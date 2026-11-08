@@ -1,0 +1,60 @@
+# ==========================================
+# 1. PERSISTÊNCIA COM SENHA E DADOS SENSÍVEIS (NÃO SOBE PRO GIT)
+# ==========================================
+src/main/resources/META-INF/persistence.xml
+**/META-INF/persistence.xml
+.env
+*.env
+*.key
+*.pem
+*secret*
+*credentials*
+
+# ==========================================
+# 2. ARQUIVOS DO BANCO DE DADOS EMBARCADO (H2 LOCAL)
+# ==========================================
+/data/
+*.mv.db
+*.trace.db
+*.lock.db
+
+# ==========================================
+# 3. BUILD E MAVEN
+# ==========================================
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+.kotlin
+*.log
+
+# ==========================================
+# 4. INTELLIJ IDEA (INCLUI DATASOURCES COM SENHAS DO BANCO)
+# ==========================================
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# ==========================================
+# 5. OUTRAS IDEs E SISTEMA OPERACIONAL
+# ==========================================
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="3.1" xmlns="https://jakarta.ee/xml/ns/persistence">
+
+    <!-- =========================================================================
+         MODELO DE PERSISTÊNCIA QUE SOBE PARA O GIT (SEM SENHAS SENSÍVEIS)
+         Para quem clonar o projeto: renomeie este arquivo para 'persistence.xml'
+         (ou o JPAUtil iniciará o banco embarcado automaticamente).
+         ========================================================================= -->
+    <persistence-unit name="sazonalisei-embarcado" transaction-type="RESOURCE_LOCAL">
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+
+        <class>br.com.senac.repository.modal.produto.Um</class>
+        <class>br.com.senac.repository.modal.produto.Produto</class>
+        <class>br.com.senac.repository.modal.produto.ProdutoFisico</class>
+        <class>br.com.senac.repository.modal.produto.ProdutoDigital</class>
+        <class>br.com.senac.repository.modal.produto.LinkProdutoDigital</class>
+        <class>br.com.senac.repository.modal.produto.ConjuntoProduto</class>
+
+        <properties>
+            <property name="jakarta.persistence.jdbc.driver" value="org.h2.Driver"/>
+            <property name="jakarta.persistence.jdbc.url"
+                      value="jdbc:h2:./data/sazonalisei;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;AUTO_SERVER=TRUE"/>
+            <property name="jakarta.persistence.jdbc.user" value="sa"/>
+            <property name="jakarta.persistence.jdbc.password" value=""/>
+
+            <!-- Pool HikariCP e Hibernate -->
+            <property name="hibernate.connection.provider_class" value="org.hibernate.hikaricp.internal.HikariCPConnectionProvider"/>
+            <property name="hibernate.hbm2ddl.auto" value="update"/>
+        </properties>
+    </persistence-unit>
+
+</persistence>
