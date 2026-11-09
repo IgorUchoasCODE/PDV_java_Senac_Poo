@@ -3,6 +3,8 @@
 # ==========================================
 src/main/resources/META-INF/persistence.xml
 **/META-INF/persistence.xml
+src/main/resources/sympla-secret.properties
+**/sympla-secret.properties
 .env
 *.env
 *.key
