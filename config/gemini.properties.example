@@ -1,0 +1,22 @@
+# =========================================================================
+# CONFIGURAÇÃO DE INTEGRAÇÃO COM A API GOOGLE GEMINI
+# Renomeie ou copie este arquivo para 'gemini.properties'
+# =========================================================================
+
+# 1. Chave da API do Google Gemini (se vazia, o sistema busca na variável de ambiente GEMINI_API_KEY)
+gemini.api.key=
+
+# 2. Modelo de IA padrão (gemini-3.8-flash é o modelo oficial recomendado para agentes multimodais e function calling)
+gemini.model=gemini-3.8-flash
+
+# 3. Temperatura de amostragem (0.1 ou 0.2 garante respostas estritamente precisas e aderentes às regras BACEN)
+gemini.temperature=0.2
+
+# 4. Limite de tokens na resposta gerada
+gemini.max.output.tokens=4096
+
+# 5. Concorrência: número máximo de threads de leitura simultâneas via Virtual Threads
+gemini.max.concurrent.reads=20
+
+# 6. Timeout das requisições HTTP (em segundos)
+gemini.timeout.seconds=60

@@ -8,6 +8,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -15,15 +16,23 @@ import java.util.regex.Pattern;
 
 public class GeolocalizacaoService {
 
+    private static final Duration TTL_CACHE_COORDENADA = Duration.ofHours(6);
+
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .build();
+    private volatile Coordenada cacheCoordenadaAtual;
+    private volatile Instant expiraCacheCoordenada = Instant.MIN;
 
     /**
      * Extrai as coordenadas geográficas reais do dispositivo via Windows Location API
      * e identifica automaticamente a cidade, UF, bairro e rua via Reverse Geocoding (OpenStreetMap).
+     * Mantém cache em memória por 6 horas para evitar chamadas repetidas de processo/rede a cada nota emitida.
      */
     public Optional<Coordenada> obterCoordenadasDispositivo() {
+        if (cacheCoordenadaAtual != null && Instant.now().isBefore(expiraCacheCoordenada)) {
+            return Optional.of(cacheCoordenadaAtual);
+        }
         String scriptPowerShell =
                 "Add-Type -AssemblyName System.Device; " +
                 "$watcher = New-Object System.Device.Location.GeoCoordinateWatcher([System.Device.Location.GeoPositionAccuracy]::High); " +
@@ -58,14 +67,22 @@ public class GeolocalizacaoService {
                     double lat = Double.parseDouble(dados[0]);
                     double lon = Double.parseDouble(dados[1]);
                     double precisao = Double.parseDouble(dados[2]);
-                    return Optional.of(enriquecerComEndereco(lat, lon, precisao));
+                    Coordenada coord = enriquecerComEndereco(lat, lon, precisao);
+                    this.cacheCoordenadaAtual = coord;
+                    this.expiraCacheCoordenada = Instant.now().plus(TTL_CACHE_COORDENADA);
+                    return Optional.of(coord);
                 }
             }
         } catch (Exception e) {
             System.err.println("[Geolocalização] Aviso no sensor Windows: " + e.getMessage());
         }
 
-        return obterFallbackPorIp();
+        Optional<Coordenada> fallback = obterFallbackPorIp();
+        fallback.ifPresent(c -> {
+            this.cacheCoordenadaAtual = c;
+            this.expiraCacheCoordenada = Instant.now().plus(TTL_CACHE_COORDENADA);
+        });
+        return fallback;
     }
 
     private Optional<Coordenada> obterFallbackPorIp() {

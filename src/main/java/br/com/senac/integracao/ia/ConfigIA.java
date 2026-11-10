@@ -1,0 +1,86 @@
+package br.com.senac.integracao.ia;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.util.Properties;
+
+/**
+ * Configuração de qual IA está ativa. Arquivo: config/ia.properties
+ * <pre>
+ * ia.provedor=gemini          # gemini | openai (Ollama/LM Studio/OpenAI) | manual (sem API)
+ * ia.openai.url=http://localhost:11434/v1
+ * ia.openai.modelo=llama3.1
+ * ia.openai.chave=
+ * </pre>
+ * A variável de ambiente IA_PROVEDOR sobrescreve o arquivo.
+ */
+public class ConfigIA {
+
+    private String provedor = "gemini";
+    private String openaiUrl = "http://localhost:11434/v1";
+    private String openaiModelo = "llama3.1";
+    private String openaiChave = "";
+    private int openaiTimeoutSegundos = 120;
+
+    private static ConfigIA instancia;
+
+    public static synchronized ConfigIA getInstancia() {
+        if (instancia == null) {
+            instancia = new ConfigIA();
+            instancia.carregar();
+        }
+        return instancia;
+    }
+
+    public synchronized void carregar() {
+        Properties p = new Properties();
+        File f = new File("config/ia.properties");
+        if (f.exists()) {
+            try (FileInputStream in = new FileInputStream(f)) {
+                p.load(in);
+            } catch (Exception ignored) {
+            }
+        }
+        provedor = valor(p, "ia.provedor", provedor);
+        openaiUrl = valor(p, "ia.openai.url", openaiUrl);
+        openaiModelo = valor(p, "ia.openai.modelo", openaiModelo);
+        openaiChave = valor(p, "ia.openai.chave", openaiChave);
+        try {
+            openaiTimeoutSegundos = Integer.parseInt(valor(p, "ia.openai.timeout.segundos", String.valueOf(openaiTimeoutSegundos)));
+        } catch (NumberFormatException ignored) {
+        }
+        String env = System.getenv("IA_PROVEDOR");
+        if (env != null && !env.isBlank()) {
+            provedor = env.trim();
+        }
+    }
+
+    private String valor(Properties p, String chave, String padrao) {
+        String v = p.getProperty(chave);
+        return v != null && !v.isBlank() ? v.trim() : padrao;
+    }
+
+    public String getProvedor() {
+        return provedor;
+    }
+
+    public void setProvedor(String provedor) {
+        this.provedor = provedor;
+    }
+
+    public String getOpenaiUrl() {
+        return openaiUrl.endsWith("/") ? openaiUrl.substring(0, openaiUrl.length() - 1) : openaiUrl;
+    }
+
+    public String getOpenaiModelo() {
+        return openaiModelo;
+    }
+
+    public String getOpenaiChave() {
+        return openaiChave;
+    }
+
+    public int getOpenaiTimeoutSegundos() {
+        return openaiTimeoutSegundos;
+    }
+}

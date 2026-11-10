@@ -1,6 +1,9 @@
 package br.com.senac.integracao.rios;
 
+import br.com.senac.integracao.cache.CacheEntry;
 import br.com.senac.integracao.geolocalizacao.Coordenada;
+import br.com.senac.interfaces.ProvedorFatorExterno;
+import br.com.senac.repository.modal.nota.VinculoFatorExternoNota;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -20,9 +23,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class NivelRioService {
+public class NivelRioService implements ProvedorFatorExterno {
+
+    private static final Duration TTL_CACHE_RIO_ATUAL = Duration.ofHours(6);
 
     private final HttpClient httpClient;
+    // Cache de 6 horas para o nível do rio atual por coordenada ("LAT|LON") economizando requisições de API
+    private final Map<String, CacheEntry<String>> cacheRioAtual6Horas = new ConcurrentHashMap<>();
+    private final Map<String, CacheEntry<NivelRioDiario>> cacheRioDiarioAtual6Horas = new ConcurrentHashMap<>();
     // Cache em memória por "ANO-MES|LAT|LON" para economizar chamadas na entrada de grandes lotes de registros passados
     private final Map<String, Map<LocalDate, NivelRioDiario>> cacheMensal = new ConcurrentHashMap<>();
 
@@ -34,9 +42,15 @@ public class NivelRioService {
 
     /**
      * Consulta os dados hidrológicos / vazão e nível dos rios atuais e previsão de 7 dias
-     * a partir das coordenadas informadas.
+     * a partir das coordenadas informadas, mantendo Cache de 6 Horas.
      */
     public String consultarNivelRioPorCoordenada(Coordenada coordenada) {
+        String chaveRegiao = String.format(Locale.US, "%.2f|%.2f", coordenada.latitude(), coordenada.longitude());
+        CacheEntry<String> emCache = cacheRioAtual6Horas.get(chaveRegiao);
+        if (emCache != null && emCache.isValido()) {
+            return emCache.dados();
+        }
+
         String url = String.format(Locale.US,
                 "https://flood-api.open-meteo.com/v1/flood?latitude=%.6f&longitude=%.6f&daily=river_discharge&forecast_days=7",
                 coordenada.latitude(), coordenada.longitude());
@@ -48,10 +62,31 @@ public class NivelRioService {
                     .build();
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            return response.body();
+            String corpo = response.body();
+            cacheRioAtual6Horas.put(chaveRegiao, CacheEntry.criarComTtl(corpo, TTL_CACHE_RIO_ATUAL));
+            return corpo;
         } catch (Exception e) {
             return "Erro ao consultar API de Nível dos Rios: " + e.getMessage();
         }
+    }
+
+    /**
+     * Retorna o record NivelRioDiario de hoje utilizando o Cache de 6 Horas.
+     */
+    public NivelRioDiario obterNivelRioAtualComCache6h(Coordenada coordenada) {
+        String chaveRegiao = String.format(Locale.US, "%.2f|%.2f", coordenada.latitude(), coordenada.longitude());
+        CacheEntry<NivelRioDiario> emCache = cacheRioDiarioAtual6Horas.get(chaveRegiao);
+        if (emCache != null && emCache.isValido()) {
+            return emCache.dados();
+        }
+
+        String json = consultarNivelRioPorCoordenada(coordenada);
+        double[] vazoes = extrairArrayDouble(json, "river_discharge");
+        double vazaoHoje = vazoes.length > 0 ? vazoes[0] : 0.0;
+
+        NivelRioDiario registro = new NivelRioDiario(LocalDate.now(), vazaoHoje, vazaoHoje, vazaoHoje, vazaoHoje);
+        cacheRioDiarioAtual6Horas.put(chaveRegiao, CacheEntry.criarComTtl(registro, TTL_CACHE_RIO_ATUAL));
+        return registro;
     }
 
     /**
@@ -170,5 +205,20 @@ public class NivelRioService {
 
     private double obterValorSeguro(double[] arr, int idx) {
         return (idx >= 0 && idx < arr.length) ? arr[idx] : 0.0;
+    }
+
+    @Override
+    public void enriquecerVinculo(LocalDate data, Coordenada coordenada, VinculoFatorExternoNota vinculo) {
+        if (data.isBefore(LocalDate.now())) {
+            consultarNivelRioPorData(data, coordenada).ifPresent(vinculo::setNivelRioRegistrado);
+        } else {
+            vinculo.setNivelRioRegistrado(obterNivelRioAtualComCache6h(coordenada));
+        }
+    }
+
+    @Override
+    public void limparCacheExpirado() {
+        cacheRioAtual6Horas.entrySet().removeIf(e -> !e.getValue().isValido());
+        cacheRioDiarioAtual6Horas.entrySet().removeIf(e -> !e.getValue().isValido());
     }
 }

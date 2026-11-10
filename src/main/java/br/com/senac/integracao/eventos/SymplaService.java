@@ -1,6 +1,9 @@
 package br.com.senac.integracao.eventos;
 
+import br.com.senac.integracao.cache.CacheEntry;
 import br.com.senac.integracao.geolocalizacao.Coordenada;
+import br.com.senac.interfaces.ProvedorFatorExterno;
+import br.com.senac.repository.modal.nota.VinculoFatorExternoNota;
 
 import java.io.InputStream;
 import java.net.URI;
@@ -13,21 +16,28 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.text.Normalizer;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class SymplaService {
+public class SymplaService implements ProvedorFatorExterno {
 
     private static final String SYMPLA_API_BASE_URL = "https://api.sympla.com.br/public/v3";
     private static final String TOKEN_MOCK_DEFAULT = "MOCK_DEFAULT_SYMPLA_TOKEN";
+    private static final Duration TTL_CACHE_EVENTOS = Duration.ofDays(7);
 
     private final String chaveAcessoSympla;
     private final boolean modoMockDefault;
     private final HttpClient httpClient;
+    // Cache de 7 dias por "CIDADE-UF" para economizar requisições de eventos no Sympla
+    private final Map<String, CacheEntry<List<EventoSympla>>> cacheEventos7Dias = new ConcurrentHashMap<>();
 
     /**
      * Construtor padrão: carrega automaticamente a chave do arquivo sensível (sympla-secret.properties).
@@ -92,7 +102,14 @@ public class SymplaService {
     public List<EventoSympla> buscarEventosPublicosPorLocalizacao(Coordenada coordenada) {
         String slugCidade = normalizarSlug(coordenada.cidade().isBlank() ? "manaus" : coordenada.cidade());
         String slugUf = normalizarSlug(coordenada.uf().isBlank() ? "am" : coordenada.uf());
-        String urlCatalogo = "https://www.sympla.com.br/eventos/" + slugCidade + "-" + slugUf;
+        String chaveCache = slugCidade + "-" + slugUf;
+
+        CacheEntry<List<EventoSympla>> emCache = cacheEventos7Dias.get(chaveCache);
+        if (emCache != null && emCache.isValido()) {
+            return emCache.dados();
+        }
+
+        String urlCatalogo = "https://www.sympla.com.br/eventos/" + chaveCache;
 
         List<EventoSympla> eventos = new ArrayList<>();
         try {
@@ -148,10 +165,12 @@ public class SymplaService {
             System.err.println("Aviso ao buscar eventos online, retornando eventos mocados default: " + e.getMessage());
         }
 
-        if (eventos.isEmpty()) {
-            return obterEventosMocadosDefault(coordenada);
-        }
-        return eventos;
+        List<EventoSympla> resultadoFinal = eventos.isEmpty()
+                ? Collections.unmodifiableList(obterEventosMocadosDefault(coordenada))
+                : Collections.unmodifiableList(eventos);
+
+        cacheEventos7Dias.put(chaveCache, CacheEntry.criarComTtl(resultadoFinal, TTL_CACHE_EVENTOS));
+        return resultadoFinal;
     }
 
     /**
@@ -254,5 +273,15 @@ public class SymplaService {
     private double extrairDouble(String json, String chave) {
         Matcher m = Pattern.compile("\"" + Pattern.quote(chave) + "\":(-?[0-9]+(?:\\.[0-9]+)?)").matcher(json);
         return m.find() ? Double.parseDouble(m.group(1)) : Double.NaN;
+    }
+
+    @Override
+    public void enriquecerVinculo(LocalDate data, Coordenada coordenada, VinculoFatorExternoNota vinculo) {
+        vinculo.registrarEventosSympla(buscarEventosPublicosPorLocalizacao(coordenada));
+    }
+
+    @Override
+    public void limparCacheExpirado() {
+        cacheEventos7Dias.entrySet().removeIf(e -> !e.getValue().isValido());
     }
 }

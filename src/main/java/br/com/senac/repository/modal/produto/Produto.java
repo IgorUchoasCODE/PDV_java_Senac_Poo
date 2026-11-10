@@ -1,6 +1,8 @@
 package br.com.senac.repository.modal.produto;
 
 
+import br.com.senac.interfaces.Mensuravel;
+import br.com.senac.interfaces.MoedaContabilBacen;
 import jakarta.persistence.*;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
@@ -14,7 +16,7 @@ import java.util.List;
 @Table(name = "produtos")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "is_digital", discriminatorType = DiscriminatorType.INTEGER, columnDefinition = "TINYINT(1)")
-public abstract class Produto implements Serializable {
+public abstract class Produto implements Serializable, Mensuravel {
 
     private static final long serialVersionUID = 1L;
 
@@ -42,6 +44,9 @@ public abstract class Produto implements Serializable {
     @Fetch(FetchMode.SELECT)
     private List<ConjuntoProduto> itensConjunto = new ArrayList<>();
 
+    @OneToMany(mappedBy = "produto", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<ProdutoImagem> imagens = new ArrayList<>();
+
     protected Produto() {
     }
 
@@ -57,6 +62,24 @@ public abstract class Produto implements Serializable {
     }
 
     public abstract boolean isDigital();
+
+    @Override
+    public boolean isQuantidadeValida(BigDecimal quantidade) {
+        if (this.um == null) {
+            return quantidade != null && quantidade.compareTo(BigDecimal.ZERO) > 0;
+        }
+        return this.um.isQuantidadeValida(quantidade);
+    }
+
+    @Override
+    public BigDecimal calcularValorProporcional(BigDecimal valorUnitario, BigDecimal quantidade) {
+        if (this.um == null) {
+            return valorUnitario
+                    .multiply(quantidade, MoedaContabilBacen.CONTEXTO_BACEN)
+                    .setScale(MoedaContabilBacen.ESCALA_MOEDA_FINAL, MoedaContabilBacen.ARREDONDAMENTO_BACEN);
+        }
+        return this.um.calcularValorProporcional(valorUnitario, quantidade);
+    }
 
     public void adicionarItemConjunto(Produto item, BigDecimal quantidade) {
         ConjuntoProduto conjuntoProduto = new ConjuntoProduto(this, item, quantidade);
@@ -123,6 +146,48 @@ public abstract class Produto implements Serializable {
     }
     public void setUm(Um um) {
         this.um = um;
+    }
+
+    public List<ProdutoImagem> getImagens() {
+        return imagens;
+    }
+
+    public void adicionarImagem(ProdutoImagem imagem) {
+        if (imagem != null) {
+            imagem.setProduto(this);
+            this.imagens.add(imagem);
+        }
+    }
+
+    public void removerImagem(ProdutoImagem imagem) {
+        if (imagem != null) {
+            this.imagens.remove(imagem);
+            imagem.setProduto(null);
+        }
+    }
+
+    public ProdutoImagem getImagemPrincipal() {
+        return imagens.stream()
+                .filter(ProdutoImagem::isPrincipal)
+                .findFirst()
+                .orElse(imagens.isEmpty() ? null : imagens.get(0));
+    }
+
+    public String getUrlImagemPrincipal() {
+        ProdutoImagem principal = getImagemPrincipal();
+        return principal != null ? principal.getCaminhoArquivo() : null;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Produto outro)) return false;
+        return id != null && id.equals(outro.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : System.identityHashCode(this);
     }
 
     @Override

@@ -5,6 +5,8 @@ src/main/resources/META-INF/persistence.xml
 **/META-INF/persistence.xml
 src/main/resources/sympla-secret.properties
 **/sympla-secret.properties
+config/gemini.properties
+**/gemini.properties
 .env
 *.env
 *.key
@@ -60,3 +62,5 @@ out/
 .vscode/
 .DS_Store
 Thumbs.db
+
+config/ia.properties

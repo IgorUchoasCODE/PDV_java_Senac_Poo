@@ -1,6 +1,9 @@
 package br.com.senac.integracao.clima;
 
+import br.com.senac.integracao.cache.CacheEntry;
 import br.com.senac.integracao.geolocalizacao.Coordenada;
+import br.com.senac.interfaces.ProvedorFatorExterno;
+import br.com.senac.repository.modal.nota.VinculoFatorExternoNota;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -21,9 +24,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ClimaService {
+public class ClimaService implements ProvedorFatorExterno {
+
+    private static final Duration TTL_CACHE_CLIMA_ATUAL = Duration.ofHours(6);
 
     private final HttpClient httpClient;
+    // Cache de 6 horas para o clima atual por coordenada ("LAT|LON") economizando requisições de API
+    private final Map<String, CacheEntry<String>> cacheClimaAtual6Horas = new ConcurrentHashMap<>();
+    private final Map<String, CacheEntry<ClimaDiario>> cacheClimaDiarioAtual6Horas = new ConcurrentHashMap<>();
     // Cache em memória por "ANO-MES|LAT|LON" para evitar chamadas repetidas ao processar grandes lotes passados
     private final Map<String, Map<LocalDate, ClimaDiario>> cacheMensal = new ConcurrentHashMap<>();
 
@@ -34,9 +42,15 @@ public class ClimaService {
     }
 
     /**
-     * Consulta o clima em tempo real (caso a consulta seja para o momento atual / hoje).
+     * Consulta o clima em tempo real com Cache de 6 Horas por região para economizar requisições na API.
      */
     public String buscarClimaAtual(Coordenada coordenada) {
+        String chaveRegiao = String.format(Locale.US, "%.2f|%.2f", coordenada.latitude(), coordenada.longitude());
+        CacheEntry<String> emCache = cacheClimaAtual6Horas.get(chaveRegiao);
+        if (emCache != null && emCache.isValido()) {
+            return emCache.dados();
+        }
+
         String url = String.format(Locale.US,
                 "https://api.open-meteo.com/v1/forecast?latitude=%.6f&longitude=%.6f&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m&timezone=auto",
                 coordenada.latitude(), coordenada.longitude());
@@ -48,10 +62,40 @@ public class ClimaService {
                     .build();
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            return response.body();
+            String corpo = response.body();
+            cacheClimaAtual6Horas.put(chaveRegiao, CacheEntry.criarComTtl(corpo, TTL_CACHE_CLIMA_ATUAL));
+            return corpo;
         } catch (Exception e) {
             return "Erro ao consultar API Climática: " + e.getMessage();
         }
+    }
+
+    /**
+     * Retorna o record ClimaDiario consolidado de hoje utilizando o Cache de 6 Horas.
+     */
+    public ClimaDiario obterClimaDiarioAtualComCache6h(Coordenada coordenada) {
+        String chaveRegiao = String.format(Locale.US, "%.2f|%.2f", coordenada.latitude(), coordenada.longitude());
+        CacheEntry<ClimaDiario> emCache = cacheClimaDiarioAtual6Horas.get(chaveRegiao);
+        if (emCache != null && emCache.isValido()) {
+            return emCache.dados();
+        }
+
+        String json = buscarClimaAtual(coordenada);
+        double temp = extrairValorCurrent(json, "temperature_2m");
+        double chuva = extrairValorCurrent(json, "precipitation");
+        double vento = extrairValorCurrent(json, "wind_speed_10m");
+
+        ClimaDiario registro = new ClimaDiario(LocalDate.now(), temp, temp, temp, chuva, vento);
+        cacheClimaDiarioAtual6Horas.put(chaveRegiao, CacheEntry.criarComTtl(registro, TTL_CACHE_CLIMA_ATUAL));
+        return registro;
+    }
+
+    private double extrairValorCurrent(String json, String campo) {
+        int idxCurrent = json.indexOf("\"current\":");
+        if (idxCurrent == -1) return 0.0;
+        Matcher m = Pattern.compile("\"" + Pattern.quote(campo) + "\"\\s*:\\s*(-?[0-9]+(?:\\.[0-9]+)?)")
+                .matcher(json.substring(idxCurrent));
+        return m.find() ? Double.parseDouble(m.group(1)) : 0.0;
     }
 
     /**
@@ -179,5 +223,20 @@ public class ClimaService {
 
     private double obterValorSeguro(double[] arr, int idx) {
         return (idx >= 0 && idx < arr.length) ? arr[idx] : 0.0;
+    }
+
+    @Override
+    public void enriquecerVinculo(LocalDate data, Coordenada coordenada, VinculoFatorExternoNota vinculo) {
+        if (data.isBefore(LocalDate.now())) {
+            buscarClimaPorData(data, coordenada).ifPresent(vinculo::setClimaRegistrado);
+        } else {
+            vinculo.setClimaRegistrado(obterClimaDiarioAtualComCache6h(coordenada));
+        }
+    }
+
+    @Override
+    public void limparCacheExpirado() {
+        cacheClimaAtual6Horas.entrySet().removeIf(e -> !e.getValue().isValido());
+        cacheClimaDiarioAtual6Horas.entrySet().removeIf(e -> !e.getValue().isValido());
     }
 }

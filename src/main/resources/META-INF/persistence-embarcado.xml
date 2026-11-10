@@ -15,6 +15,24 @@
         <class>br.com.senac.repository.modal.produto.ProdutoDigital</class>
         <class>br.com.senac.repository.modal.produto.LinkProdutoDigital</class>
         <class>br.com.senac.repository.modal.produto.ConjuntoProduto</class>
+        <class>br.com.senac.repository.modal.produto.ProdutoImagem</class>
+        <class>br.com.senac.repository.modal.pessoa.Pessoa</class>
+        <class>br.com.senac.repository.modal.pessoa.PessoaFisica</class>
+        <class>br.com.senac.repository.modal.pessoa.PessoaJuridica</class>
+        <class>br.com.senac.repository.modal.pessoa.Registro</class>
+        <class>br.com.senac.repository.modal.nota.VinculoFatorExternoNota</class>
+        <class>br.com.senac.repository.modal.nota.Nota</class>
+        <class>br.com.senac.repository.modal.nota.Item</class>
+        <class>br.com.senac.repository.modal.nota.NotaCompra</class>
+        <class>br.com.senac.repository.modal.nota.NotaVenda</class>
+        <class>br.com.senac.repository.modal.nota.NotaDevolucao</class>
+        <class>br.com.senac.repository.modal.nota.NotaPerda</class>
+        <class>br.com.senac.repository.modal.pagamento.FormaPagamento</class>
+        <class>br.com.senac.repository.modal.pagamento.NotaPagamento</class>
+        <class>br.com.senac.repository.modal.pagamento.PagamentoAVista</class>
+        <class>br.com.senac.repository.modal.pagamento.PagamentoAPrazo</class>
+        <class>br.com.senac.repository.modal.pagamento.PagamentoParcelado</class>
+        <class>br.com.senac.repository.modal.pagamento.ParcelaPagamento</class>
 
         <properties>
             <property name="jakarta.persistence.jdbc.driver" value="org.h2.Driver"/>
@@ -23,9 +41,12 @@
             <property name="jakarta.persistence.jdbc.user" value="sa"/>
             <property name="jakarta.persistence.jdbc.password" value=""/>
 
-            <!-- Pool HikariCP e Hibernate -->
+            <!-- Pool HikariCP, Batching e Hibernate -->
             <property name="hibernate.connection.provider_class" value="org.hibernate.hikaricp.internal.HikariCPConnectionProvider"/>
             <property name="hibernate.hbm2ddl.auto" value="update"/>
+            <property name="hibernate.jdbc.batch_size" value="50"/>
+            <property name="hibernate.order_inserts" value="true"/>
+            <property name="hibernate.order_updates" value="true"/>
         </properties>
     </persistence-unit>
 

@@ -1,6 +1,9 @@
 package br.com.senac.integracao.eventos;
 
+import br.com.senac.integracao.cache.CacheEntry;
 import br.com.senac.integracao.geolocalizacao.Coordenada;
+import br.com.senac.interfaces.ProvedorFatorExterno;
+import br.com.senac.repository.modal.nota.VinculoFatorExternoNota;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -9,16 +12,24 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class MinisterioCulturaService {
+public class MinisterioCulturaService implements ProvedorFatorExterno {
 
     private static final String SALIC_API_URL = "https://api.salic.cultura.gov.br/api/v1/projetos";
+    private static final Duration TTL_CACHE_EVENTOS = Duration.ofDays(7);
 
     private final HttpClient httpClient;
+    // Cache de 7 dias por "CIDADE|UF|LIMITE" para evitar consultas repetidas na API SALIC
+    private final Map<String, CacheEntry<List<ProjetoCulturalMinC>>> cacheEventos7Dias = new ConcurrentHashMap<>();
 
     public MinisterioCulturaService() {
         this.httpClient = HttpClient.newBuilder()
@@ -29,11 +40,17 @@ public class MinisterioCulturaService {
 
     /**
      * Consulta os eventos e projetos culturais públicos na API oficial do Ministério da Cultura (SALIC)
-     * com base na cidade e UF extraídas das coordenadas do dispositivo.
+     * com base na cidade e UF extraídas das coordenadas do dispositivo, mantendo Cache de 7 Dias.
      */
     public List<ProjetoCulturalMinC> buscarEventosCulturaisPorCidade(Coordenada coordenada, int limite) {
-        String uf = coordenada.uf().isBlank() ? "AM" : coordenada.uf().trim();
+        String uf = coordenada.uf().isBlank() ? "AM" : coordenada.uf().trim().toUpperCase(Locale.ROOT);
         String municipio = coordenada.cidade().isBlank() ? "Manaus" : coordenada.cidade().trim();
+        String chaveCache = municipio.toLowerCase(Locale.ROOT) + "|" + uf + "|" + limite;
+
+        CacheEntry<List<ProjetoCulturalMinC>> emCache = cacheEventos7Dias.get(chaveCache);
+        if (emCache != null && emCache.isValido()) {
+            return emCache.dados();
+        }
 
         String url = String.format("%s?UF=%s&municipio=%s&limit=%d&format=json",
                 SALIC_API_URL,
@@ -71,6 +88,11 @@ public class MinisterioCulturaService {
                         pronac, nome, segmento, dataInicio, dataTermino, situacao, mun, siglaUf, proponente, resumo
                 ));
             }
+            if (!projetos.isEmpty()) {
+                List<ProjetoCulturalMinC> imutavel = Collections.unmodifiableList(projetos);
+                cacheEventos7Dias.put(chaveCache, CacheEntry.criarComTtl(imutavel, TTL_CACHE_EVENTOS));
+                return imutavel;
+            }
         } catch (Exception e) {
             System.err.println("Erro ao consultar API do Ministério da Cultura (SALIC): " + e.getMessage());
         }
@@ -96,5 +118,15 @@ public class MinisterioCulturaService {
         }
         sb.append(texto.substring(ultimoIndice));
         return sb.toString().replace("\\/", "/").replace("\\\"", "\"");
+    }
+
+    @Override
+    public void enriquecerVinculo(LocalDate data, Coordenada coordenada, VinculoFatorExternoNota vinculo) {
+        vinculo.registrarEventosMinC(buscarEventosCulturaisPorCidade(coordenada, 10));
+    }
+
+    @Override
+    public void limparCacheExpirado() {
+        cacheEventos7Dias.entrySet().removeIf(e -> !e.getValue().isValido());
     }
 }

@@ -1,15 +1,16 @@
 package br.com.senac.repository.modal.produto;
 
+import br.com.senac.interfaces.Mensuravel;
+import br.com.senac.interfaces.MoedaContabilBacen;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 
 
 
 @Entity
 @Table(name = "unidade_medida")
-public class Um implements Serializable {
+public class Um implements Serializable, Mensuravel {
 
     private static final long serialVersionUID = 1L;
 
@@ -63,8 +64,8 @@ public class Um implements Serializable {
             );
         }
         return valorCustoUnitario
-                .multiply(quantidade)
-                .setScale(2, RoundingMode.HALF_UP);
+                .multiply(quantidade, MoedaContabilBacen.CONTEXTO_BACEN)
+                .setScale(MoedaContabilBacen.ESCALA_MOEDA_FINAL, MoedaContabilBacen.ARREDONDAMENTO_BACEN);
     }
 
     public Long getId() { return this.id; }

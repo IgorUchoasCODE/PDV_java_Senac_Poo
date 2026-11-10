@@ -16,6 +16,7 @@
         <!-- Versão LTS da linha 8 (8.4.0) ou linha 9 (9.1.0) corrige os alertas de CVE e mantém total suporte ao MySQL 8.0 -->
         <mysql.version>8.4.0</mysql.version>
         <h2.version>2.2.224</h2.version>
+        <jackson.version>2.21.4</jackson.version>
     </properties>
 
     <dependencies>
@@ -50,6 +51,29 @@
                  bloqueia imports diretos do MySQL no código Java, usando apenas em execução -->
             <scope>runtime</scope>
         </dependency>
+
+        <!-- 5. Serialização e Manipulação JSON para Integração com IA Gemini / Tool Calling -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>2.21</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>

@@ -1,6 +1,8 @@
 package br.com.senac.integracao.calendario;
 
 import br.com.senac.integracao.geolocalizacao.Coordenada;
+import br.com.senac.interfaces.ProvedorFatorExterno;
+import br.com.senac.repository.modal.nota.VinculoFatorExternoNota;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -16,12 +18,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class CalendarioService {
+public class CalendarioService implements ProvedorFatorExterno {
 
     private final HttpClient httpClient;
+    // Cache anual por "ANO|CIDADE|UF" para evitar chamadas repetidas à BrasilAPI durante o ano
+    private final Map<String, List<DiaNaoUtil>> cacheAnualFeriados = new ConcurrentHashMap<>();
 
     public CalendarioService() {
         this.httpClient = HttpClient.newBuilder()
@@ -31,12 +36,18 @@ public class CalendarioService {
 
     /**
      * Lista todos os Feriados (Nacionais, Estaduais e Municipais) e Pontos Facultativos
-     * do ano com base na cidade/UF da coordenada informada.
+     * do ano com base na cidade/UF da coordenada informada (com cache anual em memória).
      */
     public List<DiaNaoUtil> listarFeriadosEPontosFacultativos(int ano, Coordenada coordenada) {
-        Map<LocalDate, DiaNaoUtil> mapaDatas = new LinkedHashMap<>();
         String cidade = coordenada.cidade().isBlank() ? "Manaus" : coordenada.cidade().trim();
         String uf = coordenada.uf().isBlank() ? "AM" : coordenada.uf().trim().toUpperCase(Locale.ROOT);
+        String chaveCache = ano + "|" + cidade.toLowerCase(Locale.ROOT) + "|" + uf;
+
+        return cacheAnualFeriados.computeIfAbsent(chaveCache, k -> carregarFeriadosDoAno(ano, cidade, uf));
+    }
+
+    private List<DiaNaoUtil> carregarFeriadosDoAno(int ano, String cidade, String uf) {
+        Map<LocalDate, DiaNaoUtil> mapaDatas = new LinkedHashMap<>();
 
         // 1. Consulta a BrasilAPI para obter os feriados nacionais e datas móveis (Carnaval, Páscoa, Corpus Christi)
         LocalDate tercaCarnaval = null;
@@ -260,5 +271,14 @@ public class CalendarioService {
 
     private void adicionarSeAusente(Map<LocalDate, DiaNaoUtil> mapa, LocalDate data, String nome, String categoria, String abrangencia) {
         mapa.putIfAbsent(data, new DiaNaoUtil(data, nome, categoria, abrangencia));
+    }
+
+    @Override
+    public void enriquecerVinculo(LocalDate data, Coordenada coordenada, VinculoFatorExternoNota vinculo) {
+        boolean util = isDiaUtil(data, coordenada);
+        LocalDate quintoUtil = obterQuintoDiaUtil(data.getYear(), data.getMonthValue(), coordenada);
+        vinculo.setDiaUtil(util);
+        vinculo.setQuintoDiaUtil(data.equals(quintoUtil));
+        vinculo.setResumoCalendario(obterResumoDiaUtil(data, coordenada));
     }
 }
