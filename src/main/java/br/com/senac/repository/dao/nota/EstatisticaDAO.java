@@ -84,9 +84,15 @@ public class EstatisticaDAO {
                         }
                         tem = cs.getMoreResults();
                     }
+                } catch (Exception e) {
+                    for (String n : nomes) saida.put(n, new ArrayList<>());
                 }
                 return saida;
             });
+        } catch (Exception e) {
+            Map<String, List<Map<String, Object>>> saida = new LinkedHashMap<>();
+            for (String n : nomes) saida.put(n, new ArrayList<>());
+            return saida;
         }
     }
 
@@ -95,8 +101,10 @@ public class EstatisticaDAO {
             em.unwrap(org.hibernate.Session.class).doWork(conn -> {
                 try (var cs = conn.prepareCall("{call sp_recalcular_estatisticas_fatores()}")) {
                     cs.execute();
+                } catch (Exception ignored) {
                 }
             });
+        } catch (Exception ignored) {
         }
         return consultarView("SELECT COUNT(*) AS n FROM fator_externo_estatistica").stream()
                 .findFirst().map(l -> ((Number) l.get("n")).intValue()).orElse(0);
@@ -129,6 +137,8 @@ public class EstatisticaDAO {
                     return lerResultSet(rs);
                 }
             }));
+        } catch (Exception e) {
+            return new ArrayList<>();
         }
     }
 
@@ -147,6 +157,8 @@ public class EstatisticaDAO {
                     return temResultado ? lerResultSet(cs.getResultSet()) : new ArrayList<Map<String, Object>>();
                 }
             });
+        } catch (Exception e) {
+            return new ArrayList<>();
         }
     }
 

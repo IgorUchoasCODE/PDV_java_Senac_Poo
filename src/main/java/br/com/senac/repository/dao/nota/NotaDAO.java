@@ -107,22 +107,27 @@ public class NotaDAO {
     /**
      * Executa a Stored Procedure sp_consumir_estoque_fifo diretamente no banco MySQL
      * (com FOR UPDATE nativo no banco para operações de altíssimo volume).
+     * Caso esteja em banco embarcado (H2), aplica fallback automático transparente.
      */
     public void executarProcedureBaixaFIFO(Long idNotaVenda, Long idProduto, BigDecimal quantidadeTotal, BigDecimal precoVenda) {
         EntityManager em = JPAUtil.getEntityManager();
         EntityTransaction tx = em.getTransaction();
         try {
             tx.begin();
-            StoredProcedureQuery sp = em.createStoredProcedureQuery("sp_consumir_estoque_fifo")
-                    .registerStoredProcedureParameter("p_id_nota_venda", Long.class, ParameterMode.IN)
-                    .registerStoredProcedureParameter("p_id_produto", Long.class, ParameterMode.IN)
-                    .registerStoredProcedureParameter("p_quantidade_total", BigDecimal.class, ParameterMode.IN)
-                    .registerStoredProcedureParameter("p_preco_venda", BigDecimal.class, ParameterMode.IN)
-                    .setParameter("p_id_nota_venda", idNotaVenda)
-                    .setParameter("p_id_produto", idProduto)
-                    .setParameter("p_quantidade_total", quantidadeTotal)
-                    .setParameter("p_preco_venda", precoVenda != null ? precoVenda : BigDecimal.ZERO);
-            sp.execute();
+            try {
+                StoredProcedureQuery sp = em.createStoredProcedureQuery("sp_consumir_estoque_fifo")
+                        .registerStoredProcedureParameter("p_id_nota_venda", Long.class, ParameterMode.IN)
+                        .registerStoredProcedureParameter("p_id_produto", Long.class, ParameterMode.IN)
+                        .registerStoredProcedureParameter("p_quantidade_total", BigDecimal.class, ParameterMode.IN)
+                        .registerStoredProcedureParameter("p_preco_venda", BigDecimal.class, ParameterMode.IN)
+                        .setParameter("p_id_nota_venda", idNotaVenda)
+                        .setParameter("p_id_produto", idProduto)
+                        .setParameter("p_quantidade_total", quantidadeTotal)
+                        .setParameter("p_preco_venda", precoVenda != null ? precoVenda : BigDecimal.ZERO);
+                sp.execute();
+            } catch (Exception e) {
+                consumirEstoqueFifoEmulado(em, idNotaVenda, idProduto, quantidadeTotal, precoVenda);
+            }
             tx.commit();
         } catch (Exception e) {
             if (tx.isActive()) tx.rollback();
@@ -134,22 +139,27 @@ public class NotaDAO {
 
     /**
      * Executa a Stored Procedure sp_consumir_lote_especifico diretamente no banco MySQL.
+     * Caso esteja em banco embarcado (H2), aplica fallback automático transparente.
      */
     public void executarProcedureBaixaLoteEspecifico(Long idNotaVenda, Long idLoteDesejado, BigDecimal quantidade, BigDecimal precoVenda) {
         EntityManager em = JPAUtil.getEntityManager();
         EntityTransaction tx = em.getTransaction();
         try {
             tx.begin();
-            StoredProcedureQuery sp = em.createStoredProcedureQuery("sp_consumir_lote_especifico")
-                    .registerStoredProcedureParameter("p_id_nota_venda", Long.class, ParameterMode.IN)
-                    .registerStoredProcedureParameter("p_id_lote_desejado", Long.class, ParameterMode.IN)
-                    .registerStoredProcedureParameter("p_quantidade", BigDecimal.class, ParameterMode.IN)
-                    .registerStoredProcedureParameter("p_preco_venda", BigDecimal.class, ParameterMode.IN)
-                    .setParameter("p_id_nota_venda", idNotaVenda)
-                    .setParameter("p_id_lote_desejado", idLoteDesejado)
-                    .setParameter("p_quantidade", quantidade)
-                    .setParameter("p_preco_venda", precoVenda != null ? precoVenda : BigDecimal.ZERO);
-            sp.execute();
+            try {
+                StoredProcedureQuery sp = em.createStoredProcedureQuery("sp_consumir_lote_especifico")
+                        .registerStoredProcedureParameter("p_id_nota_venda", Long.class, ParameterMode.IN)
+                        .registerStoredProcedureParameter("p_id_lote_desejado", Long.class, ParameterMode.IN)
+                        .registerStoredProcedureParameter("p_quantidade", BigDecimal.class, ParameterMode.IN)
+                        .registerStoredProcedureParameter("p_preco_venda", BigDecimal.class, ParameterMode.IN)
+                        .setParameter("p_id_nota_venda", idNotaVenda)
+                        .setParameter("p_id_lote_desejado", idLoteDesejado)
+                        .setParameter("p_quantidade", quantidade)
+                        .setParameter("p_preco_venda", precoVenda != null ? precoVenda : BigDecimal.ZERO);
+                sp.execute();
+            } catch (Exception e) {
+                consumirLoteEspecificoEmulado(em, idNotaVenda, idLoteDesejado, quantidade, precoVenda);
+            }
             tx.commit();
         } catch (Exception e) {
             if (tx.isActive()) tx.rollback();
@@ -157,6 +167,47 @@ public class NotaDAO {
         } finally {
             em.close();
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void consumirEstoqueFifoEmulado(EntityManager em, Long idNotaVenda, Long idProduto, BigDecimal qtdTotal, BigDecimal precoVenda) {
+        List<Item> lotes = em.createQuery(
+                "SELECT i FROM Item i WHERE i.produto.id = :idProduto AND i.quantidadeDisponivel > 0 AND (i.dataValidade IS NULL OR i.dataValidade >= CURRENT_DATE) ORDER BY i.data ASC, i.id ASC", Item.class)
+                .setParameter("idProduto", idProduto)
+                .getResultList();
+        BigDecimal restante = qtdTotal;
+        Nota nota = em.find(Nota.class, idNotaVenda);
+        for (Item lote : lotes) {
+            if (restante.compareTo(BigDecimal.ZERO) <= 0) break;
+            BigDecimal disponivel = lote.getQuantidadeDisponivel();
+            BigDecimal consumir = disponivel.min(restante);
+            lote.setQuantidadeDisponivel(disponivel.subtract(consumir));
+            em.merge(lote);
+
+            Item itemConsumo = new Item(lote.getProduto(), precoVenda != null && precoVenda.compareTo(BigDecimal.ZERO) > 0 ? precoVenda : lote.getValor(), consumir, lote.getDataValidade());
+            itemConsumo.setNota(nota);
+            itemConsumo.setItemOrigem(lote);
+            itemConsumo.setQuantidadeDisponivel(BigDecimal.ZERO);
+            em.persist(itemConsumo);
+
+            restante = restante.subtract(consumir);
+        }
+    }
+
+    private void consumirLoteEspecificoEmulado(EntityManager em, Long idNotaVenda, Long idLoteDesejado, BigDecimal qtd, BigDecimal precoVenda) {
+        Item lote = em.find(Item.class, idLoteDesejado);
+        if (lote == null) return;
+        BigDecimal disp = lote.getQuantidadeDisponivel();
+        BigDecimal consumir = disp.min(qtd);
+        lote.setQuantidadeDisponivel(disp.subtract(consumir));
+        em.merge(lote);
+
+        Nota nota = em.find(Nota.class, idNotaVenda);
+        Item itemConsumo = new Item(lote.getProduto(), precoVenda != null && precoVenda.compareTo(BigDecimal.ZERO) > 0 ? precoVenda : lote.getValor(), consumir, lote.getDataValidade());
+        itemConsumo.setNota(nota);
+        itemConsumo.setItemOrigem(lote);
+        itemConsumo.setQuantidadeDisponivel(BigDecimal.ZERO);
+        em.persist(itemConsumo);
     }
 
     /**

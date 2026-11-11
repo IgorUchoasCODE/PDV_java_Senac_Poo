@@ -139,6 +139,65 @@ public class JPAUtil {
                     "WHERE nv.tipo_nota = 'VENDA'"
             ).executeUpdate();
 
+            // Tabelas de Fatores Externos e Eventos (compatíveis com H2 e MySQL)
+            em.createNativeQuery(
+                    "CREATE TABLE IF NOT EXISTS evento_externo (" +
+                    "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
+                    "fonte VARCHAR(12) NOT NULL, " +
+                    "id_externo VARCHAR(60) NOT NULL, " +
+                    "nome VARCHAR(300) NOT NULL, " +
+                    "local_nome VARCHAR(200), " +
+                    "bairro VARCHAR(100), " +
+                    "cidade VARCHAR(80) NOT NULL, " +
+                    "uf VARCHAR(5) NOT NULL, " +
+                    "data_inicio DATE NULL, " +
+                    "data_fim DATE NULL, " +
+                    "data_texto VARCHAR(120), " +
+                    "distancia_km DOUBLE, " +
+                    "url VARCHAR(500), " +
+                    "segmento VARCHAR(120), " +
+                    "situacao VARCHAR(80), " +
+                    "proponente VARCHAR(200), " +
+                    "resumo VARCHAR(600), " +
+                    "coletado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP" +
+                    ")"
+            ).executeUpdate();
+
+            em.createNativeQuery(
+                    "CREATE TABLE IF NOT EXISTS vinculo_evento (" +
+                    "id_vinculo BIGINT NOT NULL, " +
+                    "id_evento BIGINT NOT NULL, " +
+                    "PRIMARY KEY (id_vinculo, id_evento)" +
+                    ")"
+            ).executeUpdate();
+
+            em.createNativeQuery(
+                    "CREATE TABLE IF NOT EXISTS fila_fator_externo_pendente (" +
+                    "id_nota BIGINT NOT NULL PRIMARY KEY, " +
+                    "data_referencia DATE NOT NULL, " +
+                    "bloco_horario_6h INT NOT NULL, " +
+                    "criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP" +
+                    ")"
+            ).executeUpdate();
+
+            em.createNativeQuery(
+                    "CREATE TABLE IF NOT EXISTS fator_externo_estatistica (" +
+                    "id_produto BIGINT NOT NULL, " +
+                    "tipo_fator VARCHAR(24) NOT NULL, " +
+                    "n_com INT NOT NULL, " +
+                    "n_sem INT NOT NULL, " +
+                    "media_qtd_com DECIMAL(20,6), " +
+                    "media_qtd_sem DECIMAL(20,6), " +
+                    "desvio_com DECIMAL(20,6), " +
+                    "desvio_sem DECIMAL(20,6), " +
+                    "lift_pct DECIMAL(12,2), " +
+                    "z_welch DECIMAL(12,4), " +
+                    "significancia VARCHAR(14) NOT NULL, " +
+                    "atualizado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
+                    "PRIMARY KEY (id_produto, tipo_fator)" +
+                    ")"
+            ).executeUpdate();
+
             // Executa o script de inicialização do sistema (Unidades de Medida, Formas de Pagamento e Cliente Padrão)
             var inicializador = new br.com.senac.service.InicializadorSistemaService();
             inicializador.executarScriptInicializacao(em);

@@ -57,12 +57,36 @@ public class ProdutoDAO {
     }
 
     public Produto buscarPorNome(String nome) {
+        if (nome == null || nome.isBlank()) return null;
         try (EntityManager em = JPAUtil.getEntityManager()) {
-            return em.createQuery("SELECT p FROM Produto p WHERE p.nome = :nome", Produto.class)
-                    .setParameter("nome", nome)
-                    .getSingleResult();
-        } catch (NoResultException e) {
+            List<Produto> exatos = em.createQuery(
+                    "SELECT p FROM Produto p LEFT JOIN FETCH p.um WHERE LOWER(TRIM(p.nome)) = LOWER(TRIM(:nome)) ORDER BY p.id",
+                    Produto.class)
+                    .setParameter("nome", nome.trim())
+                    .getResultList();
+            if (!exatos.isEmpty()) {
+                return exatos.get(0);
+            }
+            List<Produto> parciais = em.createQuery(
+                    "SELECT p FROM Produto p LEFT JOIN FETCH p.um WHERE LOWER(p.nome) LIKE LOWER(:termo) ORDER BY p.id",
+                    Produto.class)
+                    .setParameter("termo", "%" + nome.trim() + "%")
+                    .getResultList();
+            if (!parciais.isEmpty()) {
+                return parciais.get(0);
+            }
             return null;
+        }
+    }
+
+    public List<Produto> buscarPorTermo(String termo) {
+        if (termo == null || termo.isBlank()) return List.of();
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            return em.createQuery(
+                    "SELECT p FROM Produto p LEFT JOIN FETCH p.um WHERE LOWER(p.nome) LIKE LOWER(:termo) ORDER BY p.id",
+                    Produto.class)
+                    .setParameter("termo", "%" + termo.trim() + "%")
+                    .getResultList();
         }
     }
 
