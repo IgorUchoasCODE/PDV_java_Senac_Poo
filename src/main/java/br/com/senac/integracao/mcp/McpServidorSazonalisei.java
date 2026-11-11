@@ -422,12 +422,17 @@ public class McpServidorSazonalisei {
     }
 
     private String formatarRetorno(Object dados) {
-        if (dados == null) return "OK";
+        if (dados == null) return "Nenhum registro encontrado.";
         if (dados instanceof Produto p) {
             return String.format("Produto #%d: '%s' | Preço: R$ %s | Unidade: %s",
                     p.getId(), p.getNome(),
                     p.getPrecoVenda() != null ? p.getPrecoVenda() : "0.00",
                     p.getUm() != null ? p.getUm().getSigla() : "UN");
+        }
+        if (dados instanceof Pessoa pes) {
+            return String.format("Pessoa #%d: '%s' | Cliente: %s | Fornecedor: %s | Limite: R$ %s",
+                    pes.getId(), pes.getNome(), pes.isCliente(), pes.isFornecedor(),
+                    pes.getLimite() != null ? pes.getLimite() : "0.00");
         }
         return dados.toString();
     }

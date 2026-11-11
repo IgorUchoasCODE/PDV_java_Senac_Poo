@@ -5,8 +5,14 @@ $cp = (Get-Content "$dir\target\cp.txt" -Raw).Trim() -replace 'C:\\Users\\[^\\]+
 if ($cp.StartsWith('-cp ')) {
     $cp = $cp.Substring(4).Trim().Trim('"')
 }
-$sources = Get-ChildItem -Path "$dir\src\main\java" -Filter "*.java" -Recurse | Select-Object -ExpandProperty FullName
-[System.IO.File]::WriteAllLines("$dir\target\sources.txt", $sources, [System.Text.Encoding]::ASCII)
+if (!(Test-Path "$dir\target\classes")) {
+    New-Item -ItemType Directory -Force -Path "$dir\target\classes" | Out-Null
+}
+if (Test-Path "$dir\src\main\resources") {
+    Copy-Item -Path "$dir\src\main\resources\*" -Destination "$dir\target\classes" -Recurse -Force
+}
+$sources = Get-ChildItem -Path "$dir\src\main\java" -Filter "*.java" -Recurse | ForEach-Object { '"' + ($_.FullName -replace '\\', '/') + '"' }
+[System.IO.File]::WriteAllLines("$dir\target\sources.txt", $sources, (New-Object System.Text.UTF8Encoding($false)))
 $srcPath = (Get-Item "$dir\target\sources.txt").FullName
 
 Write-Host "--- Compilando Projeto Java ---" -ForegroundColor Cyan

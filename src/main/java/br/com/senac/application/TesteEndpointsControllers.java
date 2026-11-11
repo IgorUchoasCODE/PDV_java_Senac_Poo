@@ -104,6 +104,37 @@ public class TesteEndpointsControllers {
             validarEndpoint(roteador, RotaSistema.PRODUTO_CATALOGO_LISTAR, Map.of());
             validarEndpoint(roteador, RotaSistema.PRODUTO_CATALOGO_BUSCAR, Map.of("id", idMonitor));
             validarEndpoint(roteador, RotaSistema.PRODUTO_CATALOGO_BUSCAR, Map.of("nome", "Monitor Gamer"));
+            validarEndpoint(roteador, RotaSistema.PRODUTO_BUSCAR_UNICO, Map.of("nome", "Monitor Gamer"));
+            validarEndpoint(roteador, RotaSistema.PRODUTO_ESTOQUE_VALIDO_LISTAR, Map.of());
+            validarEndpoint(roteador, RotaSistema.PRODUTO_ESTOQUE_VALIDO_BUSCAR_UNICO, Map.of("id", idMonitor));
+
+            // Validação de busca por palavras parciais ("ov branc tip a") e iniciais ("o b a")
+            roteador.executarEndpoint(RotaSistema.PRODUTO_FISICO_CADASTRAR, Map.of(
+                    "nome", "Ovo Branco Tipo A",
+                    "descricao", "Cartela de ovos brancos tipo A",
+                    "precoVenda", "18.90",
+                    "siglaUm", "UN"
+            ));
+            RespostaEndpoint<Object> respParcial1 = validarEndpoint(roteador, RotaSistema.PRODUTO_BUSCAR_UNICO, Map.of("nome", "ov branc tip a"));
+            if (respParcial1.dados() == null) {
+                throw new AssertionError("Busca parcial 'ov branc tip a' deveria encontrar 'Ovo Branco Tipo A'!");
+            }
+            RespostaEndpoint<Object> respIniciais1 = validarEndpoint(roteador, RotaSistema.PRODUTO_CATALOGO_BUSCAR, Map.of("nome", "o b a"));
+            if (respIniciais1.dados() == null) {
+                throw new AssertionError("Busca por iniciais 'o b a' deveria encontrar 'Ovo Branco Tipo A'!");
+            }
+
+            // Cadastra segundo produto compatível com "o b a" para validar retorno de lista para escolha do usuário
+            roteador.executarEndpoint(RotaSistema.PRODUTO_FISICO_CADASTRAR, Map.of(
+                    "nome", "Ovo Branco Tipo A Especial #" + sufixo,
+                    "descricao", "Cartela especial",
+                    "precoVenda", "22.90",
+                    "siglaUm", "UN"
+            ));
+            RespostaEndpoint<Object> respListaEscolha = validarEndpoint(roteador, RotaSistema.PRODUTO_CATALOGO_BUSCAR, Map.of("nome", "o b a"));
+            if (!(respListaEscolha.dados() instanceof List<?> listaOpcoes) || listaOpcoes.size() < 2) {
+                throw new AssertionError("Busca ambígua 'o b a' deveria retornar lista de opções para escolha do usuário!");
+            }
 
             // Atualização cadastral de produto (CRUD - nome/descrição)
             validarEndpoint(roteador, RotaSistema.PRODUTO_CATALOGO_ATUALIZAR, Map.of(
@@ -200,12 +231,14 @@ public class TesteEndpointsControllers {
             validarEndpoint(roteador, RotaSistema.PESSOA_REGISTRO_ADICIONAR, Map.of(
                     "idPessoa", idCliPf,
                     "tipoDocumento", "CNH",
-                    "numeroRegistro", "04599887766"
+                    "numeroRegistro", "04599887766" + sufixo
             ));
 
             validarEndpoint(roteador, RotaSistema.PESSOA_LISTAR_CLIENTES, Map.of());
             validarEndpoint(roteador, RotaSistema.PESSOA_LISTAR_FORNECEDORES, Map.of());
             validarEndpoint(roteador, RotaSistema.PESSOA_BUSCAR, Map.of("termo", "Roberto"));
+            validarEndpoint(roteador, RotaSistema.PESSOA_BUSCAR_UNICA, Map.of("idPessoa", idCliPf));
+            validarEndpoint(roteador, RotaSistema.PESSOA_REGISTRO_BUSCAR_UNICO, Map.of("tipoDocumento", "CNH", "numeroRegistro", "04599887766" + sufixo));
             validarEndpoint(roteador, RotaSistema.PESSOA_HISTORICO_COMPLETO, Map.of("idPessoa", idCliPf));
 
             // Exclusão de pessoa temporária
@@ -296,6 +329,8 @@ public class TesteEndpointsControllers {
 
             validarEndpoint(roteador, RotaSistema.ESTOQUE_SALDO_CONSOLIDADO, Map.of("idProduto", idMonitor));
             validarEndpoint(roteador, RotaSistema.ESTOQUE_FILA_LOTES_FIFO, Map.of("idProduto", idMonitor));
+            validarEndpoint(roteador, RotaSistema.ESTOQUE_LOTES_VALIDOS_LISTAR, Map.of("idProduto", idMonitor));
+            validarEndpoint(roteador, RotaSistema.ESTOQUE_LOTE_VALIDO_BUSCAR_UNICO, Map.of("idProduto", idMonitor));
             validarEndpoint(roteador, RotaSistema.ESTOQUE_BUSCAR_LOTE_ESPECIFICO, Map.of("idLote", idLoteCriado));
             validarEndpoint(roteador, RotaSistema.ESTOQUE_LOTES_PROXIMOS_VALIDADE, Map.of("dataLimite", LocalDate.now().plusMonths(18)));
             validarEndpoint(roteador, RotaSistema.ESTOQUE_BAIXAR_PERDA_DIRETA, Map.of(
@@ -374,6 +409,17 @@ public class TesteEndpointsControllers {
 
             // ==================== 7. MÓDULO RELATÓRIOS CONTÁBEIS E SAZONAIS ====================
             Long idNotaVendaRelatorio = vendaFifoSalva != null ? vendaFifoSalva.getId() : 1L;
+            validarEndpoint(roteador, RotaSistema.NOTA_BUSCAR_UNICA, Map.of("idNota", idNotaVendaRelatorio));
+            validarEndpoint(roteador, RotaSistema.NOTA_LISTAR_PADRAO, Map.of("tipoNota", "VENDA"));
+            validarEndpoint(roteador, RotaSistema.NOTA_DEFINIR_DATA, Map.of(
+                    "idNota", idNotaVendaRelatorio,
+                    "data", LocalDateTime.now().toString()
+            ));
+            validarEndpoint(roteador, RotaSistema.BUSCA_PADRAO_IA, Map.of(
+                    "entidade", "PRODUTO_ESTOQUE_VALIDO",
+                    "id", idMonitor,
+                    "unico", true
+            ));
             validarEndpoint(roteador, RotaSistema.RELATORIO_LUCRO_CONTABIL_BACEN, Map.of("idNotaVenda", idNotaVendaRelatorio));
             validarEndpoint(roteador, RotaSistema.RELATORIO_PERDAS_POR_FORNECEDOR, Map.of(
                     "fornecedor", fornecedorPj,
@@ -406,6 +452,7 @@ public class TesteEndpointsControllers {
             validarEndpoint(roteador, RotaSistema.ESTATISTICA_FATORES_PRODUTO, Map.of("idProduto", idMonitor));
             validarEndpoint(roteador, RotaSistema.FATOR_EXTERNO_EVENTOS_LISTAR, Map.of("limite", 10));
             validarEndpoint(roteador, RotaSistema.FATOR_EXTERNO_RESOLVER_PENDENCIAS, Map.of());
+            validarEndpoint(roteador, RotaSistema.FATOR_EXTERNO_RELATORIO_INTEGRADO_NOTAS, Map.of("idNota", idNotaVendaRelatorio));
 
             // ==================== 9. VALIDAÇÃO DO SCHEMA JSON DE FERRAMENTAS GEMINI ====================
             String jsonToolsGemini = roteador.exportarDeclaracoesFerramentasGeminiJson();

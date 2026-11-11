@@ -1,6 +1,7 @@
 package br.com.senac.repository.dao.nota;
 
 import br.com.senac.repository.dao.JPAUtil;
+import br.com.senac.repository.dao.PadraoDAO;
 import br.com.senac.repository.modal.nota.Item;
 import br.com.senac.repository.modal.nota.Nota;
 import br.com.senac.repository.modal.nota.NotaPerda;
@@ -15,7 +16,65 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-public class NotaDAO {
+public class NotaDAO implements PadraoDAO<Nota, Long> {
+
+    @Override
+    public Nota salvar(Nota nota) {
+        return salvarComSincronizacaoFIFO(nota, null);
+    }
+
+    @Override
+    public Nota atualizar(Nota nota) {
+        if (nota != null && nota.getId() != null && isBloqueadoParaBandejaIA(nota.getId())) {
+            throw new IllegalStateException("Nota #" + nota.getId() + " está bloqueada na Bandeja de Contexto da IA.");
+        }
+        return salvarComSincronizacaoFIFO(nota, null);
+    }
+
+    @Override
+    public Nota buscarPorId(Long id) {
+        return buscarNotaPorId(id);
+    }
+
+    @Override
+    public List<Nota> listarTodos() {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            List<Nota> lista = em.createQuery(
+                            "SELECT DISTINCT n FROM Nota n LEFT JOIN FETCH n.itens LEFT JOIN FETCH n.pessoa ORDER BY n.dataGerada DESC",
+                            Nota.class)
+                    .getResultList();
+            lista.forEach(this::inicializarGrafoNotaParaEndpoint);
+            return lista;
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    @Override
+    public boolean deletar(Long id) {
+        if (id == null) return false;
+        if (isBloqueadoParaBandejaIA(id)) {
+            throw new IllegalStateException("Nota #" + id + " está bloqueada na Bandeja de Contexto da IA.");
+        }
+        EntityManager em = JPAUtil.getEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        try {
+            tx.begin();
+            Nota nota = em.find(Nota.class, id);
+            if (nota != null) {
+                em.remove(nota);
+                tx.commit();
+                return true;
+            }
+            tx.commit();
+            return false;
+        } catch (Exception e) {
+            if (tx.isActive()) tx.rollback();
+            throw e;
+        } finally {
+            em.close();
+        }
+    }
 
     /**
      * Salva a Nota e atualiza em uma única transação atômica (ACID) os saldos dos lotes de origem consumidos
@@ -102,6 +161,35 @@ public class NotaDAO {
                     .setParameter("hoje", LocalDate.now())
                     .getResultList();
         }
+    }
+
+    /**
+     * Busca todos os lotes disponíveis com estoque válido (quantidadeDisponivel > 0 e dentro da validade) de todos os produtos.
+     */
+    @SuppressWarnings("unchecked")
+    public List<Item<? extends Produto>> listarTodosLotesComEstoqueValido() {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            return (List<Item<? extends Produto>>) (List<?>) em.createQuery(
+                            "SELECT i FROM Item i JOIN FETCH i.produto p LEFT JOIN FETCH p.um JOIN FETCH i.nota n LEFT JOIN FETCH n.pessoa " +
+                            "WHERE TYPE(n) = br.com.senac.repository.modal.nota.NotaCompra " +
+                            "AND i.quantidadeDisponivel > 0 " +
+                            "AND (i.dataValidade IS NULL OR i.dataValidade >= :hoje) " +
+                            "ORDER BY p.id ASC, i.data ASC, i.dataValidade ASC, i.id ASC",
+                            Item.class)
+                    .setParameter("hoje", LocalDate.now())
+                    .getResultList();
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    /**
+     * Busca o lote prioritário único (primeiro da fila FIFO com estoque válido) de um determinado produto.
+     */
+    public Item<? extends Produto> buscarPrimeiroLoteComEstoqueValido(Long idProduto) {
+        if (idProduto == null) return null;
+        List<Item<? extends Produto>> lotes = buscarLotesDisponiveisFIFO(idProduto);
+        return lotes.isEmpty() ? null : lotes.get(0);
     }
 
     /**

@@ -31,6 +31,12 @@ public class NotaDevolucao extends Nota {
         this.motivo = motivo;
     }
 
+    public NotaDevolucao(NotaVenda notaVenda, String motivo, java.time.LocalDateTime dataGerada) {
+        super(notaVenda != null ? notaVenda.getPessoa() : null, "Devolução: " + motivo, dataGerada);
+        this.notaVenda = notaVenda;
+        this.motivo = motivo;
+    }
+
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Item<? extends Produto> adicionarItemDevolvido(Item<? extends Produto> itemVendaOrigem, BigDecimal quantidade) {
         if (itemVendaOrigem == null || quantidade == null || quantidade.compareTo(BigDecimal.ZERO) <= 0) {

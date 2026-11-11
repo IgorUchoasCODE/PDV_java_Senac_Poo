@@ -8,7 +8,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "pessoa")
+@Table(
+        name = "pessoa",
+        indexes = {
+                @Index(name = "idx_pessoa_nome", columnList = "nome")
+        }
+)
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "tipo_pessoa", discriminatorType = DiscriminatorType.STRING, length = 2)
 public abstract class Pessoa implements Serializable {
@@ -19,7 +24,7 @@ public abstract class Pessoa implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "nome", nullable = false, length = 150)
+    @Column(name = "nome", nullable = false, length = 150, unique = false)
     private String nome;
 
     @Column(name = "limite", precision = 20, scale = 2)
@@ -113,5 +118,11 @@ public abstract class Pessoa implements Serializable {
     @Override
     public int hashCode() {
         return id != null ? id.hashCode() : System.identityHashCode(this);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s{id=%d, nome='%s', cliente=%s, fornecedor=%s, limite=%s}",
+                getClass().getSimpleName(), id, nome, isCliente, isFornecedor, limite);
     }
 }

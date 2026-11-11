@@ -30,6 +30,10 @@ public class NotaCompra extends Nota implements OperacaoComDesconto {
         super(fornecedor, descricao);
     }
 
+    public NotaCompra(Pessoa fornecedor, String descricao, java.time.LocalDateTime dataGerada) {
+        super(fornecedor, descricao, dataGerada);
+    }
+
     public void adicionarNotaPerda(NotaPerda notaPerda) {
         if (validarNotaPerdaPosVendaFornecedor(notaPerda)) {
             notaPerda.setNotaCompraAbatimento(this);

@@ -239,4 +239,12 @@ public class ClimaService implements ProvedorFatorExterno {
         cacheClimaAtual6Horas.entrySet().removeIf(e -> !e.getValue().isValido());
         cacheClimaDiarioAtual6Horas.entrySet().removeIf(e -> !e.getValue().isValido());
     }
+
+    @Override
+    public String extrairDetalheVinculo(VinculoFatorExternoNota vinculo) {
+        if (vinculo == null || vinculo.getClimaRegistrado() == null) return "N/A";
+        ClimaDiario c = vinculo.getClimaRegistrado();
+        return String.format(Locale.US, "Temp Média: %.1f°C (Máx %.1f°C / Mín %.1f°C), Chuva: %.1f mm, Vento: %.1f km/h",
+                c.temperaturaMedia(), c.temperaturaMax(), c.temperaturaMin(), c.precipitacaoMm(), c.ventoMaxKmh());
+    }
 }

@@ -281,4 +281,12 @@ public class CalendarioService implements ProvedorFatorExterno {
         vinculo.setQuintoDiaUtil(data.equals(quintoUtil));
         vinculo.setResumoCalendario(obterResumoDiaUtil(data, coordenada));
     }
+
+    @Override
+    public String extrairDetalheVinculo(VinculoFatorExternoNota vinculo) {
+        if (vinculo == null) return "N/A";
+        return String.format("%s | 5º Dia Útil: %s",
+                vinculo.getResumoCalendario() != null ? vinculo.getResumoCalendario() : (vinculo.isDiaUtil() ? "DIA ÚTIL" : "DIA NÃO ÚTIL"),
+                vinculo.isQuintoDiaUtil() ? "SIM" : "NÃO");
+    }
 }

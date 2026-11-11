@@ -129,4 +129,11 @@ public class MinisterioCulturaService implements ProvedorFatorExterno {
     public void limparCacheExpirado() {
         cacheEventos7Dias.entrySet().removeIf(e -> !e.getValue().isValido());
     }
+
+    @Override
+    public String extrairDetalheVinculo(VinculoFatorExternoNota vinculo) {
+        if (vinculo == null) return "N/A";
+        return String.format("Projetos Culturais MinC/Ativos: %d | Resumo: %s",
+                vinculo.getTotalEventosAtivos(), vinculo.getResumoEventosJson());
+    }
 }

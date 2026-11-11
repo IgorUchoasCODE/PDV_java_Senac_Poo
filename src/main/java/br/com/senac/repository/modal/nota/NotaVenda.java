@@ -29,6 +29,10 @@ public class NotaVenda extends Nota implements OperacaoComDesconto {
         super(cliente, descricao);
     }
 
+    public NotaVenda(Pessoa cliente, String descricao, LocalDateTime dataGerada) {
+        super(cliente, descricao, dataGerada);
+    }
+
     public boolean validarLimiteCliente() {
         if (getPessoa() == null || !getPessoa().isCliente()) {
             return false;

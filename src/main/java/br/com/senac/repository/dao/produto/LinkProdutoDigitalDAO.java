@@ -1,21 +1,31 @@
 package br.com.senac.repository.dao.produto;
 
 import br.com.senac.repository.dao.JPAUtil;
+import br.com.senac.repository.dao.PadraoDAO;
 import br.com.senac.repository.modal.produto.LinkProdutoDigital;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
 
 import java.util.List;
 
-public class LinkProdutoDigitalDAO {
+public class LinkProdutoDigitalDAO implements PadraoDAO<LinkProdutoDigital, Long> {
 
-    public void salvar(LinkProdutoDigital link) {
+    @Override
+    public LinkProdutoDigital salvar(LinkProdutoDigital link) {
+        if (link != null && link.getId() != null && isBloqueadoParaBandejaIA(link.getId())) {
+            throw new IllegalStateException("Link digital #" + link.getId() + " está bloqueado na Bandeja de Contexto da IA.");
+        }
         EntityManager em = JPAUtil.getEntityManager();
         EntityTransaction tx = em.getTransaction();
         try {
             tx.begin();
-            em.persist(link);
+            if (link.getId() == null) {
+                em.persist(link);
+            } else {
+                em.merge(link);
+            }
             tx.commit();
+            return link;
         } catch (Exception e) {
             if (tx.isActive()) tx.rollback();
             throw e;
@@ -24,7 +34,11 @@ public class LinkProdutoDigitalDAO {
         }
     }
 
+    @Override
     public LinkProdutoDigital atualizar(LinkProdutoDigital link) {
+        if (link != null && link.getId() != null && isBloqueadoParaBandejaIA(link.getId())) {
+            throw new IllegalStateException("Link digital #" + link.getId() + " está bloqueado na Bandeja de Contexto da IA.");
+        }
         EntityManager em = JPAUtil.getEntityManager();
         EntityTransaction tx = em.getTransaction();
         try {
@@ -40,7 +54,9 @@ public class LinkProdutoDigitalDAO {
         }
     }
 
+    @Override
     public LinkProdutoDigital buscarPorId(Long id) {
+        if (id == null) return null;
         try (EntityManager em = JPAUtil.getEntityManager()) {
             return em.find(LinkProdutoDigital.class, id);
         }
@@ -56,7 +72,20 @@ public class LinkProdutoDigitalDAO {
         }
     }
 
-    public void deletar(Long id) {
+    @Override
+    public List<LinkProdutoDigital> listarTodos() {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            return em.createQuery("SELECT l FROM LinkProdutoDigital l ORDER BY l.id", LinkProdutoDigital.class)
+                    .getResultList();
+        }
+    }
+
+    @Override
+    public boolean deletar(Long id) {
+        if (id == null) return false;
+        if (isBloqueadoParaBandejaIA(id)) {
+            throw new IllegalStateException("Link digital #" + id + " está bloqueado na Bandeja de Contexto da IA.");
+        }
         EntityManager em = JPAUtil.getEntityManager();
         EntityTransaction tx = em.getTransaction();
         try {
@@ -64,8 +93,11 @@ public class LinkProdutoDigitalDAO {
             LinkProdutoDigital link = em.find(LinkProdutoDigital.class, id);
             if (link != null) {
                 em.remove(link);
+                tx.commit();
+                return true;
             }
             tx.commit();
+            return false;
         } catch (Exception e) {
             if (tx.isActive()) tx.rollback();
             throw e;

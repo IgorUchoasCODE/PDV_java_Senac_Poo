@@ -1,6 +1,7 @@
 package br.com.senac.repository.dao.produto;
 
 import br.com.senac.repository.dao.JPAUtil;
+import br.com.senac.repository.dao.PadraoDAO;
 import br.com.senac.repository.modal.produto.ProdutoImagem;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
@@ -10,9 +11,13 @@ import java.util.List;
 /**
  * DAO direto para persistência e recuperação de imagens de produtos.
  */
-public class ProdutoImagemDAO {
+public class ProdutoImagemDAO implements PadraoDAO<ProdutoImagem, Long> {
 
+    @Override
     public ProdutoImagem salvar(ProdutoImagem imagem) {
+        if (imagem != null && imagem.getId() != null && isBloqueadoParaBandejaIA(imagem.getId())) {
+            throw new IllegalStateException("Imagem #" + imagem.getId() + " está bloqueada na Bandeja de Contexto da IA.");
+        }
         EntityManager em = JPAUtil.getEntityManager();
         EntityTransaction tx = em.getTransaction();
         try {
@@ -28,13 +33,24 @@ public class ProdutoImagemDAO {
         }
     }
 
+    @Override
     public ProdutoImagem atualizar(ProdutoImagem imagem) {
         return salvar(imagem);
     }
 
+    @Override
     public ProdutoImagem buscarPorId(Long id) {
+        if (id == null) return null;
         try (EntityManager em = JPAUtil.getEntityManager()) {
             return em.find(ProdutoImagem.class, id);
+        }
+    }
+
+    @Override
+    public List<ProdutoImagem> listarTodos() {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            return em.createQuery("SELECT pi FROM ProdutoImagem pi ORDER BY pi.id", ProdutoImagem.class)
+                    .getResultList();
         }
     }
 
@@ -111,6 +127,10 @@ public class ProdutoImagemDAO {
     }
 
     public boolean remover(Long idImagem) {
+        if (idImagem == null) return false;
+        if (isBloqueadoParaBandejaIA(idImagem)) {
+            throw new IllegalStateException("Imagem #" + idImagem + " está bloqueada na Bandeja de Contexto da IA.");
+        }
         EntityManager em = JPAUtil.getEntityManager();
         EntityTransaction tx = em.getTransaction();
         try {
@@ -129,6 +149,11 @@ public class ProdutoImagemDAO {
         } finally {
             em.close();
         }
+    }
+
+    @Override
+    public boolean deletar(Long idImagem) {
+        return remover(idImagem);
     }
 
     public long contarPorProduto(Long idProduto) {

@@ -17,10 +17,14 @@ import java.util.Properties;
 public class ConfigIA {
 
     private String provedor = "gemini";
+    private String provedoresFailover = "gemini,openai";
     private String openaiUrl = "http://localhost:11434/v1";
     private String openaiModelo = "llama3.1";
     private String openaiChave = "";
     private int openaiTimeoutSegundos = 120;
+    private String openai2Url = "";
+    private String openai2Modelo = "";
+    private String openai2Chave = "";
 
     private static ConfigIA instancia;
 
@@ -42,9 +46,13 @@ public class ConfigIA {
             }
         }
         provedor = valor(p, "ia.provedor", provedor);
+        provedoresFailover = valor(p, "ia.provedores.failover", provedoresFailover);
         openaiUrl = valor(p, "ia.openai.url", openaiUrl);
         openaiModelo = valor(p, "ia.openai.modelo", openaiModelo);
         openaiChave = valor(p, "ia.openai.chave", openaiChave);
+        openai2Url = valor(p, "ia.openai2.url", openai2Url);
+        openai2Modelo = valor(p, "ia.openai2.modelo", openai2Modelo);
+        openai2Chave = valor(p, "ia.openai2.chave", openai2Chave);
         try {
             openaiTimeoutSegundos = Integer.parseInt(valor(p, "ia.openai.timeout.segundos", String.valueOf(openaiTimeoutSegundos)));
         } catch (NumberFormatException ignored) {
@@ -82,5 +90,25 @@ public class ConfigIA {
 
     public int getOpenaiTimeoutSegundos() {
         return openaiTimeoutSegundos;
+    }
+
+    public String getProvedoresFailover() {
+        return provedoresFailover;
+    }
+
+    public void setProvedoresFailover(String provedoresFailover) {
+        this.provedoresFailover = provedoresFailover;
+    }
+
+    public String getOpenai2Url() {
+        return openai2Url;
+    }
+
+    public String getOpenai2Modelo() {
+        return openai2Modelo;
+    }
+
+    public String getOpenai2Chave() {
+        return openai2Chave;
     }
 }

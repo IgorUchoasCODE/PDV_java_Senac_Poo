@@ -24,12 +24,12 @@ public final class ManualInstrucoesIA {
 
     public static String gerar() {
         StringBuilder sb = new StringBuilder();
-        sb.append("# MANUAL DO SISTEMA DE VENDAS SAZONALISEI - INSTRUÇÕES PARA IA\n\n");
+        sb.append(ContextoIABuilder.propriedade("ia.manual.titulo",
+                "# MANUAL DO SISTEMA DE VENDAS SAZONALISEI - INSTRUÇÕES PARA IA")).append("\n\n");
 
         sb.append("## 1. Seu papel\n");
-        sb.append("Você é o assistente operacional do Sistema de Vendas Sazonalisei. O usuário fala em português natural ")
-          .append("(texto ou voz transcrita). Você traduz o pedido em AÇÕES, cada uma apontando para uma ROTA do sistema ")
-          .append("(catálogo na seção 5). Você NÃO executa nada: quem executa e valida é o sistema.\n");
+        sb.append(ContextoIABuilder.propriedade("ia.contexto.papel",
+                "Você é o assistente operacional do Sistema de Vendas Sazonalisei.")).append("\n");
         GeminiConfig cfg = GeminiConfig.getInstancia();
         if (cfg.getPersonalidade() != null && !cfg.getPersonalidade().isBlank()) {
             sb.append("\nPersonalidade e tom da mensagem ao usuário: ").append(cfg.getPersonalidade().trim()).append("\n");
@@ -37,51 +37,18 @@ public final class ManualInstrucoesIA {
         if (cfg.getInstrucoesCustomizadas() != null && !cfg.getInstrucoesCustomizadas().isBlank()) {
             sb.append("Instruções adicionais do usuário: ").append(cfg.getInstrucoesCustomizadas().trim()).append("\n");
         }
-        sb.append("Data de hoje: ").append(LocalDate.now()).append(" (use para 'hoje', 'amanhã', 'daqui 30 dias').\n\n");
+        sb.append("Data de hoje: ").append(LocalDate.now()).append(".\n\n");
 
         sb.append("## 2. Formato OBRIGATÓRIO da resposta\n");
-        sb.append("Responda SOMENTE com um JSON (pode estar dentro de um bloco ```json), sem texto fora dele:\n\n");
+        sb.append(ContextoIABuilder.propriedade("ia.manual.formato.json",
+                "Responda SOMENTE com um JSON contendo mensagem e acoes.")).append("\n\n");
         sb.append("```json\n{\n  \"mensagem\": \"o que você entendeu e vai fazer, em português curto\",\n")
           .append("  \"acoes\": [\n    { \"rota\": \"NOME_DA_ROTA\", \"parametros\": { \"campo\": \"valor\" } }\n  ]\n}\n```\n\n");
-        sb.append("- `rota`: exatamente um nome do catálogo (seção 5).\n");
-        sb.append("- `parametros`: apenas os campos listados na rota. Os marcados como obrigatórios nunca podem faltar.\n");
-        sb.append("- Se for só conversa, ou se faltar informação: `\"acoes\": []` e pergunte em `mensagem`.\n\n");
 
-        sb.append("## 3. Regras semânticas (como entender o usuário)\n");
-        sb.append("1. ATUALIZAÇÃO E EXCLUSÃO PELO NOME: Se o usuário pedir para atualizar ou alterar produto citando o nome atual ")
-          .append("(ex: 'quero alterar o nome do produto ovos para Ovos branco tipo A' ou 'mude o preço de ovos para 10.00'), ")
-          .append("use DIRETAMENTE a rota de atualização correspondente (ex: PRODUTO_CATALOGO_ATUALIZAR com nomeAtual='ovos' e novoNome='Ovos branco tipo A', ")
-          .append("ou PRODUTO_CATALOGO_ATUALIZAR_PRECO com nomeProduto='ovos' e novoPreco='10.00'). O sistema resolve o produto no banco pelo nome automaticamente!\n");
-        sb.append("2. BANDEJA DE CONTEXTO E HUMAN-IN-THE-LOOP: O sistema gerencia uma BANDEJA DE CONTEXTO. Todas as ações de cadastro, ")
-          .append("atualização e exclusão geradas ficam retidas e validadas na bandeja. O sistema solicita confirmação ('SIM') ao usuário ")
-          .append("e executa todas as instruções em lote, fechando a janela de contexto ao concluir. Não peça confirmação no JSON.\n");
-        sb.append("3. NUNCA invente IDs fictícios. Se o usuário quiser excluir uma pessoa e não souber o ID, use PESSOA_BUSCAR ou PESSOA_LISTAR_CLIENTES.\n");
-        sb.append("4. Formatos: dinheiro, preço, quantidade e limite = TEXTO com ponto decimal (\"49.90\", \"1.000000\"); ")
-          .append("IDs e contagens = número; datas = \"AAAA-MM-DD\"; verdadeiro/falso = true/false; CPF/CNPJ com pontuação.\n");
-        sb.append("5. Pedidos independentes na mesma frase => várias ações na lista (ex: cadastrar múltiplos produtos ou produto e unidade).\n");
-        sb.append("6. Mantenha `mensagem` curta, clara e sem termos técnicos (nada de nomes de rota para o usuário).\n\n");
+        sb.append("## 3. Regras semânticas e Leitura de Comandos $$\n");
+        sb.append(ContextoIABuilder.propriedade("ia.contexto.diretrizes", "")).append("\n\n");
 
-        sb.append("### Dicionário rápido (frase do usuário -> rota)\n");
-        sb.append("| O usuário diz | Rota |\n|---|---|\n");
-        sb.append("| \"quanto custa / me mostra o produto 86\" | PRODUTO_CATALOGO_BUSCAR |\n");
-        sb.append("| \"liste os produtos\" | PRODUTO_CATALOGO_LISTAR |\n");
-        sb.append("| \"mude o preço do produto 86 para 120\" | PRODUTO_CATALOGO_ATUALIZAR_PRECO |\n");
-        sb.append("| \"apague / delete / remova o produto 86\" | PRODUTO_CATALOGO_EXCLUIR |\n");
-        sb.append("| \"liste meus clientes\" | PESSOA_LISTAR_CLIENTES |\n");
-        sb.append("| \"apague o cliente 12\" | PESSOA_CLIENTE_EXCLUIR |\n");
-        sb.append("| \"quanto tenho em estoque do produto 5\" | ESTOQUE_SALDO_CONSOLIDADO |\n\n");
-
-        sb.append("## 4. Exemplos completos\n");
-        sb.append("Usuário: \"qual o preço do produto 86?\"\n```json\n")
-          .append("{\"mensagem\":\"Vou consultar o produto 86.\",\"acoes\":[{\"rota\":\"PRODUTO_CATALOGO_BUSCAR\",\"parametros\":{\"id\":86}}]}\n```\n");
-        sb.append("Usuário: \"muda o preço do 86 pra 120 reais\"\n```json\n")
-          .append("{\"mensagem\":\"Vou alterar o preço do produto 86 para R$ 120,00.\",\"acoes\":[{\"rota\":\"PRODUTO_CATALOGO_ATUALIZAR_PRECO\",\"parametros\":{\"idProduto\":86,\"novoPreco\":\"120.00\"}}]}\n```\n");
-        sb.append("Usuário: \"apaga o produto 86\"\n```json\n")
-          .append("{\"mensagem\":\"Vou excluir o produto 86 (o sistema vai pedir sua confirmação).\",\"acoes\":[{\"rota\":\"PRODUTO_CATALOGO_EXCLUIR\",\"parametros\":{\"idProduto\":86}}]}\n```\n");
-        sb.append("Usuário: \"apaga o cliente Igor\" (sem ID)\n```json\n")
-          .append("{\"mensagem\":\"Vou listar os clientes para localizar o Igor. Depois me diga o ID.\",\"acoes\":[{\"rota\":\"PESSOA_LISTAR_CLIENTES\",\"parametros\":{}}]}\n```\n\n");
-
-        sb.append("## 5. Catálogo de rotas\n");
+        sb.append("## 4. Catálogo de rotas\n");
         Map<String, List<RotaSistema>> porModulo = new LinkedHashMap<>();
         for (RotaSistema r : RotaSistema.values()) {
             porModulo.computeIfAbsent(String.valueOf(r.getModulo()), k -> new ArrayList<>()).add(r);
@@ -228,6 +195,35 @@ public final class ManualInstrucoesIA {
                     (params != null && params.get("nomeProduto") != null && !params.get("nomeProduto").toString().isBlank());
             if (!temIdentificador) {
                 faltando.add("idProduto");
+            }
+        } else if (r == RotaSistema.PRODUTO_BUSCAR_UNICO || r == RotaSistema.PRODUTO_ESTOQUE_VALIDO_BUSCAR_UNICO) {
+            boolean temIdentificador = (params != null && (params.get("id") != null || params.get("idProduto") != null)) ||
+                    (params != null && params.get("nome") != null && !params.get("nome").toString().isBlank()) ||
+                    (params != null && params.get("termo") != null && !params.get("termo").toString().isBlank());
+            if (!temIdentificador) {
+                faltando.add("nome");
+            }
+        } else if (r == RotaSistema.PESSOA_BUSCAR || r == RotaSistema.PESSOA_BUSCAR_UNICA) {
+            boolean temIdentificador = (params != null && (params.get("idPessoa") != null || params.get("id") != null)) ||
+                    (params != null && params.get("termo") != null && !params.get("termo").toString().isBlank()) ||
+                    (params != null && params.get("nome") != null && !params.get("nome").toString().isBlank()) ||
+                    (params != null && params.get("documento") != null && !params.get("documento").toString().isBlank()) ||
+                    (params != null && params.get("registro") != null && !params.get("registro").toString().isBlank());
+            if (!temIdentificador) {
+                faltando.add("termo");
+            }
+        } else if (r == RotaSistema.PESSOA_REGISTRO_BUSCAR_UNICO) {
+            boolean temIdentificador = (params != null && params.get("numeroRegistro") != null && !params.get("numeroRegistro").toString().isBlank()) ||
+                    (params != null && params.get("documento") != null && !params.get("documento").toString().isBlank()) ||
+                    (params != null && params.get("registro") != null && !params.get("registro").toString().isBlank()) ||
+                    (params != null && params.get("termo") != null && !params.get("termo").toString().isBlank());
+            if (!temIdentificador) {
+                faltando.add("numeroRegistro");
+            }
+        } else if (r == RotaSistema.NOTA_BUSCAR_UNICA) {
+            boolean temIdentificador = params != null && (params.get("idNota") != null || params.get("id") != null);
+            if (!temIdentificador) {
+                faltando.add("idNota");
             }
         }
 

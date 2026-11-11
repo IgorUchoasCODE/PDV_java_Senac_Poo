@@ -284,4 +284,11 @@ public class SymplaService implements ProvedorFatorExterno {
     public void limparCacheExpirado() {
         cacheEventos7Dias.entrySet().removeIf(e -> !e.getValue().isValido());
     }
+
+    @Override
+    public String extrairDetalheVinculo(VinculoFatorExternoNota vinculo) {
+        if (vinculo == null) return "N/A";
+        return String.format("Eventos Sympla/Ativos: %d | Resumo: %s",
+                vinculo.getTotalEventosAtivos(), vinculo.getResumoEventosJson());
+    }
 }

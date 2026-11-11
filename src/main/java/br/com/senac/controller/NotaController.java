@@ -60,8 +60,19 @@ public class NotaController {
             List<NotaPagamento> pagamentos,
             String cupomDescontoOpcional,
             BigDecimal valorDescontoCupom) {
+        return emitirVendaFIFO(clienteOuNullParaPadrao, descricaoVenda, produtosEQuantidades, pagamentos, cupomDescontoOpcional, valorDescontoCupom, null);
+    }
 
-        NotaVenda venda = new NotaVenda(clienteOuNullParaPadrao, descricaoVenda);
+    public NotaVenda emitirVendaFIFO(
+            Pessoa clienteOuNullParaPadrao,
+            String descricaoVenda,
+            Map<Produto, BigDecimal> produtosEQuantidades,
+            List<NotaPagamento> pagamentos,
+            String cupomDescontoOpcional,
+            BigDecimal valorDescontoCupom,
+            java.time.LocalDateTime dataGeradaOpcional) {
+
+        NotaVenda venda = new NotaVenda(clienteOuNullParaPadrao, descricaoVenda, dataGeradaOpcional);
         if (cupomDescontoOpcional != null && !cupomDescontoOpcional.isBlank()) {
             venda.aplicarCupomDesconto(cupomDescontoOpcional, valorDescontoCupom);
         }
@@ -74,8 +85,15 @@ public class NotaController {
     public NotaVenda emitirVendaBalcaoClienteNaoRegistradoFIFO(
             Map<Produto, BigDecimal> produtosEQuantidades,
             List<NotaPagamento> pagamentos) {
+        return emitirVendaBalcaoClienteNaoRegistradoFIFO(produtosEQuantidades, pagamentos, null);
+    }
 
-        NotaVenda vendaBalcao = new NotaVenda(null, "Venda de Balcão - Consumidor Não Registrado");
+    public NotaVenda emitirVendaBalcaoClienteNaoRegistradoFIFO(
+            Map<Produto, BigDecimal> produtosEQuantidades,
+            List<NotaPagamento> pagamentos,
+            java.time.LocalDateTime dataGeradaOpcional) {
+
+        NotaVenda vendaBalcao = new NotaVenda(null, "Venda de Balcão - Consumidor Não Registrado", dataGeradaOpcional);
         return manageNotas.emitirNotaVendaFIFO(vendaBalcao, produtosEQuantidades, pagamentos);
     }
 
@@ -87,8 +105,17 @@ public class NotaController {
             String descricaoVenda,
             Map<Long, BigDecimal> lotesDesejadosEQuantidades,
             List<NotaPagamento> pagamentos) {
+        return emitirVendaPorLoteDesejado(clienteOuNullParaPadrao, descricaoVenda, lotesDesejadosEQuantidades, pagamentos, null);
+    }
 
-        NotaVenda venda = new NotaVenda(clienteOuNullParaPadrao, descricaoVenda);
+    public NotaVenda emitirVendaPorLoteDesejado(
+            Pessoa clienteOuNullParaPadrao,
+            String descricaoVenda,
+            Map<Long, BigDecimal> lotesDesejadosEQuantidades,
+            List<NotaPagamento> pagamentos,
+            java.time.LocalDateTime dataGeradaOpcional) {
+
+        NotaVenda venda = new NotaVenda(clienteOuNullParaPadrao, descricaoVenda, dataGeradaOpcional);
         return manageNotas.emitirNotaVendaPorLoteDesejado(venda, lotesDesejadosEQuantidades, pagamentos);
     }
 
@@ -152,8 +179,54 @@ public class NotaController {
         return notaDAO.consultarViewAnaliseSazonalVendas();
     }
 
+    /**
+     * Gera o relatório padronizado de fatores externos (Clima, Rios, Calendário e Eventos) citando cada Nota.
+     */
+    public String gerarRelatorioIntegradoFatoresExternosCitandoNotas(List<? extends Nota> notas) {
+        return manageNotas.gerarRelatorioIntegradoCitandoNotas(notas);
+    }
+
+    public List<Map<String, Object>> consultarRelatorioIntegradoFatoresExternosPorNotas(List<? extends Nota> notas) {
+        return manageNotas.estruturarRelatorioIntegradoCitandoNotas(notas);
+    }
+
     public Nota buscarNotaPorId(Long idNota) {
         return notaDAO.buscarNotaPorId(idNota);
+    }
+
+    public List<Nota> listarTodasNotas() {
+        return notaDAO.listarTodos();
+    }
+
+    public List<Nota> listarNotasPorPessoa(Long idPessoa) {
+        return notaDAO.listarNotasPorPessoa(idPessoa);
+    }
+
+    public Nota definirDataNota(Long idNota, java.time.LocalDateTime novaData) {
+        if (idNota == null) {
+            throw new IllegalArgumentException("O ID da nota é obrigatório para definir a data.");
+        }
+        Nota nota = notaDAO.buscarNotaPorId(idNota);
+        if (nota == null) {
+            throw new IllegalArgumentException("Nota não encontrada para o ID #" + idNota);
+        }
+        nota.definirData(novaData != null ? novaData : java.time.LocalDateTime.now());
+        return notaDAO.atualizar(nota);
+    }
+
+    public Map<String, Object> gerarRelatorioIntegradoPadraoNotas(Long idNotaOpcional) {
+        List<Nota> notasAlvo;
+        if (idNotaOpcional != null) {
+            Nota unica = notaDAO.buscarNotaPorId(idNotaOpcional);
+            notasAlvo = unica != null ? List.of(unica) : java.util.Collections.emptyList();
+        } else {
+            notasAlvo = notaDAO.listarTodos();
+        }
+        Map<String, Object> resultado = new java.util.LinkedHashMap<>();
+        resultado.put("quantidadeNotasCitadas", notasAlvo.size());
+        resultado.put("relatorioTextoPadronizado", manageNotas.gerarRelatorioIntegradoCitandoNotas(notasAlvo));
+        resultado.put("notasCitadas", manageNotas.estruturarRelatorioIntegradoCitandoNotas(notasAlvo));
+        return resultado;
     }
 
     public <T extends Nota> List<T> listarNotasPorTipo(Class<T> tipoNota) {

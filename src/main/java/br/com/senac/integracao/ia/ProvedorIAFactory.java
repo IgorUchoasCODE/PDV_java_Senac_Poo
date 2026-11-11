@@ -2,10 +2,18 @@ package br.com.senac.integracao.ia;
 
 import br.com.senac.integracao.gemini.GeminiClientService;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+
 /**
- * Escolhe o provedor de IA conforme config/ia.properties.
- * Retorna null no modo "manual": nesse caso nenhuma API é chamada e o usuário usa a ponte
- * (manual copiado para o Gemini do celular/PC + resposta colada de volta no sistema).
+ * Fábrica e montador da cadeia de alta disponibilidade ({@link ProvedorIAComFailover})
+ * conforme {@code config/ia.properties}.
+ *
+ * <p>Permite encadear múltiplas IAs (ex: Gemini -> OpenAI/Ollama primário -> OpenAI/LM Studio secundário)
+ * para que, caso uma falhe, a próxima assuma automaticamente sem alterar nada no código consumidor.
  */
 public final class ProvedorIAFactory {
 
@@ -13,11 +21,61 @@ public final class ProvedorIAFactory {
     }
 
     public static ProvedorIA criar(GeminiClientService geminiClient) {
-        String id = ConfigIA.getInstancia().getProvedor().toLowerCase();
+        ConfigIA cfg = ConfigIA.getInstancia();
+        String idPrincipal = cfg.getProvedor() != null ? cfg.getProvedor().trim().toLowerCase(Locale.ROOT) : "gemini";
+        if ("manual".equals(idPrincipal) || "sem-api".equals(idPrincipal) || "sem_api".equals(idPrincipal)) {
+            return null;
+        }
+
+        Set<String> ordemIds = new LinkedHashSet<>();
+        ordemIds.add(idPrincipal);
+        if (cfg.getProvedoresFailover() != null && !cfg.getProvedoresFailover().isBlank()) {
+            for (String token : cfg.getProvedoresFailover().split(",")) {
+                String t = token.trim().toLowerCase(Locale.ROOT);
+                if (!t.isEmpty() && !"manual".equals(t) && !"sem-api".equals(t)) {
+                    ordemIds.add(t);
+                }
+            }
+        }
+
+        List<ProvedorIA> cadeia = new ArrayList<>();
+        for (String id : ordemIds) {
+            ProvedorIA inst = instanciarIndividual(id, geminiClient, cfg);
+            if (inst != null) {
+                cadeia.add(inst);
+            }
+        }
+
+        if (cfg.getOpenai2Url() != null && !cfg.getOpenai2Url().isBlank()
+                && ordemIds.stream().noneMatch(s -> s.equals("openai2") || s.equals("secundario"))) {
+            cadeia.add(new OpenAiCompativelProvedor(
+                    "openai-secundario",
+                    cfg.getOpenai2Url(),
+                    cfg.getOpenai2Modelo() != null && !cfg.getOpenai2Modelo().isBlank() ? cfg.getOpenai2Modelo() : cfg.getOpenaiModelo(),
+                    cfg.getOpenai2Chave(),
+                    cfg.getOpenaiTimeoutSegundos()
+            ));
+        }
+
+        if (cadeia.isEmpty()) {
+            cadeia.add(new GeminiApiProvedor(geminiClient));
+        }
+
+        return new ProvedorIAComFailover(cadeia);
+    }
+
+    private static ProvedorIA instanciarIndividual(String id, GeminiClientService geminiClient, ConfigIA cfg) {
         return switch (id) {
-            case "manual", "sem-api", "sem_api" -> null;
+            case "gemini" -> new GeminiApiProvedor(geminiClient);
             case "openai", "ollama", "lmstudio", "local" -> new OpenAiCompativelProvedor();
-            default -> new GeminiApiProvedor(geminiClient);
+            case "openai2", "secundario", "backup" -> new OpenAiCompativelProvedor(
+                    "openai-secundario",
+                    cfg.getOpenai2Url() != null && !cfg.getOpenai2Url().isBlank() ? cfg.getOpenai2Url() : cfg.getOpenaiUrl(),
+                    cfg.getOpenai2Modelo() != null && !cfg.getOpenai2Modelo().isBlank() ? cfg.getOpenai2Modelo() : cfg.getOpenaiModelo(),
+                    cfg.getOpenai2Chave(),
+                    cfg.getOpenaiTimeoutSegundos()
+            );
+            default -> null;
         };
     }
 }

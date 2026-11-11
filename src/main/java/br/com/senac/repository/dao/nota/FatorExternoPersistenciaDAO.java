@@ -3,6 +3,7 @@ package br.com.senac.repository.dao.nota;
 import br.com.senac.integracao.eventos.EventoSympla;
 import br.com.senac.integracao.eventos.ProjetoCulturalMinC;
 import br.com.senac.repository.dao.JPAUtil;
+import br.com.senac.repository.dao.PadraoDAO;
 import br.com.senac.repository.modal.nota.VinculoFatorExternoNota;
 import jakarta.persistence.EntityManager;
 
@@ -25,9 +26,103 @@ import java.util.regex.Pattern;
  * O banco funciona como cache persistente: dentro do TTL nenhuma requisição externa é refeita,
  * mesmo após reiniciar o sistema.
  */
-public class FatorExternoPersistenciaDAO {
+public class FatorExternoPersistenciaDAO implements PadraoDAO<Map<String, Object>, Long> {
 
     public static final int TTL_EVENTOS_DIAS = 7;
+
+    @Override
+    public Map<String, Object> salvar(Map<String, Object> entidade) {
+        return atualizar(entidade);
+    }
+
+    @Override
+    public Map<String, Object> atualizar(Map<String, Object> entidade) {
+        if (entidade == null) return null;
+        return executarComFallbackReacao(() -> {
+            try (EntityManager em = JPAUtil.getEntityManager()) {
+                return em.unwrap(org.hibernate.Session.class).doReturningWork(conn -> {
+                    String sql = "INSERT INTO evento_externo (fonte, id_externo, nome, cidade, uf) VALUES (?, ?, ?, ?, ?) " +
+                            "ON DUPLICATE KEY UPDATE nome = VALUES(nome), coletado_em = NOW()";
+                    try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                        ps.setString(1, String.valueOf(entidade.getOrDefault("fonte", "MANUAL")));
+                        ps.setString(2, String.valueOf(entidade.getOrDefault("id_externo", System.currentTimeMillis())));
+                        ps.setString(3, String.valueOf(entidade.getOrDefault("nome", "Evento")));
+                        ps.setString(4, String.valueOf(entidade.getOrDefault("cidade", "Manaus")));
+                        ps.setString(5, String.valueOf(entidade.getOrDefault("uf", "AM")));
+                        ps.executeUpdate();
+                        try (ResultSet k = ps.getGeneratedKeys()) {
+                            if (k.next()) entidade.put("id", k.getLong(1));
+                        }
+                    }
+                    return entidade;
+                });
+            }
+        }, e -> entidade);
+    }
+
+    @Override
+    public Map<String, Object> buscarPorId(Long id) {
+        if (id == null) return null;
+        return executarComFallbackReacao(() -> {
+            try (EntityManager em = JPAUtil.getEntityManager()) {
+                return em.unwrap(org.hibernate.Session.class).doReturningWork(conn -> {
+                    try (PreparedStatement ps = conn.prepareStatement("SELECT * FROM evento_externo WHERE id = ?")) {
+                        ps.setLong(1, id);
+                        try (ResultSet rs = ps.executeQuery()) {
+                            if (!rs.next()) return null;
+                            Map<String, Object> m = new LinkedHashMap<>();
+                            var meta = rs.getMetaData();
+                            for (int i = 1; i <= meta.getColumnCount(); i++) {
+                                m.put(meta.getColumnLabel(i), rs.getObject(i));
+                            }
+                            return m;
+                        }
+                    }
+                });
+            }
+        }, e -> null);
+    }
+
+    @Override
+    public List<Map<String, Object>> listarTodos() {
+        return executarComFallbackReacao(() -> {
+            try (EntityManager em = JPAUtil.getEntityManager()) {
+                return em.unwrap(org.hibernate.Session.class).doReturningWork(conn -> {
+                    List<Map<String, Object>> lista = new ArrayList<>();
+                    try (Statement st = conn.createStatement();
+                         ResultSet rs = st.executeQuery("SELECT * FROM evento_externo ORDER BY id DESC LIMIT 200")) {
+                        var meta = rs.getMetaData();
+                        while (rs.next()) {
+                            Map<String, Object> m = new LinkedHashMap<>();
+                            for (int i = 1; i <= meta.getColumnCount(); i++) {
+                                m.put(meta.getColumnLabel(i), rs.getObject(i));
+                            }
+                            lista.add(m);
+                        }
+                    }
+                    return lista;
+                });
+            }
+        }, e -> List.of());
+    }
+
+    @Override
+    public boolean deletar(Long id) {
+        if (id == null) return false;
+        if (isBloqueadoParaBandejaIA(id)) {
+            throw new IllegalStateException("Evento externo #" + id + " está bloqueado na Bandeja de Contexto da IA.");
+        }
+        return executarComFallbackReacao(() -> {
+            try (EntityManager em = JPAUtil.getEntityManager()) {
+                return em.unwrap(org.hibernate.Session.class).doReturningWork(conn -> {
+                    try (PreparedStatement ps = conn.prepareStatement("DELETE FROM evento_externo WHERE id = ?")) {
+                        ps.setLong(1, id);
+                        return ps.executeUpdate() > 0;
+                    }
+                });
+            }
+        }, e -> false);
+    }
 
     private static final Map<String, Integer> MESES = Map.ofEntries(
             Map.entry("jan", 1), Map.entry("fev", 2), Map.entry("mar", 3), Map.entry("abr", 4),

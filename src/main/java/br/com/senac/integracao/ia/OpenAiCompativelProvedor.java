@@ -21,17 +21,51 @@ import java.util.*;
 public class OpenAiCompativelProvedor implements ProvedorIA {
 
     private final ConfigIA cfg = ConfigIA.getInstancia();
+    private final String idCustom;
+    private final String urlCustom;
+    private final String modeloCustom;
+    private final String chaveCustom;
+    private final Integer timeoutCustom;
     private final ObjectMapper om = new ObjectMapper();
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
 
+    public OpenAiCompativelProvedor() {
+        this(null, null, null, null, null);
+    }
+
+    public OpenAiCompativelProvedor(String idCustom, String urlCustom, String modeloCustom, String chaveCustom, Integer timeoutCustom) {
+        this.idCustom = idCustom;
+        this.urlCustom = urlCustom;
+        this.modeloCustom = modeloCustom;
+        this.chaveCustom = chaveCustom;
+        this.timeoutCustom = timeoutCustom;
+    }
+
+    private String urlEfetiva() {
+        String u = urlCustom != null && !urlCustom.isBlank() ? urlCustom.trim() : cfg.getOpenaiUrl();
+        return u.endsWith("/") ? u.substring(0, u.length() - 1) : u;
+    }
+
+    private String modeloEfetivo() {
+        return modeloCustom != null && !modeloCustom.isBlank() ? modeloCustom.trim() : cfg.getOpenaiModelo();
+    }
+
+    private String chaveEfetiva() {
+        return chaveCustom != null ? chaveCustom.trim() : cfg.getOpenaiChave();
+    }
+
+    private int timeoutEfetivo() {
+        return timeoutCustom != null && timeoutCustom > 0 ? timeoutCustom : cfg.getOpenaiTimeoutSegundos();
+    }
+
     @Override
     public String getId() {
-        return "openai";
+        return idCustom != null && !idCustom.isBlank() ? idCustom : "openai";
     }
 
     @Override
     public String getDescricao() {
-        return "IA compatível OpenAI (" + cfg.getOpenaiModelo() + " em " + cfg.getOpenaiUrl() + ")";
+        return "IA compatível OpenAI (" + modeloEfetivo() + " em " + urlEfetiva() + ")";
     }
 
     @Override
@@ -77,18 +111,18 @@ public class OpenAiCompativelProvedor implements ProvedorIA {
         messages.add(Map.of("role", "user", "content", pedido.mensagem()));
 
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("model", cfg.getOpenaiModelo());
+        body.put("model", modeloEfetivo());
         body.put("temperature", 0.2);
         body.put("messages", messages);
         body.put("tools", tools);
 
         HttpRequest.Builder rb = HttpRequest.newBuilder()
-                .uri(URI.create(cfg.getOpenaiUrl() + "/chat/completions"))
+                .uri(URI.create(urlEfetiva() + "/chat/completions"))
                 .header("Content-Type", "application/json")
-                .timeout(Duration.ofSeconds(cfg.getOpenaiTimeoutSegundos()))
+                .timeout(Duration.ofSeconds(timeoutEfetivo()))
                 .POST(HttpRequest.BodyPublishers.ofString(om.writeValueAsString(body)));
-        if (!cfg.getOpenaiChave().isBlank()) {
-            rb.header("Authorization", "Bearer " + cfg.getOpenaiChave());
+        if (!chaveEfetiva().isBlank()) {
+            rb.header("Authorization", "Bearer " + chaveEfetiva());
         }
 
         HttpResponse<String> resp = http.send(rb.build(), HttpResponse.BodyHandlers.ofString());

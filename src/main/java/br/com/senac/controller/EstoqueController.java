@@ -60,6 +60,22 @@ public class EstoqueController {
         return notaDAO.buscarLotePorId(idLote);
     }
 
+    public Item<? extends Produto> buscarPrimeiroLoteComEstoqueValido(Long idProduto) {
+        return notaDAO.buscarPrimeiroLoteComEstoqueValido(idProduto);
+    }
+
+    public List<Item<? extends Produto>> listarTodosLotesComEstoqueValido() {
+        return notaDAO.listarTodosLotesComEstoqueValido();
+    }
+
+    public List<Produto> listarTodosProdutosComEstoqueValido() {
+        return produtoDAO.listarProdutosComEstoqueValido();
+    }
+
+    public Produto buscarUnicoProdutoComEstoqueValido(Long idProduto, String nomeOuTermo) {
+        return produtoDAO.buscarUnicoComEstoqueValido(idProduto, nomeOuTermo);
+    }
+
     /**
      * Rota que lista todos os lotes com saldo > 0 cuja validade vence até a data limite informada.
      */

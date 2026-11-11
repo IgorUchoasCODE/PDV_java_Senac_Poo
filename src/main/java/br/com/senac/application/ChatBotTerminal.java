@@ -27,7 +27,13 @@ public class ChatBotTerminal {
     private static final String ROXO = "\u001B[35m";
     private static final String NEGRITO = "\u001B[1m";
 
+    static {
+        silenciarLogsTecnicos();
+    }
+
     public static void main(String[] args) {
+        silenciarLogsTecnicos();
+
         // Inicializa o agente operacional e componentes
         GeminiAgenteOperacional agente = new GeminiAgenteOperacional();
         String sessaoTerminal = "terminal-user-" + System.currentTimeMillis();
@@ -100,8 +106,7 @@ public class ChatBotTerminal {
                 continue;
             }
 
-            // Envia o comando em linguagem natural para o Agente Operacional
-            System.out.println(AZUL + "⏳ Processando comando e analisando regras de controle..." + RESET);
+            // Envia o comando para o Agente Operacional sem poluição visual
             String resposta = agente.processarMensagem(sessaoTerminal, entrada);
             exibirRespostaFormatada(resposta);
         }
@@ -148,36 +153,23 @@ public class ChatBotTerminal {
         }
     }
 
-    private static void exibirRespostaFormatada(String resposta) {
-        System.out.println("\n" + NEGRITO + CIANO + "╭────────────────────── RESPOSTA DO CHATBOT ──────────────────────" + RESET);
-
-        // Remove tokens específicos de interface web se presentes
-        String limpa = resposta
+    public static String limparPoluicaoVisual(String resposta) {
+        if (resposta == null) return "";
+        return resposta
                 .replace("[BOTAO_CONFIRMAR:SIM] [BOTAO_CANCELAR:NAO]", "")
                 .replace("[ACAO_CONFIRMAR:SIM] [ACAO_CANCELAR:NAO]", "")
+                .replace("**", "")
+                .replace("`", "")
+                .replaceAll("(?m)^[╭╰─═]{3,}.*$", "")
+                .replaceAll("\n{3,}", "\n\n")
                 .trim();
+    }
 
-        for (String linha : limpa.split("\n")) {
-            if (linha.startsWith("🧠")) {
-                System.out.println(ROXO + NEGRITO + linha + RESET);
-            } else if (linha.startsWith("🎯")) {
-                System.out.println(CIANO + NEGRITO + linha + RESET);
-            } else if (linha.startsWith("📋")) {
-                System.out.println(AZUL + linha + RESET);
-            } else if (linha.startsWith("⚖️")) {
-                System.out.println(AMARELO + linha + RESET);
-            } else if (linha.startsWith("⚠️")) {
-                System.out.println(VERMELHO + NEGRITO + linha + RESET);
-            } else if (linha.startsWith("✅") || linha.startsWith("🗑️") || linha.startsWith("🏷️")) {
-                System.out.println(VERDE + NEGRITO + linha + RESET);
-            } else if (linha.startsWith("─")) {
-                System.out.println(AMARELO + linha + RESET);
-            } else {
-                System.out.println(linha);
-            }
+    private static void exibirRespostaFormatada(String resposta) {
+        String limpa = limparPoluicaoVisual(resposta);
+        if (!limpa.isEmpty()) {
+            System.out.println("\n" + limpa);
         }
-
-        System.out.println(CIANO + "╰─────────────────────────────────────────────────────────────────" + RESET);
     }
 
     private static void exibirBanner(GeminiAgenteOperacional agente) {
@@ -235,5 +227,32 @@ public class ChatBotTerminal {
                 System.out.flush();
             }
         } catch (Exception ignored) {}
+    }
+
+    public static void silenciarLogsTecnicos() {
+        try {
+            java.util.logging.LogManager.getLogManager().reset();
+            java.util.logging.Logger.getLogger("").setLevel(java.util.logging.Level.OFF);
+            java.util.logging.Logger.getLogger("org.hibernate").setLevel(java.util.logging.Level.OFF);
+            java.util.logging.Logger.getLogger("com.zaxxer.hikari").setLevel(java.util.logging.Level.OFF);
+            System.setProperty("org.jboss.logging.provider", "jdk");
+            java.io.PrintStream errOriginal = System.err;
+            System.setErr(new java.io.PrintStream(new java.io.OutputStream() {
+                private final StringBuilder buffer = new StringBuilder();
+                @Override
+                public void write(int b) {
+                    if (b == '\n') {
+                        String linha = buffer.toString();
+                        buffer.setLength(0);
+                        if (!linha.contains("SLF4J") && !linha.contains("HHH0") && !linha.contains("org.hibernate")) {
+                            errOriginal.println(linha);
+                        }
+                    } else if (b != '\r') {
+                        buffer.append((char) b);
+                    }
+                }
+            }, true, java.nio.charset.StandardCharsets.UTF_8));
+        } catch (Exception ignored) {
+        }
     }
 }

@@ -156,10 +156,27 @@ public class ProdutoController {
         return produtoDAO.listarTodos();
     }
 
+    public Produto buscarUnicoComEstoqueValido(Long id, String nomeOuTermo) {
+        return produtoDAO.buscarUnicoComEstoqueValido(id, nomeOuTermo);
+    }
+
+    public List<Produto> listarProdutosComEstoqueValido() {
+        return produtoDAO.listarProdutosComEstoqueValido();
+    }
+
     // ==================== ROTAS DE MANUTENÇÃO (EXCLUSÃO E PREÇO) ====================
 
     public List<Produto> buscarPorTermo(String termo) {
         return produtoDAO.buscarPorTermo(termo);
+    }
+
+    /**
+     * Busca um produto específico por ID ou palavras parciais/iniciais ("ov branc tip a" ou "o b a").
+     * Retorna o {@link Produto} único se encontrado especificamente, ou uma {@link List} de candidatos
+     * caso existam múltiplos produtos compatíveis para o usuário escolher.
+     */
+    public Object buscarEspecificoOuListarParaEscolha(Long id, String nomeOuTermo, boolean apenasEstoqueValido) {
+        return produtoDAO.buscarEspecificoOuListarParaEscolha(id, nomeOuTermo, apenasEstoqueValido);
     }
 
     public boolean excluirProduto(Long idProduto) {

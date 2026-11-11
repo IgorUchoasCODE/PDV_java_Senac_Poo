@@ -39,6 +39,12 @@ public class NotaPerda extends Nota {
         this.notaDevolucao = notaDevolucao;
     }
 
+    public NotaPerda(String tipoPerda, String descricao, NotaDevolucao notaDevolucao, java.time.LocalDateTime dataGerada) {
+        super(null, descricao, dataGerada);
+        this.tipoPerda = tipoPerda;
+        this.notaDevolucao = notaDevolucao;
+    }
+
     public boolean isPerdaPosVenda() {
         return notaDevolucao != null;
     }

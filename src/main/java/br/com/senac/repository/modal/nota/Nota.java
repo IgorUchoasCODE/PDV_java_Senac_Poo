@@ -64,9 +64,25 @@ public abstract class Nota implements Serializable {
     }
 
     protected Nota(Pessoa pessoa, String descricao) {
+        this(pessoa, descricao, LocalDateTime.now());
+    }
+
+    protected Nota(Pessoa pessoa, String descricao, LocalDateTime dataGerada) {
         this.pessoa = pessoa;
         this.descricao = descricao;
-        this.dataGerada = LocalDateTime.now();
+        this.dataGerada = dataGerada != null ? dataGerada : LocalDateTime.now();
+    }
+
+    public void definirData(LocalDateTime data) {
+        if (data != null) {
+            this.dataGerada = data;
+        }
+    }
+
+    public void definirData(java.time.LocalDate data) {
+        if (data != null) {
+            this.dataGerada = data.atTime(java.time.LocalTime.now());
+        }
     }
 
     public void addItem(Item<? extends Produto> item) {
@@ -206,5 +222,23 @@ public abstract class Nota implements Serializable {
 
     public void setVinculoFatorExterno(VinculoFatorExternoNota vinculoFatorExterno) {
         this.vinculoFatorExterno = vinculoFatorExterno;
+    }
+
+    @Override
+    public String toString() {
+        String nomePessoa = "N/A";
+        try {
+            if (pessoa != null && pessoa.getNome() != null) {
+                nomePessoa = pessoa.getNome();
+            }
+        } catch (Exception ignored) {
+        }
+        BigDecimal total = BigDecimal.ZERO;
+        try {
+            total = getValorTotal();
+        } catch (Exception ignored) {
+        }
+        return String.format("%s{id=%d, data=%s, pessoa='%s', descricao='%s', valorTotal=%s}",
+                getClass().getSimpleName(), id, dataGerada, nomePessoa, descricao, total);
     }
 }

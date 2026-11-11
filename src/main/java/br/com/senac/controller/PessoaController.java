@@ -218,6 +218,27 @@ public class PessoaController {
         return pessoaDAO.buscarPorTermo(termo, papel);
     }
 
+    public Pessoa buscarUnicaPessoa(Long id, String termoOuNome) {
+        return pessoaDAO.buscarUnicaPessoa(id, termoOuNome);
+    }
+
+    /**
+     * Busca um cliente ou fornecedor específico por ID, documento ou palavras parciais/iniciais.
+     * Retorna a {@link Pessoa} única se identificada especificamente, ou uma {@link List} de pessoas
+     * caso existam múltiplos candidatos compatíveis para o usuário escolher.
+     */
+    public Object buscarEspecificaOuListarParaEscolha(Long id, String termoOuNome, String papelOpcional) {
+        return pessoaDAO.buscarEspecificaOuListarParaEscolha(id, termoOuNome, papelOpcional);
+    }
+
+    public Pessoa buscarPorRegistroUnico(String valorRegistro) {
+        return pessoaDAO.buscarPorRegistroUnico(valorRegistro);
+    }
+
+    public Pessoa buscarPessoaPorRegistroUnico(String tipoOpcional, String valorRegistro) {
+        return pessoaDAO.buscarPorRegistroUnico(tipoOpcional, valorRegistro);
+    }
+
     /**
      * Consulta o histórico 360º (dossiê completo) de um cliente ou fornecedor:
      * dados cadastrais, todas as notas emitidas vinculadas a ele, itens de produtos e pagamentos.

@@ -62,49 +62,18 @@ public class GeminiToolRegistry {
         }
         if (nome.contains("CADASTRAR") || nome.contains("EMITIR") || nome.contains("ATUALIZAR") ||
                 nome.contains("ADICIONAR") || nome.contains("QUITAR") || nome.contains("DEFINIR_PRINCIPAL") ||
-                nome.contains("ALTERAR_STATUS") || nome.contains("CUSTOMIZAR")) {
+                nome.contains("DEFINIR_DATA") || nome.contains("ALTERAR_STATUS") || nome.contains("CUSTOMIZAR")) {
             return NivelRiscoOperacao.WRITE_SEGURO;
         }
         return NivelRiscoOperacao.READ_ONLY;
     }
 
     /**
-     * Gera o System Instruction padrão com as diretrizes contábeis BACEN, concorrência e confirmação.
+     * Gera o System Instruction padrão a partir do ContextoIABuilder (config/ia-contexto.properties),
+     * respeitando o Princípio da Responsabilidade Única (SRP).
      */
     public static Map<String, Object> gerarSystemInstruction() {
-        GeminiConfig cfg = GeminiConfig.getInstancia();
-        StringBuilder sb = new StringBuilder();
-        sb.append("Você é a Inteligência Artificial e Assistente Operacional do Sistema de Vendas Sazonalisei.\n\n");
-
-        if (cfg.getPersonalidade() != null && !cfg.getPersonalidade().isBlank()) {
-            sb.append("🎭 SUA PERSONALIDADE E TOM DE VOZ (DEFINIDOS PELO USUÁRIO):\n")
-              .append(cfg.getPersonalidade().trim())
-              .append("\n\n");
-        }
-
-        if (cfg.getInstrucoesCustomizadas() != null && !cfg.getInstrucoesCustomizadas().isBlank()) {
-            sb.append("📋 INSTRUÇÕES ESPECÍFICAS ADICIONAIS DO USUÁRIO:\n")
-              .append(cfg.getInstrucoesCustomizadas().trim())
-              .append("\n\n");
-        }
-
-        sb.append("""
-                DIRETRIZES OPERACIONAIS OBRIGATÓRIAS DO SISTEMA:
-                1. COMUNICAÇÃO NATURAL E EXECUTIVA: Fale sempre em português claro, direto, amigável e educado, aderindo à personalidade definida acima. Explique sempre o que você fez ou encontrou de forma resumida e profissional. NUNCA cuspa objetos técnicos brutos ou códigos incompreensíveis.
-                2. CONSULTAS E BUSCAS: Ao buscar produtos ou clientes, apresente os itens encontrados com ID, Nome e Preço (ex: 'Encontrei o produto #86: Monitor Gamer 27 (R$ 1.250,00)').
-                3. MODIFICAÇÕES (PREÇO, DADOS): Ao atualizar qualquer informação, confirme o novo valor com clareza (ex: 'Preço do produto #86 atualizado para R$ 1.100,00 com sucesso!').
-                4. ATUALIZAÇÃO PELO NOME: Se o usuário pedir para atualizar o nome, descrição ou preço de um produto citando o nome (ex: 'quero alterar o nome do produto ovos para Ovos branco tipo A' ou 'mude o preço de ovos para 12.00'), acione IMEDIATAMENTE a ferramenta de atualização (PRODUTO_CATALOGO_ATUALIZAR com nomeAtual='ovos' e novoNome='Ovos branco tipo A', ou PRODUTO_CATALOGO_ATUALIZAR_PRECO com nomeProduto='ovos' e novoPreco='12.00'). NÃO chame busca se a intenção já for de atualizar!
-                5. AÇÕES DESTRUTIVAS (DELETAR, APAGAR, BAIXAR PERDAS): Ao identificar uma solicitação de exclusão, acione a ferramenta correspondente. O sistema exibirá a solicitação de confirmação na bandeja para o usuário.
-                6. BANDEJA DE CONTEXTO: O sistema retém ações de cadastro e mutação em uma bandeja de contexto para confirmação e execução conjunta em lote (Human-in-the-Loop), encerrando a janela de contexto após a execução.
-                7. PADRÃO CONTÁBIL BACEN: Todas as operações financeiras e margens seguem o padrão Banco Central do Brasil (HALF_EVEN, 2 casas decimais).
-                """);
-
-        Map<String, Object> part = new HashMap<>();
-        part.put("text", sb.toString());
-
-        Map<String, Object> sys = new HashMap<>();
-        sys.put("parts", Collections.singletonList(part));
-        return sys;
+        return br.com.senac.integracao.ia.ContextoIABuilder.construirSystemInstruction();
     }
 
     private static String construirDescricaoEnriquecida(RotaSistema rota) {
@@ -125,6 +94,14 @@ public class GeminiToolRegistry {
 
         switch (rota) {
             case SISTEMA_INICIALIZAR_DADOS_PADRAO -> {
+            }
+            case BUSCA_PADRAO_IA -> {
+                props.put("entidade", prop("STRING", "Entidade/DAO alvo da busca padrão: 'PRODUTO', 'PRODUTO_ESTOQUE_VALIDO', 'PRODUTOS_ESTOQUE_VALIDO', 'PESSOA', 'REGISTRO', 'LOTE_VALIDO', 'LOTES_VALIDOS', 'NOTA', 'UNIDADE_MEDIDA', 'FORMA_PAGAMENTO', 'FATOR_EXTERNO_NOTAS'"));
+                props.put("id", prop("INTEGER", "ID numérico único do registro (opcional se informar termo/nome/documento)"));
+                props.put("termo", prop("STRING", "Termo de busca: nome do produto, nome da pessoa, número de registro/CPF/CNPJ, sigla ou código (opcional)"));
+                props.put("unico", prop("BOOLEAN", "True para retornar informação única (1 registro com fallback), False para listagem (padrão: true quando houver id/termo)"));
+                props.put("apenasEstoqueValido", prop("BOOLEAN", "True para filtrar apenas produtos/lotes com estoque válido disponível e dentro da validade"));
+                required.add("entidade");
             }
             case PRODUTO_UNIDADE_CADASTRAR -> {
                 props.put("sigla", prop("STRING", "Sigla da unidade de medida (ex: UN, KG, LT, CX)"));
@@ -177,9 +154,29 @@ public class GeminiToolRegistry {
                 props.put("quantidade", prop("STRING", "Quantidade fracionada do componente"));
                 required.addAll(Arrays.asList("idProdutoKit", "idProdutoComponente", "quantidade"));
             }
+            case PRODUTO_CATALOGO_LISTAR -> {
+                props.put("apenasEstoqueValido", prop("BOOLEAN", "Se true, lista apenas produtos que possuem estoque válido (saldo FIFO > 0 e dentro da validade)"));
+            }
             case PRODUTO_CATALOGO_BUSCAR -> {
                 props.put("id", prop("INTEGER", "ID do produto (opcional)"));
                 props.put("nome", prop("STRING", "Nome exato ou parcial do produto (opcional)"));
+                props.put("termo", prop("STRING", "Termo livre de busca no nome/descrição do produto (opcional)"));
+                props.put("unico", prop("BOOLEAN", "Se true, retorna estritamente um único produto (opcional)"));
+                props.put("apenasEstoqueValido", prop("BOOLEAN", "Se true, busca somente produto com estoque válido disponível (opcional)"));
+            }
+            case PRODUTO_BUSCAR_UNICO -> {
+                props.put("id", prop("INTEGER", "ID do produto único (opcional se informar nome/termo)"));
+                props.put("idProduto", prop("INTEGER", "Alias para ID do produto (opcional)"));
+                props.put("nome", prop("STRING", "Nome único ou parcial indexado do produto (opcional se informar id)"));
+                props.put("termo", prop("STRING", "Termo de busca do produto (opcional)"));
+            }
+            case PRODUTO_ESTOQUE_VALIDO_BUSCAR_UNICO -> {
+                props.put("id", prop("INTEGER", "ID do produto com estoque válido (opcional se informar nome/termo)"));
+                props.put("idProduto", prop("INTEGER", "Alias para ID do produto (opcional)"));
+                props.put("nome", prop("STRING", "Nome do produto com estoque válido (opcional se informar id)"));
+                props.put("termo", prop("STRING", "Termo de busca para localizar um único produto com estoque válido (opcional)"));
+            }
+            case PRODUTO_ESTOQUE_VALIDO_LISTAR -> {
             }
             case PRODUTO_CATALOGO_ATUALIZAR -> {
                 props.put("idProduto", prop("INTEGER", "ID numérico do produto no catálogo (opcional se informar nomeAtual)"));
@@ -268,9 +265,22 @@ public class GeminiToolRegistry {
                 required.addAll(Arrays.asList("idPessoa", "tipoDocumento", "numeroRegistro"));
             }
             case PESSOA_BUSCAR -> {
-                props.put("termo", prop("STRING", "Termo de busca: nome/razão social, CPF ou CNPJ"));
+                props.put("idPessoa", prop("INTEGER", "ID da pessoa (opcional se informar termo)"));
+                props.put("termo", prop("STRING", "Termo de busca: nome/razão social, CPF, CNPJ ou RG"));
                 props.put("papel", prop("STRING", "Filtro opcional: 'CLIENTE', 'FORNECEDOR' ou 'TODOS'"));
-                required.add("termo");
+                props.put("unico", prop("BOOLEAN", "Se true, retorna apenas uma única pessoa (opcional)"));
+            }
+            case PESSOA_BUSCAR_UNICA -> {
+                props.put("idPessoa", prop("INTEGER", "ID numérico da pessoa (opcional se informar termo/nome/documento)"));
+                props.put("id", prop("INTEGER", "Alias para ID da pessoa (opcional)"));
+                props.put("termo", prop("STRING", "Nome, CPF, CNPJ ou número de registro único para localizar uma única pessoa"));
+                props.put("nome", prop("STRING", "Nome da pessoa (opcional)"));
+                props.put("documento", prop("STRING", "Documento único CPF/CNPJ/RG (opcional)"));
+            }
+            case PESSOA_REGISTRO_BUSCAR_UNICO -> {
+                props.put("tipoDocumento", prop("STRING", "Tipo de registro (ex: CPF, CNPJ, RG, CNH, IE - opcional)"));
+                props.put("numeroRegistro", prop("STRING", "Número único do documento/registro para localizar a pessoa"));
+                props.put("documento", prop("STRING", "Alias para número do documento/registro (opcional)"));
             }
             case PESSOA_HISTORICO_COMPLETO -> {
                 props.put("idPessoa", prop("INTEGER", "ID da pessoa (opcional se informar termo)"));
@@ -339,9 +349,27 @@ public class GeminiToolRegistry {
                 props.put("dataQuitacao", prop("STRING", "Data da liquidação no formato YYYY-MM-DD"));
                 required.add("idNotaPagamento");
             }
+            case ESTOQUE_SALDO_CONSOLIDADO -> {
+                props.put("idProduto", prop("INTEGER", "ID do produto para consultar saldo total consolidado"));
+                required.add("idProduto");
+            }
+            case ESTOQUE_FILA_LOTES_FIFO -> {
+                props.put("idProduto", prop("INTEGER", "ID do produto (opcional; se omitido lista todos os lotes válidos)"));
+                props.put("unico", prop("BOOLEAN", "Se true, retorna apenas o primeiro lote FIFO com estoque válido"));
+            }
+            case ESTOQUE_LOTES_VALIDOS_LISTAR -> {
+                props.put("idProduto", prop("INTEGER", "ID do produto para filtrar lotes válidos (opcional; se omitido lista todos os lotes com estoque válido)"));
+            }
+            case ESTOQUE_LOTE_VALIDO_BUSCAR_UNICO -> {
+                props.put("idProduto", prop("INTEGER", "ID do produto para buscar o primeiro lote único com estoque válido (opcional se informar idLote)"));
+                props.put("idLote", prop("INTEGER", "ID específico do lote (opcional)"));
+            }
             case ESTOQUE_BUSCAR_LOTE_ESPECIFICO -> {
-                props.put("idItemLote", prop("INTEGER", "ID do lote específico em estoque"));
-                required.add("idItemLote");
+                props.put("idItemLote", prop("INTEGER", "ID do lote específico em estoque (opcional se informar idLote ou idProduto)"));
+                props.put("idLote", prop("INTEGER", "Alias para ID do lote específico em estoque"));
+            }
+            case ESTOQUE_LOTES_PROXIMOS_VALIDADE -> {
+                props.put("dataLimite", prop("STRING", "Data limite de vencimento no formato YYYY-MM-DD (opcional)"));
             }
             case ESTOQUE_BAIXAR_PERDA_DIRETA -> {
                 props.put("idItemLote", prop("INTEGER", "ID do lote que sofreu perda"));
@@ -379,6 +407,22 @@ public class GeminiToolRegistry {
                 props.put("quantidadeDevolvida", prop("STRING", "Quantidade devolvida"));
                 props.put("motivo", prop("STRING", "Motivo da devolução"));
                 required.addAll(Arrays.asList("idNotaVenda", "idItemVenda", "quantidadeDevolvida"));
+            }
+            case NOTA_BUSCAR_UNICA -> {
+                props.put("idNota", prop("INTEGER", "ID numérico da nota operacional (Compra, Venda, Devolução ou Perda)"));
+                props.put("id", prop("INTEGER", "Alias para ID da nota (opcional)"));
+            }
+            case NOTA_LISTAR_PADRAO -> {
+                props.put("idPessoa", prop("INTEGER", "ID do cliente ou fornecedor para filtrar notas (opcional)"));
+                props.put("tipoNota", prop("STRING", "Filtro opcional por tipo: 'COMPRA', 'VENDA', 'DEVOLUCAO', 'PERDA' ou 'TODAS'"));
+            }
+            case NOTA_DEFINIR_DATA -> {
+                props.put("idNota", prop("INTEGER", "ID da nota operacional que terá a data definida/atualizada"));
+                props.put("data", prop("STRING", "Nova data/hora da nota no formato YYYY-MM-DD ou YYYY-MM-DDTHH:mm:ss"));
+                required.addAll(Arrays.asList("idNota", "data"));
+            }
+            case FATOR_EXTERNO_RELATORIO_INTEGRADO_NOTAS -> {
+                props.put("idNota", prop("INTEGER", "ID de uma nota específica para citar no relatório integrado (opcional; se omitido consolida todas as notas)"));
             }
             case ESTATISTICA_DEMANDA_MENSAL_CLIENTE -> {
                 props.put("idCliente", prop("INTEGER", "ID do cliente"));

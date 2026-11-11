@@ -5,8 +5,9 @@ package br.com.senac.controller;
  */
 public enum RotaSistema {
 
-    // 1. Inicialização do Sistema
+    // 1. Inicialização do Sistema e Busca Padrão da IA
     SISTEMA_INICIALIZAR_DADOS_PADRAO("SISTEMA", "/sistema/inicializar", "Executa script de carga inicial (Unidades de Medida, Formas de Pagamento e Cliente Padrão)"),
+    BUSCA_PADRAO_IA("SISTEMA", "/ia/busca-padrao", "Executa busca padrão estruturada para leitura da IA em qualquer DAO (produto, pessoa, registro, estoque_valido, lote_valido, nota, unidade_medida, forma_pagamento, fator_externo)"),
 
     // 2. Rotas de Produtos, Unidades de Medida, Dimensões e Kits
     PRODUTO_UNIDADE_LISTAR("PRODUTO", "/produtos/unidades/listar", "Lista todas as Unidades de Medida (Um) cadastradas"),
@@ -19,6 +20,9 @@ public enum RotaSistema {
     PRODUTO_KIT_ADICIONAR_COMPONENTE("PRODUTO", "/produtos/kit/componente", "Adiciona item componente e proporção a um Kit/Conjunto"),
     PRODUTO_CATALOGO_LISTAR("PRODUTO", "/produtos/catalogo/listar", "Lista todos os produtos do catálogo"),
     PRODUTO_CATALOGO_BUSCAR("PRODUTO", "/produtos/catalogo/buscar", "Busca produto por ID ou Nome"),
+    PRODUTO_BUSCAR_UNICO("PRODUTO", "/produtos/buscar-unico", "Busca padrão de um único produto por ID ou Nome indexado para leitura da IA"),
+    PRODUTO_ESTOQUE_VALIDO_BUSCAR_UNICO("PRODUTO", "/produtos/estoque-valido/buscar-unico", "Busca um único produto que possua estoque válido (saldo FIFO > 0 e dentro da validade)"),
+    PRODUTO_ESTOQUE_VALIDO_LISTAR("PRODUTO", "/produtos/estoque-valido/listar", "Lista todos os produtos que possuem estoque válido (saldo disponível e não vencidos)"),
     PRODUTO_CATALOGO_ATUALIZAR("PRODUTO", "/produtos/catalogo/atualizar", "Atualiza o nome e descrição cadastrais de um produto no catálogo"),
     PRODUTO_CATALOGO_ATUALIZAR_PRECO("PRODUTO", "/produtos/catalogo/atualizar-preco", "Atualiza o preço de venda de um produto no catálogo"),
     PRODUTO_CATALOGO_EXCLUIR("PRODUTO", "/produtos/catalogo/excluir", "Exclui definitivamente um produto do catálogo pelo ID"),
@@ -41,6 +45,8 @@ public enum RotaSistema {
     PESSOA_LISTAR_CLIENTES("PESSOA", "/pessoas/clientes/listar", "Lista todos os clientes cadastrados"),
     PESSOA_LISTAR_FORNECEDORES("PESSOA", "/pessoas/fornecedores/listar", "Lista todos os fornecedores cadastrados"),
     PESSOA_BUSCAR("PESSOA", "/pessoas/buscar", "Busca clientes e/ou fornecedores por termo (nome, CPF ou CNPJ)"),
+    PESSOA_BUSCAR_UNICA("PESSOA", "/pessoas/buscar-unica", "Busca padrão de uma única pessoa por ID, documento/registro único ou Nome indexado"),
+    PESSOA_REGISTRO_BUSCAR_UNICO("PESSOA", "/pessoas/registros/buscar-unico", "Busca uma única pessoa pelo documento/registro único (CPF, CNPJ, RG, CNH, IE)"),
     PESSOA_HISTORICO_COMPLETO("PESSOA", "/pessoas/historico-completo", "Consulta histórico 360º de cliente/fornecedor: cadastro, notas vinculadas, itens de produtos e pagamentos"),
     PESSOA_CLIENTE_EXCLUIR("PESSOA", "/pessoas/clientes/excluir", "Exclui cliente/pessoa do sistema pelo ID"),
 
@@ -58,6 +64,8 @@ public enum RotaSistema {
     // 5. Rotas de Controle de Estoque e Lotes FIFO
     ESTOQUE_SALDO_CONSOLIDADO("ESTOQUE", "/estoque/saldo-consolidado", "Consulta saldo total disponível na View vw_saldo_consolidado_estoque"),
     ESTOQUE_FILA_LOTES_FIFO("ESTOQUE", "/estoque/lotes-fifo", "Lista a fila de lotes disponíveis na ordem FIFO (vw_lotes_fifo_disponiveis)"),
+    ESTOQUE_LOTES_VALIDOS_LISTAR("ESTOQUE", "/estoque/lotes-validos/listar", "Lista todos os lotes de estoque válidos (saldo disponível > 0 e dentro da validade)"),
+    ESTOQUE_LOTE_VALIDO_BUSCAR_UNICO("ESTOQUE", "/estoque/lotes-validos/buscar-unico", "Busca o primeiro lote único com estoque válido (FIFO) de um produto"),
     ESTOQUE_BUSCAR_LOTE_ESPECIFICO("ESTOQUE", "/estoque/lote/buscar", "Busca um lote específico pelo ID para conferência ou venda dirigida"),
     ESTOQUE_LOTES_PROXIMOS_VALIDADE("ESTOQUE", "/estoque/lotes/validade", "Lista lotes com saldo disponível próximos da data de vencimento"),
     ESTOQUE_BAIXAR_PERDA_DIRETA("ESTOQUE", "/estoque/perda/baixar", "Baixa perda física diretamente do saldo disponível de um lote em estoque"),
@@ -72,6 +80,9 @@ public enum RotaSistema {
     NOTA_VENDA_PROCEDURE_MYSQL_FIFO("NOTA", "/notas/venda/procedure-fifo", "Executa baixa de estoque via Stored Procedure MySQL sp_consumir_estoque_fifo"),
     NOTA_VENDA_PROCEDURE_MYSQL_LOTE("NOTA", "/notas/venda/procedure-lote", "Executa baixa de lote específico via Stored Procedure MySQL sp_consumir_lote_especifico"),
     NOTA_DEVOLUCAO_REGISTRAR("NOTA", "/notas/devolucao/registrar", "Registra NotaDevolucao reintegrando lote válido ou gerando NotaPerda pós-venda para o fornecedor"),
+    NOTA_BUSCAR_UNICA("NOTA", "/notas/buscar-unica", "Busca padrão de uma única nota operacional pelo ID com detalhes completos para leitura da IA"),
+    NOTA_LISTAR_PADRAO("NOTA", "/notas/listar", "Lista notas operacionais emitidas (todas ou por pessoa/tipo) para leitura da IA"),
+    NOTA_DEFINIR_DATA("NOTA", "/notas/definir-data", "Define ou altera a data/hora de emissão (dataGerada) de uma nota operacional"),
 
     // 7. Rotas de Relatórios Contábeis (Padrão BACEN) e Inteligência Sazonal
     RELATORIO_LUCRO_CONTABIL_BACEN("RELATORIO", "/relatorios/lucro-contabil-bacen", "Consulta View vw_apuracao_lucro_contabil (CMV, Receita Líquida, Taxas, Lucro Líquido e Margem % BACEN)"),
@@ -90,6 +101,7 @@ public enum RotaSistema {
     ESTATISTICA_FATORES_PRODUTO("ESTATISTICA", "/estatisticas/fatores-produto", "Lista o efeito estatístico dos fatores externos sobre a demanda de cada produto"),
     FATOR_EXTERNO_EVENTOS_LISTAR("FATOR_EXTERNO", "/fatores-externos/eventos", "Lista os eventos reais (Sympla/MinC) gravados no banco e quantos snapshots os citam"),
     FATOR_EXTERNO_RESOLVER_PENDENCIAS("FATOR_EXTERNO", "/fatores-externos/resolver-pendencias", "Resolve a fila de notas sem fator externo com uma única obtenção por janela de 6h"),
+    FATOR_EXTERNO_RELATORIO_INTEGRADO_NOTAS("FATOR_EXTERNO", "/fatores-externos/relatorio-integrado-notas", "Gera relatório padronizado e integrado de fatores externos (Rios, Clima, Calendário e Eventos) citando cada Nota"),
 
     RELATORIO_ANALISE_SAZONAL_VENDAS("RELATORIO", "/relatorios/analise-sazonal", "Consulta View vw_analise_sazonal_vendas (Clima 6h, Rios 6h, Eventos 7d e Faturamento)");
 

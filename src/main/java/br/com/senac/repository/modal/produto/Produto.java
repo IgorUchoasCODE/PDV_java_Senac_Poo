@@ -13,7 +13,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "produtos")
+@Table(
+        name = "produtos",
+        indexes = {
+                @Index(name = "idx_produto_nome", columnList = "nome")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_produto_nome", columnNames = {"nome"})
+        }
+)
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "is_digital", discriminatorType = DiscriminatorType.INTEGER, columnDefinition = "TINYINT(1)")
 public abstract class Produto implements Serializable, Mensuravel {

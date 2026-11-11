@@ -160,14 +160,12 @@ public class GeminiClientService {
                 if (response.statusCode() == 200) {
                     if (!modeloAtual.equals(this.modeloAtivoFixado)) {
                         this.modeloAtivoFixado = modeloAtual;
-                        System.out.println("⚡ [GeminiClient] Modelo fixado com sucesso: " + modeloAtual + " (alta velocidade)");
                     }
                     return objectMapper.readTree(response.body());
                 }
 
                 if (response.statusCode() == 503 || response.statusCode() == 429) {
                     ultimoErro = "HTTP " + response.statusCode() + " (" + modeloAtual + "): " + response.body();
-                    System.err.println("Aviso: Modelo " + modeloAtual + " sobrecarregado (" + response.statusCode() + "). Alternando imediatamente para o próximo modelo...");
                     continue;
                 }
 

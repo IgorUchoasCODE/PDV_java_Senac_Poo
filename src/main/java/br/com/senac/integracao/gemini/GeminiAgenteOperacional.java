@@ -4,6 +4,7 @@ import br.com.senac.controller.RespostaEndpoint;
 import br.com.senac.controller.RotaSistema;
 import br.com.senac.controller.RoteadorController;
 import br.com.senac.integracao.ia.BandejaOperacoesContexto;
+import br.com.senac.integracao.ia.CompiladorInstrucoesCurtaService;
 import br.com.senac.integracao.ia.DecisaoConfirmacao;
 import br.com.senac.integracao.ia.InterpretadorRespostaIA;
 import br.com.senac.integracao.ia.ItemBandeja;
@@ -40,6 +41,7 @@ public class GeminiAgenteOperacional {
     private final RoteadorController roteadorController;
     private final ConfirmacaoAcaoGatekeeper gatekeeper;
     private final ConcorrenciaSeguraEngine concorrenciaEngine;
+    private final CompiladorInstrucoesCurtaService compiladorInstrucoesCurta;
     private volatile ProvedorIA provedor;
 
     // Bandejas de Operações e Contexto ativas por sessão do usuário
@@ -91,6 +93,7 @@ public class GeminiAgenteOperacional {
         this.roteadorController = roteadorController;
         this.gatekeeper = gatekeeper;
         this.concorrenciaEngine = concorrenciaEngine;
+        this.compiladorInstrucoesCurta = new CompiladorInstrucoesCurtaService(roteadorController);
         this.provedor = ProvedorIAFactory.criar(geminiClient);
     }
 
@@ -100,6 +103,17 @@ public class GeminiAgenteOperacional {
     public BandejaOperacoesContexto obterBandeja(String idSessao) {
         if (idSessao == null || idSessao.isBlank()) idSessao = "default";
         return bandejasPorSessao.computeIfAbsent(idSessao, BandejaOperacoesContexto::new);
+    }
+
+    /**
+     * Retorna o foco conversacional de busca da sessão (contendo a última Nota, Pessoa, Produto e os Java Records gerados para a UI).
+     */
+    public br.com.senac.integracao.ia.RetornoChatBotUI.FocoBuscaSessao obterFocoSessao(String idSessao) {
+        return compiladorInstrucoesCurta.obterFocoSessao(idSessao);
+    }
+
+    public CompiladorInstrucoesCurtaService getCompiladorInstrucoesCurta() {
+        return compiladorInstrucoesCurta;
     }
 
     /**
@@ -125,9 +139,19 @@ public class GeminiAgenteOperacional {
 
     // ==================== ENTRADAS ====================
 
-    /** Mensagem de texto do usuário, interpretada pelo provedor de IA configurado. */
+    /** Mensagem de texto do usuário, interpretada pelo provedor de IA configurado ou pelo compilador $$ local. */
     public String processarMensagem(String idSessao, String mensagemUsuario) {
         String msg = mensagemUsuario != null ? mensagemUsuario.trim() : "";
+
+        // Se o prompt iniciar com $$, atribui imediatamente à classe de compilação de instruções curtas (0 chamadas à IA)
+        if (CompiladorInstrucoesCurtaService.ehComandoEncurtado(msg)) {
+            BandejaOperacoesContexto bandeja = obterBandeja(idSessao);
+            String respostaCompilada = compiladorInstrucoesCurta.compilarEProcessar(
+                    idSessao, msg, bandeja, () -> fecharJanelaContexto(idSessao));
+            registrarNoHistorico(idSessao, "user", msg);
+            registrarNoHistorico(idSessao, "model", respostaCompilada);
+            return respostaCompilada;
+        }
 
         if (temConfirmacaoPendente(idSessao)) {
             DecisaoConfirmacao d = DecisaoConfirmacao.interpretar(msg);
@@ -138,6 +162,16 @@ public class GeminiAgenteOperacional {
                 return resposta;
             }
         }
+
+        // Busca direta por sigla fora de $$ (ex: "procura produto o.b.a", "procura prodito >oba", "cliente i.s.u")
+        // Executada em paralelo via Virtual Thread sem fechar a bandeja de espera!
+        String buscaRapidaSigla = tentarResolverBuscaSiglaForaDeDsl(idSessao, msg);
+        if (buscaRapidaSigla != null) {
+            registrarNoHistorico(idSessao, "user", msg);
+            registrarNoHistorico(idSessao, "model", buscaRapidaSigla);
+            return buscaRapidaSigla;
+        }
+
         String bloqueio = validarProvedor(false);
         if (bloqueio != null) return bloqueio;
 
@@ -149,7 +183,102 @@ public class GeminiAgenteOperacional {
             registrarNoHistorico(idSessao, "model", resposta);
             return resposta;
         } catch (Exception e) {
-            return "❌ Erro ao processar solicitação com a IA: " + e.getMessage();
+            return br.com.senac.integracao.ia.ContextoIABuilder.propriedade("ia.msg.erro.generico",
+                    "Não consegui processar sua solicitação agora. Tente novamente em instantes.");
+        }
+    }
+
+    /**
+     * Detecta comandos de janela (abrir>janela>...), buscas em sequência/contexto ("agora o fornecedor dessa nota",
+     * "os produtos dessa nota", "os contatos dele", "os pagamentos dessa nota") e buscas por sigla realizadas fora de {@code $$}
+     * e executa imediatamente em uma Virtual Thread, mantendo intactas eventuais instruções de C=, U=, D= na bandeja.
+     */
+    private String tentarResolverBuscaSiglaForaDeDsl(String idSessao, String msg) {
+        if (msg == null || msg.isBlank()) return null;
+        String texto = msg.trim();
+        String lower = texto.toLowerCase(Locale.ROOT);
+
+        // 1. Comando direto de abertura de janela JavaFX (ex: abrir>janela>Registrar>nota)
+        if (lower.startsWith("abrir>janela") || lower.startsWith("abrir > janela")) {
+            return compiladorInstrucoesCurta.compilarEProcessar(
+                    idSessao, "$$ " + texto + ";", obterBandeja(idSessao), () -> fecharJanelaContexto(idSessao));
+        }
+
+        // 2. Busca sequencial contextual em linguagem natural (Nota -> Fornecedor/Cliente -> Contatos -> Produtos -> Pagamentos)
+        if (lower.matches(".*\\b(dessa\\s+nota|dessaa\\s+nota|da\\s+nota|nota\\s+atual|desse\\s+fornecedor|desse\\s+cliente|dessa\\s+pessoa|contatos\\s+del[ea])\\b.*")) {
+            if (lower.matches(".*\\b(fornecedor|fornecedores)\\b.*")) {
+                return compiladorInstrucoesCurta.compilarEProcessar(
+                        idSessao, "$$ R= #Fornecedor da_nota;", obterBandeja(idSessao), () -> fecharJanelaContexto(idSessao));
+            }
+            if (lower.matches(".*\\b(cliente|clientes|clinete|clinetes)\\b.*")) {
+                return compiladorInstrucoesCurta.compilarEProcessar(
+                        idSessao, "$$ R= #Cliente da_nota;", obterBandeja(idSessao), () -> fecharJanelaContexto(idSessao));
+            }
+            if (lower.matches(".*\\b(pessoa|pessoas)\\b.*") && !lower.matches(".*\\b(contato|contatos)\\b.*")) {
+                return compiladorInstrucoesCurta.compilarEProcessar(
+                        idSessao, "$$ R= #Pessoa da_nota;", obterBandeja(idSessao), () -> fecharJanelaContexto(idSessao));
+            }
+            if (lower.matches(".*\\b(contato|contatos|telefone|whatsapp|email|documento|documentos|registro|registros)\\b.*")) {
+                return compiladorInstrucoesCurta.compilarEProcessar(
+                        idSessao, "$$ R= #Contato da_pessoa;", obterBandeja(idSessao), () -> fecharJanelaContexto(idSessao));
+            }
+            if (lower.matches(".*\\b(produto|produtos|prodito|itens|item)\\b.*")) {
+                return compiladorInstrucoesCurta.compilarEProcessar(
+                        idSessao, "$$ R= #Produto da_nota;", obterBandeja(idSessao), () -> fecharJanelaContexto(idSessao));
+            }
+            if (lower.matches(".*\\b(pagamento|pagamentos|parcela|parcelas)\\b.*")) {
+                return compiladorInstrucoesCurta.compilarEProcessar(
+                        idSessao, "$$ R= #Pagamento da_nota;", obterBandeja(idSessao), () -> fecharJanelaContexto(idSessao));
+            }
+        }
+
+        // Busca direta de Nota por número em linguagem natural (ex: "nota 1", "buscar nota #1", "consultar nota 2")
+        java.util.regex.Matcher mNota = java.util.regex.Pattern
+                .compile("(?i)^(?:buscar|busca|procurar|procura|consultar|consulta|ver|mostrar|mostra)?\\s*nota\\s*#?(\\d+)\\s*$")
+                .matcher(texto);
+        if (mNota.matches()) {
+            return compiladorInstrucoesCurta.compilarEProcessar(
+                    idSessao, "$$ R= #Nota id> " + mNota.group(1) + ";", obterBandeja(idSessao), () -> fecharJanelaContexto(idSessao));
+        }
+
+        // Não intercepta intenções de escrita/exclusão/atualização
+        if (lower.matches(".*\\b(criar|cria|cadastrar|cadastra|atualizar|atualiza|mudar|muda|alterar|altera|apagar|apaga|excluir|exclui|deletar|deleta|remover|remove|comprar|vender)\\b.*")) {
+            return null;
+        }
+
+        boolean mencionaBusca = lower.matches("^(procura|procurar|busca|buscar|acha|achar|localiza|localizar|consulta|consultar|mostra|mostrar|ver|qual|cad[eê])\\b.*");
+        boolean mencionaProduto = lower.matches(".*\\b(produto|produtos|prodito|item|estoque)\\b.*");
+        boolean mencionaPessoa = lower.matches(".*\\b(pessoa|pessoas|cliente|clientes|fornecedor|fornecedores)\\b.*");
+
+        // Extrai o termo após palavras de comando comuns
+        String termo = texto.replaceAll("(?i)^(procura|procurar|busca|buscar|acha|achar|localiza|localizar|consulta|consultar|mostra|mostrar|ver)\\s+", "")
+                .replaceAll("(?i)^(o|a|os|as|um|uma)?\\s*(produto|produtos|prodito|item|pessoa|pessoas|cliente|clientes|fornecedor|fornecedores)\\s+", "")
+                .trim();
+
+        boolean ehSiglaExplicita = br.com.senac.repository.dao.BuscaPalavrasParciaisUtil.isFormatoSiglaExplicita(termo)
+                || br.com.senac.repository.dao.BuscaPalavrasParciaisUtil.isFormatoSiglaExplicita(texto);
+
+        if (!ehSiglaExplicita && !(mencionaBusca && (mencionaProduto || mencionaPessoa) && !termo.isBlank())) {
+            return null;
+        }
+
+        final String entidadeAlvo = mencionaPessoa ? "PESSOA" : "PRODUTO";
+        final String termoFinal = termo.isBlank() ? texto : termo;
+
+        try {
+            String resultadoLeitura = concorrenciaEngine.submeterTarefa(
+                    () -> compiladorInstrucoesCurta.processarLeitura(entidadeAlvo, Map.of("nm", termoFinal)),
+                    null // Leitura livre em Virtual Thread
+            ).get();
+
+            BandejaOperacoesContexto bandeja = bandejasPorSessao.get(idSessao);
+            if (bandeja != null && bandeja.temItens()) {
+                return resultadoLeitura + "\n\nObservação: você continua com " + bandeja.totalItens()
+                        + " instrução(ões) aguardando confirmação na bandeja.";
+            }
+            return resultadoLeitura;
+        } catch (Exception ignored) {
+            return null;
         }
     }
 
@@ -197,6 +326,12 @@ public class GeminiAgenteOperacional {
      */
     public String processarRespostaExterna(String idSessao, String textoDaIA) {
         String texto = textoDaIA != null ? textoDaIA.trim() : "";
+
+        if (CompiladorInstrucoesCurtaService.ehComandoEncurtado(texto)) {
+            BandejaOperacoesContexto bandeja = obterBandeja(idSessao);
+            return compiladorInstrucoesCurta.compilarEProcessar(
+                    idSessao, texto, bandeja, () -> fecharJanelaContexto(idSessao));
+        }
 
         if (temConfirmacaoPendente(idSessao)) {
             if (texto.contains("{") || texto.contains("[")) {
@@ -292,7 +427,7 @@ public class GeminiAgenteOperacional {
             return bandeja.formatarVisualizacao();
         }
 
-        // APENAS CONSULTAS (READ_ONLY): Virtual Threads imediatas sem bloqueio
+        // APENAS CONSULTAS (READ_ONLY): Virtual Threads imediatas em paralelo sem bloquear nem fechar a Bandeja
         try {
             String chaveRecurso = extrairChaveRecurso(params);
             RespostaEndpoint<Object> resultado = concorrenciaEngine.submeterTarefa(
@@ -301,31 +436,38 @@ public class GeminiAgenteOperacional {
             ).get();
 
             StringBuilder sb = new StringBuilder();
-            sb.append("🧠 **O que entendi:** ").append(entendimento).append("\n");
-            sb.append("🎯 **Rota Identificada:** `").append(rota.name()).append("` (Módulo: ").append(rota.getModulo()).append(")\n");
-            sb.append("📋 **Parâmetros:** ").append(formatarParametrosResumidos(params)).append("\n");
-            sb.append("⚖️ **Regra do Sistema:** ").append(regra).append("\n\n");
-            sb.append("────────────────────────────────────────\n");
-
             if (resultado.sucesso()) {
                 sb.append(formatarResultadoAmigavel(rota, params, resultado.dados()));
             } else {
-                sb.append(String.format("⚠️ Falha ao executar [%s]: %s", rota.getDescricaoOperacao(), resultado.mensagem()));
+                sb.append(String.format("⚠️ Não foi possível concluir a consulta: %s", resultado.mensagem()));
+            }
+
+            BandejaOperacoesContexto bandeja = bandejasPorSessao.get(idSessao);
+            if (bandeja != null && bandeja.temItens()) {
+                sb.append("\n\nObservação: você continua com ").append(bandeja.totalItens())
+                  .append(" instrução(ões) em espera na bandeja.");
             }
             return sb.toString();
         } catch (Exception e) {
-            return "❌ Erro interno ao executar operação: " + e.getMessage();
+            return br.com.senac.integracao.ia.ContextoIABuilder.propriedade("ia.msg.erro.generico",
+                    "Não foi possível concluir a consulta no momento.");
         }
     }
 
     private String descreverEntendimento(RotaSistema rota, Map<String, Object> params) {
         if (rota == null) return "Operação não identificada";
         return switch (rota) {
-            case PRODUTO_CATALOGO_BUSCAR -> {
-                if (params.containsKey("id")) yield "Buscar produto pelo ID #" + params.get("id");
-                if (params.containsKey("nome")) yield "Buscar produto com nome semelhante a '" + params.get("nome") + "'";
+            case PRODUTO_CATALOGO_BUSCAR, PRODUTO_BUSCAR_UNICO -> {
+                if (params.containsKey("id") || params.containsKey("idProduto")) {
+                    yield "Buscar produto único pelo ID #" + (params.get("id") != null ? params.get("id") : params.get("idProduto"));
+                }
+                if (params.containsKey("nome") || params.containsKey("termo")) {
+                    yield "Buscar produto único pelo nome/termo '" + (params.get("nome") != null ? params.get("nome") : params.get("termo")) + "'";
+                }
                 yield "Consultar catálogo de produtos";
             }
+            case PRODUTO_ESTOQUE_VALIDO_BUSCAR_UNICO -> "Buscar um único produto com estoque válido disponível";
+            case PRODUTO_ESTOQUE_VALIDO_LISTAR -> "Listar todos os produtos com estoque válido disponível e dentro da validade";
             case PRODUTO_CATALOGO_LISTAR -> "Listar todos os produtos disponíveis no catálogo";
             case PRODUTO_CATALOGO_ATUALIZAR -> {
                 String id = params.get("idProduto") != null ? "#" + params.get("idProduto") : "";
@@ -354,6 +496,8 @@ public class GeminiAgenteOperacional {
             case PESSOA_LISTAR_CLIENTES -> "Listar clientes cadastrados na base de dados";
             case PESSOA_LISTAR_FORNECEDORES -> "Listar fornecedores cadastrados na base de dados";
             case PESSOA_BUSCAR -> "Buscar clientes ou fornecedores pelo termo '" + params.get("termo") + "'";
+            case PESSOA_BUSCAR_UNICA -> "Buscar uma única pessoa (cliente ou fornecedor) com os critérios informados";
+            case PESSOA_REGISTRO_BUSCAR_UNICO -> "Buscar uma única pessoa pelo documento/registro único";
             case PESSOA_HISTORICO_COMPLETO -> "Consultar histórico 360º completo (notas, produtos e pagamentos) da pessoa";
             case PESSOA_CLIENTE_EXCLUIR -> "Excluir cadastro do cliente/pessoa #" + params.get("idPessoa");
             case PESSOA_CLIENTE_PF_CADASTRAR -> "Cadastrar cliente pessoa física '" + params.get("nome") + "'";
@@ -365,9 +509,16 @@ public class GeminiAgenteOperacional {
             case PAGAMENTO_FORMA_EXCLUIR -> "Excluir forma de pagamento '" + params.get("codigo") + "'";
             case ESTOQUE_SALDO_CONSOLIDADO -> "Consultar saldo consolidado do produto #" + params.get("idProduto");
             case ESTOQUE_FILA_LOTES_FIFO -> "Consultar lotes em fila FIFO para o produto #" + params.get("idProduto");
+            case ESTOQUE_LOTES_VALIDOS_LISTAR -> "Listar todos os lotes de estoque válidos e não vencidos";
+            case ESTOQUE_LOTE_VALIDO_BUSCAR_UNICO -> "Buscar o primeiro lote único com estoque válido (FIFO)";
             case ESTOQUE_BAIXAR_PERDA_DIRETA -> "Baixar perda operacional direta no lote #" + params.get("idLote");
             case NOTA_VENDA_EMITIR_FIFO -> "Emitir nota fiscal de venda com consumo FIFO de estoque";
             case NOTA_COMPRA_EMITIR -> "Emitir nota fiscal de compra e dar entrada no estoque";
+            case NOTA_BUSCAR_UNICA -> "Buscar nota operacional única #" + (params.get("idNota") != null ? params.get("idNota") : params.get("id"));
+            case NOTA_LISTAR_PADRAO -> "Listar notas operacionais registradas no sistema";
+            case NOTA_DEFINIR_DATA -> "Definir/atualizar a data da nota operacional #" + params.get("idNota");
+            case FATOR_EXTERNO_RELATORIO_INTEGRADO_NOTAS -> "Gerar relatório integrado de fatores externos (Rios, Clima, Calendário e Eventos) citando cada Nota";
+            case BUSCA_PADRAO_IA -> "Executar busca padrão estruturada de leitura da IA na entidade " + params.get("entidade");
             default -> rota.getDescricaoOperacao();
         };
     }
@@ -401,7 +552,7 @@ public class GeminiAgenteOperacional {
             switch (decisao) {
                 case SIM -> {
                     if (bandeja.temItensPendentes() && !bandeja.temItensValidados()) {
-                        return "⚠️ Todas as instruções na bandeja estão aguardando dados adicionais antes da execução:\n\n"
+                        return "Todas as instruções na bandeja estão aguardando dados adicionais antes da execução:\n\n"
                                 + bandeja.formatarVisualizacao();
                     }
                     RelatorioExecucaoBandeja rel = bandeja.executarTodasValidadas(roteadorController);
@@ -411,11 +562,11 @@ public class GeminiAgenteOperacional {
                 }
                 case NAO -> {
                     fecharJanelaContexto(idSessao);
-                    return "🛑 **Operações canceladas.** A bandeja de contexto foi descartada e a janela de contexto foi encerrada com sucesso. Nada foi gravado no banco.";
+                    return "Operações canceladas. A bandeja foi limpa e nada foi gravado no banco.";
                 }
                 default -> {
-                    return "⚠️ Aguardando sua decisão sobre as instruções na bandeja de contexto.\n"
-                            + "Responda **'SIM'** para executar todas ou **'NÃO'** para cancelar.\n\n"
+                    return "Aguardando sua decisão sobre as instruções na bandeja.\n"
+                            + "Responda SIM para executar todas ou NÃO para cancelar.\n\n"
                             + bandeja.formatarVisualizacao();
                 }
             }
@@ -437,13 +588,13 @@ public class GeminiAgenteOperacional {
                 RespostaEndpoint<Object> resp = gatekeeper.confirmarEExecutar(ticketId, roteadorController);
                 String resultado;
                 if (!resp.sucesso()) {
-                    resultado = "❌ Não foi possível executar: " + resp.mensagem();
+                    resultado = "Não foi possível executar: " + resp.mensagem();
                 } else if (rota == RotaSistema.PRODUTO_CATALOGO_EXCLUIR) {
-                    resultado = "🗑️ **Produto #" + params.get("idProduto") + " excluído com sucesso do catálogo!**";
+                    resultado = "Produto #" + params.get("idProduto") + " excluído com sucesso do catálogo.";
                 } else if (rota == RotaSistema.PESSOA_CLIENTE_EXCLUIR) {
-                    resultado = "🗑️ **Cliente/Pessoa #" + params.get("idPessoa") + " excluído com sucesso do sistema!**";
+                    resultado = "Cliente/Pessoa #" + params.get("idPessoa") + " excluído com sucesso do sistema.";
                 } else {
-                    resultado = "✅ **Operação confirmada e executada!**\n" + formatarResultadoAmigavel(rota, params, resp.dados());
+                    resultado = "Operação confirmada e executada:\n" + formatarResultadoAmigavel(rota, params, resp.dados());
                 }
                 if (fila.isEmpty()) {
                     fecharJanelaContexto(idSessao);
@@ -456,10 +607,10 @@ public class GeminiAgenteOperacional {
                 if (fila.isEmpty()) {
                     fecharJanelaContexto(idSessao);
                 }
-                return "🛑 **Operação cancelada.** Nada foi alterado ou excluído." + proximaPergunta(idSessao);
+                return "Operação cancelada. Nada foi alterado ou excluído." + proximaPergunta(idSessao);
             }
             default:
-                return "⚠️ Aguardando sua decisão. Responda ou fale **'SIM'** para confirmar ou **'NÃO'** para cancelar.\n\n"
+                return "Aguardando sua decisão. Responda SIM para confirmar ou NÃO para cancelar.\n\n"
                         + perguntaAtual(idSessao);
         }
     }
@@ -469,45 +620,37 @@ public class GeminiAgenteOperacional {
         if (rel.totalOperacoes() == 1 && rel.todasComSucesso()) {
             var d = rel.detalhes().get(0);
             RotaSistema r = roteadorController.resolverRota(d.rota());
-            sb.append("✅ **Operação confirmada e executada!**\n");
+            sb.append("Operação confirmada e executada:\n");
             if (d.dados() != null) {
                 sb.append(formatarResultadoAmigavel(r, Collections.emptyMap(), d.dados())).append("\n");
             } else {
-                sb.append("• ").append(d.mensagem()).append("\n");
+                sb.append("  ").append(d.mensagem()).append("\n");
             }
-            sb.append("\n🔒 **Janela de contexto encerrada.** Sistema pronto para nova solicitação.");
             return sb.toString().trim();
         }
 
         if (rel.todasComSucesso()) {
-            sb.append("🎉 **BANDEJA DE OPERAÇÕES EXECUTADA COM SUCESSO!**\n");
-            sb.append(String.format("✔ **Total de instruções concluídas:** %d de %d\n", rel.sucessos(), rel.totalOperacoes()));
+            sb.append(String.format("BANDEJA DE OPERAÇÕES EXECUTADA COM SUCESSO (%d de %d concluídas):\n", rel.sucessos(), rel.totalOperacoes()));
         } else if (rel.sucessos() > 0) {
-            sb.append("⚠️ **BANDEJA EXECUTADA PARCIALMENTE**\n");
-            sb.append(String.format("✔ Sucessos: %d | ❌ Falhas: %d (Total: %d)\n", rel.sucessos(), rel.falhas(), rel.totalOperacoes()));
+            sb.append(String.format("Bandeja executada parcialmente (Sucessos: %d, Falhas: %d):\n", rel.sucessos(), rel.falhas()));
         } else {
-            sb.append("❌ **FALHA AO EXECUTAR INSTRUÇÕES DA BANDEJA**\n");
-            sb.append(String.format("Todas as %d operações falharam.\n", rel.totalOperacoes()));
+            sb.append(String.format("Não foi possível executar as %d operações da bandeja:\n", rel.totalOperacoes()));
         }
-        sb.append("──────────────────────────────────────────────────\n");
 
         for (int i = 0; i < rel.detalhes().size(); i++) {
             var d = rel.detalhes().get(i);
-            String icone = d.sucesso() ? "✅" : "❌";
-            sb.append(String.format("%s **[%d] %s** (`%s`)\n", icone, (i + 1), d.descricao(), d.rota()));
+            sb.append(String.format("  %d. %s\n", (i + 1), d.descricao()));
             if (d.sucesso()) {
                 if (d.dados() != null) {
                     RotaSistema r = roteadorController.resolverRota(d.rota());
-                    sb.append(formatarResultadoAmigavel(r, Collections.emptyMap(), d.dados())).append("\n");
+                    sb.append("     ").append(formatarResultadoAmigavel(r, Collections.emptyMap(), d.dados()).replace("\n", "\n     ")).append("\n");
                 } else {
-                    sb.append("   • ").append(d.mensagem()).append("\n");
+                    sb.append("     ").append(d.mensagem()).append("\n");
                 }
             } else {
-                sb.append("   • ⚠️ Motivo: ").append(d.mensagem()).append("\n");
+                sb.append("     Motivo: ").append(d.mensagem()).append("\n");
             }
         }
-        sb.append("──────────────────────────────────────────────────\n");
-        sb.append("🔒 **Janela de contexto encerrada.** O histórico e a bandeja foram reiniciados limpos para a próxima solicitação.");
         return sb.toString().trim();
     }
 
@@ -532,22 +675,12 @@ public class GeminiAgenteOperacional {
         boolean isDestrutivo = GeminiToolRegistry.classificarRisco(rota) == GeminiToolRegistry.NivelRiscoOperacao.DESTRUTIVO;
 
         StringBuilder sb = new StringBuilder();
-        sb.append("🧠 **O que entendi:** ").append(entendimento).append("\n");
-        sb.append("🎯 **Rota Identificada:** `").append(rota.name()).append("` (Módulo: ").append(rota.getModulo()).append(")\n");
-        sb.append("📋 **Campos Pré-preenchidos:** ").append(formatarParametrosResumidos(ticket.parametros())).append("\n");
-
+        sb.append("Resumo da instrução preparada: ").append(entendimento).append("\n");
         if (isDestrutivo) {
-            sb.append("⚖️ **Regra do Sistema:** ⚠️ Governança Human-in-the-Loop ativa (Ação Destrutiva Irreversível).\n\n");
-            sb.append("────────────────────────────────────────\n");
-            sb.append("⚠️ **Confirmação Necessária (Exclusão Física):**\n");
-            sb.append("🎯 **Alvo:** ").append(ticket.resumoImpacto()).append("\n\n");
-            sb.append("👉 **Você confirma a exclusão definitiva?**\n");
-            sb.append("Responda ou fale **'SIM'** para excluir, ou **'NÃO'** para cancelar.\n\n");
+            sb.append("Atenção: esta é uma exclusão definitiva (").append(ticket.resumoImpacto()).append(").\n");
+            sb.append("Confirma a exclusão? Digite SIM para confirmar ou NÃO para cancelar.\n");
         } else {
-            sb.append("⚖️ **Regra do Sistema:** 🔒 Execução sob Demanda: Os dados só serão gravados após sua conclusão/aprovação.\n\n");
-            sb.append("────────────────────────────────────────\n");
-            sb.append("👉 **Deseja concluir e executar esta operação com estes dados?**\n");
-            sb.append("Responda ou fale **'SIM'** para salvar/executar, ou **'NÃO'** para cancelar.\n\n");
+            sb.append("Deseja confirmar e salvar agora? Digite SIM para confirmar ou NÃO para cancelar.\n");
         }
         sb.append("[BOTAO_CONFIRMAR:SIM] [BOTAO_CANCELAR:NAO]");
         return sb.toString();
@@ -567,7 +700,7 @@ public class GeminiAgenteOperacional {
                     Produto p = roteadorController.produtos().buscarPorId(id);
                     if (p != null) {
                         return String.format("Produto #%d: '%s' (Preço Atual: R$ %s)",
-                                p.getId(), p.getNome(),
+                                p.getId(), CompiladorInstrucoesCurtaService.limparNomeExibicao(p.getNome(), null),
                                 p.getPrecoVenda() != null ? p.getPrecoVenda().toString() : "0.00");
                     }
                     return "Produto ID #" + id + " (não encontrado no catálogo)";
@@ -592,7 +725,7 @@ public class GeminiAgenteOperacional {
                 try {
                     Pessoa p = roteadorController.pessoas().buscarPorId(id);
                     if (p != null) {
-                        return String.format("Cliente #%d: '%s'", p.getId(), p.getNome());
+                        return String.format("Cliente #%d: '%s'", p.getId(), CompiladorInstrucoesCurtaService.limparNomeExibicao(p.getNome(), null));
                     }
                     return "Cliente/Pessoa ID #" + id + " (não encontrado)";
                 } catch (Exception ignored) {
@@ -605,44 +738,58 @@ public class GeminiAgenteOperacional {
             Object idLote = params.get("idLote") != null ? params.get("idLote") : params.get("idItemLote");
             Object qtd = params.get("quantidade") != null ? params.get("quantidade") : params.get("quantidadePerda");
             Object mot = params.get("motivo") != null ? params.get("motivo") : params.get("motivoPerda");
-            return String.format("Lote #%s | Quantidade: %s | Motivo: %s", idLote, qtd, mot);
+            return String.format("Lote #%s, Quantidade: %s, Motivo: %s", idLote, qtd, mot);
         }
 
         return params.toString();
     }
 
-    /** Converte retornos Java em texto limpo e compreensível. */
+    /** Converte retornos Java em texto limpo e compreensível sem poluição de markdown. */
     private String formatarResultadoAmigavel(RotaSistema rota, Map<String, Object> params, Object dados) {
         if (rota == RotaSistema.PRODUTO_CATALOGO_ATUALIZAR_PRECO) {
             String alvo = params.get("idProduto") != null ? "#" + params.get("idProduto") : String.valueOf(params.get("nomeProduto"));
-            return String.format("🏷️ **Preço Atualizado com Sucesso!**\nO produto **%s** agora possui o preço de venda de **R$ %s**.",
+            return String.format("Preço atualizado com sucesso: o produto %s agora custa R$ %s.",
                     alvo, params.get("novoPreco"));
         }
         if (rota == RotaSistema.PRODUTO_CATALOGO_ATUALIZAR && dados instanceof Produto p) {
-            return String.format("📝 **Produto Atualizado com Sucesso!**\n• **ID:** #%d\n• **Nome Atualizado:** %s\n• **Preço de Venda:** R$ %s\n• **Unidade:** %s",
-                    p.getId(), p.getNome(),
-                    p.getPrecoVenda() != null ? p.getPrecoVenda() : "0.00",
-                    p.getUm() != null ? p.getUm().getSigla() : "UN");
+            String umSigla = p.getUm() != null ? p.getUm().getSigla() : "UN";
+            return String.format("Produto atualizado: #%d - %s — R$ %s (%s)",
+                    p.getId(), CompiladorInstrucoesCurtaService.limparNomeExibicao(p.getNome(), umSigla),
+                    p.getPrecoVenda() != null ? p.getPrecoVenda().setScale(2, java.math.RoundingMode.HALF_EVEN) : "0.00",
+                    umSigla);
         }
         if (dados == null) {
-            if (rota == RotaSistema.PRODUTO_CATALOGO_BUSCAR) {
-                return "ℹ️ Nenhum produto encontrado com os dados informados.";
+            if (rota == RotaSistema.PRODUTO_CATALOGO_BUSCAR || rota == RotaSistema.PRODUTO_BUSCAR_UNICO
+                    || rota == RotaSistema.PRODUTO_ESTOQUE_VALIDO_BUSCAR_UNICO) {
+                return "Nenhum produto encontrado com os dados informados.";
             }
-            if (rota == RotaSistema.PESSOA_BUSCAR) {
-                return "ℹ️ Nenhuma pessoa/cliente encontrada com os dados informados.";
+            if (rota == RotaSistema.PESSOA_BUSCAR || rota == RotaSistema.PESSOA_BUSCAR_UNICA
+                    || rota == RotaSistema.PESSOA_REGISTRO_BUSCAR_UNICO) {
+                return "Nenhuma pessoa ou cliente encontrado com os dados informados.";
             }
-            return "✅ Operação realizada com sucesso.";
+            if (rota == RotaSistema.NOTA_BUSCAR_UNICA) {
+                return "Nenhuma nota operacional encontrada com o código informado.";
+            }
+            return "Operação realizada com sucesso.";
+        }
+
+        if (dados instanceof Item<?> lote) {
+            String nomeProd = lote.getProduto() != null ? CompiladorInstrucoesCurtaService.limparNomeExibicao(lote.getProduto().getNome(), null) : "Produto";
+            return String.format("Lote válido #%d (%s) — Saldo disponível: %s, Valor unitário: R$ %s, Validade: %s",
+                    lote.getId(), nomeProd, lote.getQuantidadeDisponivel(), lote.getValor(),
+                    lote.getDataValidade() != null ? lote.getDataValidade() : "Indeterminada");
         }
 
         if (dados instanceof Produto p) {
+            String umSigla = p.getUm() != null ? p.getUm().getSigla() : "UN";
             StringBuilder sb = new StringBuilder();
-            sb.append("📦 **Detalhes do Produto:**\n")
-              .append("• **ID:** #").append(p.getId()).append("\n")
-              .append("• **Nome:** ").append(p.getNome()).append("\n")
-              .append("• **Preço de Venda:** R$ ").append(p.getPrecoVenda() != null ? p.getPrecoVenda() : "0.00").append("\n")
-              .append("• **Unidade:** ").append(p.getUm() != null ? p.getUm().getSigla() : "UN").append("\n");
+            sb.append(String.format("#%d - %s (%s) — Preço de venda: R$ %s",
+                    p.getId(),
+                    CompiladorInstrucoesCurtaService.limparNomeExibicao(p.getNome(), umSigla),
+                    umSigla,
+                    p.getPrecoVenda() != null ? p.getPrecoVenda().setScale(2, java.math.RoundingMode.HALF_EVEN) : "0.00"));
             if (p instanceof ProdutoFisico pf && pf.possuiDimensoesValidas()) {
-                sb.append(String.format("• **Dimensões:** %scm (A) x %scm (L) x %scm (C) | Peso: %skg\n",
+                sb.append(String.format(" — Dimensões: %scm x %scm x %scm, Peso: %skg",
                         pf.getAlturaCm(), pf.getLarguraCm(), pf.getComprimentoCm(), pf.getPesoLiquidoKg()));
             }
             return sb.toString().trim();
@@ -650,31 +797,93 @@ public class GeminiAgenteOperacional {
 
         if (dados instanceof List<?> lista) {
             if (lista.isEmpty()) {
-                return "ℹ️ Nenhum registro encontrado para os critérios informados.";
+                return "Nenhum registro encontrado para os critérios informados.";
             }
             if (lista.get(0) instanceof Produto) {
-                StringBuilder sb = new StringBuilder("📋 **Produtos Encontrados (" + lista.size() + " itens):**\n");
-                for (Object item : lista) {
-                    if (item instanceof Produto p) {
-                        sb.append(String.format("• **#%d** - %s | **R$ %s** (%s)\n",
-                                p.getId(), p.getNome(),
-                                p.getPrecoVenda() != null ? p.getPrecoVenda() : "0.00",
-                                p.getUm() != null ? p.getUm().getSigla() : "UN"));
-                    }
+                @SuppressWarnings("unchecked")
+                List<Produto> prodsBrutos = (List<Produto>) lista;
+                List<Produto> prodsLimpos = CompiladorInstrucoesCurtaService.filtrarProdutosExibicaoLimpa(prodsBrutos);
+                if (prodsLimpos.isEmpty()) {
+                    prodsLimpos = prodsBrutos;
+                }
+                boolean isBuscaEspecifica = rota == RotaSistema.PRODUTO_CATALOGO_BUSCAR
+                        || rota == RotaSistema.PRODUTO_BUSCAR_UNICO
+                        || rota == RotaSistema.PRODUTO_ESTOQUE_VALIDO_BUSCAR_UNICO;
+                StringBuilder sb = new StringBuilder();
+                if (isBuscaEspecifica && prodsLimpos.size() > 1) {
+                    sb.append("Encontrei ").append(prodsLimpos.size())
+                      .append(" produtos correspondentes (escolha um pelo código ou nome):\n");
+                } else {
+                    sb.append("Produtos no catálogo (").append(prodsLimpos.size()).append(" itens):\n");
+                }
+                for (Produto p : prodsLimpos) {
+                    String umSigla = p.getUm() != null ? p.getUm().getSigla() : "UN";
+                    sb.append(String.format("  #%d - %s — R$ %s (%s)\n",
+                            p.getId(),
+                            CompiladorInstrucoesCurtaService.limparNomeExibicao(p.getNome(), umSigla),
+                            p.getPrecoVenda() != null ? p.getPrecoVenda().setScale(2, java.math.RoundingMode.HALF_EVEN) : "0.00",
+                            umSigla));
                 }
                 return sb.toString().trim();
             }
             if (lista.get(0) instanceof Pessoa) {
-                StringBuilder sb = new StringBuilder("👥 **Clientes / Fornecedores Encontrados (" + lista.size() + " registros):**\n");
+                @SuppressWarnings("unchecked")
+                List<Pessoa> pessoasBrutas = (List<Pessoa>) lista;
+                List<Pessoa> pessoasLimpas = CompiladorInstrucoesCurtaService.filtrarPessoasExibicaoLimpa(pessoasBrutas);
+                if (pessoasLimpas.isEmpty()) {
+                    pessoasLimpas = pessoasBrutas;
+                }
+                boolean isBuscaEspecifica = rota == RotaSistema.PESSOA_BUSCAR || rota == RotaSistema.PESSOA_BUSCAR_UNICA;
+                StringBuilder sb = new StringBuilder();
+                if (isBuscaEspecifica && pessoasLimpas.size() > 1) {
+                    sb.append("Encontrei ").append(pessoasLimpas.size())
+                      .append(" pessoas correspondentes (escolha uma pelo código ou nome):\n");
+                } else {
+                    sb.append("Clientes e fornecedores cadastrados (").append(pessoasLimpas.size()).append(" registros):\n");
+                }
+                for (Pessoa pes : pessoasLimpas) {
+                    sb.append(String.format("  #%d - %s — Limite: R$ %s\n",
+                            pes.getId(),
+                            CompiladorInstrucoesCurtaService.limparNomeExibicao(pes.getNome(), null),
+                            pes.getLimite() != null ? pes.getLimite().setScale(2, java.math.RoundingMode.HALF_EVEN) : "0.00"));
+                }
+                return sb.toString().trim();
+            }
+            if (lista.get(0) instanceof Item<?>) {
+                StringBuilder sb = new StringBuilder("Lotes com estoque válido (" + lista.size() + " lotes):\n");
                 for (Object item : lista) {
-                    if (item instanceof Pessoa pes) {
-                        sb.append(String.format("• **#%d** - %s | Limite: R$ %s\n",
-                                pes.getId(), pes.getNome(),
-                                pes.getLimite() != null ? pes.getLimite() : "0.00"));
+                    if (item instanceof Item<?> lote) {
+                        String nomeProd = lote.getProduto() != null ? CompiladorInstrucoesCurtaService.limparNomeExibicao(lote.getProduto().getNome(), null) : "Produto";
+                        sb.append(String.format("  Lote #%d - %s — Saldo FIFO: %s, Validade: %s, Unitário: R$ %s\n",
+                                lote.getId(), nomeProd, lote.getQuantidadeDisponivel(),
+                                lote.getDataValidade() != null ? lote.getDataValidade() : "Sem vencimento",
+                                lote.getValor()));
                     }
                 }
                 return sb.toString().trim();
             }
+            if (lista.get(0) instanceof Nota) {
+                StringBuilder sb = new StringBuilder("Notas operacionais (" + lista.size() + " notas):\n");
+                for (Object item : lista) {
+                    if (item instanceof Nota n) {
+                        String nomePes = n.getPessoa() != null ? CompiladorInstrucoesCurtaService.limparNomeExibicao(n.getPessoa().getNome(), null) : "Consumidor Padrão";
+                        sb.append(String.format("  Nota #%d (%s) — Data: %s, Pessoa: %s, Total: R$ %s\n",
+                                n.getId(), n.getClass().getSimpleName(),
+                                n.getDataGerada() != null ? n.getDataGerada().toLocalDate() : "N/A",
+                                nomePes, n.getValorTotal()));
+                    }
+                }
+                return sb.toString().trim();
+            }
+        }
+
+        if (dados instanceof Map<?, ?> map && map.containsKey("relatorioTextoPadronizado")) {
+            return String.valueOf(map.get("relatorioTextoPadronizado"));
+        }
+
+        if (dados instanceof Map<?, ?> map && map.containsKey("entidadeConsultada") && map.containsKey("dados")) {
+            Object interno = map.get("dados");
+            return formatarResultadoAmigavel(rota, params, interno);
         }
 
         if (dados instanceof Map<?, ?> map && map.containsKey("pessoa") && map.containsKey("notas")) {
@@ -686,55 +895,25 @@ public class GeminiAgenteOperacional {
             List<Map<String, Object>> notas = (List<Map<String, Object>>) map.get("notas");
 
             StringBuilder sb = new StringBuilder();
-            sb.append("👤 **DOSSIÊ COMPLETO 360º DA PESSOA**\n")
-              .append("• **ID:** #").append(pMap.get("id")).append("\n")
-              .append("• **Nome/Razão Social:** ").append(pMap.get("nome")).append("\n")
-              .append("• **Documento:** ").append(pMap.get("documento")).append(" (").append(pMap.get("tipoPessoa")).append(")\n")
-              .append("• **Papel:** ").append(Boolean.TRUE.equals(pMap.get("isCliente")) ? "Cliente " : "")
-              .append(Boolean.TRUE.equals(pMap.get("isFornecedor")) ? "Fornecedor" : "").append("\n")
-              .append("• **Limite de Crédito:** R$ ").append(pMap.get("limiteCredito")).append("\n\n");
+            sb.append("Histórico completo da pessoa:\n")
+              .append("  Código: #").append(pMap.get("id")).append(" - ").append(pMap.get("nome")).append("\n")
+              .append("  Documento: ").append(pMap.get("documento")).append(" (").append(pMap.get("tipoPessoa")).append(")\n")
+              .append("  Limite de crédito: R$ ").append(pMap.get("limiteCredito")).append("\n\n");
 
             if (resumo != null) {
-                sb.append("📊 **Resumo Consolidado:**\n")
-                  .append("• Total de Notas: ").append(resumo.get("totalNotasEmitidas")).append("\n")
-                  .append("• Valor Total Movimentado: R$ ").append(resumo.get("valorTotalMovimentado")).append("\n")
-                  .append("• Quantidade Total de Itens: ").append(resumo.get("quantidadeTotalItens")).append("\n")
-                  .append("• Total de Pagamentos: R$ ").append(resumo.get("valorTotalPagamentosRegistrados")).append("\n\n");
+                sb.append("Resumo consolidado:\n")
+                  .append("  Total de notas: ").append(resumo.get("totalNotasEmitidas")).append("\n")
+                  .append("  Valor total movimentado: R$ ").append(resumo.get("valorTotalMovimentado")).append("\n")
+                  .append("  Total de pagamentos: R$ ").append(resumo.get("valorTotalPagamentosRegistrados")).append("\n\n");
             }
 
             if (notas == null || notas.isEmpty()) {
-                sb.append("ℹ️ Nenhuma nota fiscal/operacional vinculada a esta pessoa até o momento.");
+                sb.append("Nenhuma nota vinculada a esta pessoa até o momento.");
             } else {
-                sb.append("🧾 **Histórico de Notas Vinculadas (").append(notas.size()).append("):**\n");
+                sb.append("Notas vinculadas (").append(notas.size()).append("):\n");
                 for (Map<String, Object> n : notas) {
-                    sb.append(String.format("▸ **Nota #%s** [%s] - %s | Total: **R$ %s**\n",
+                    sb.append(String.format("  Nota #%s (%s) em %s — Total: R$ %s\n",
                             n.get("idNota"), n.get("tipoNota"), n.get("dataGerada"), n.get("valorTotal")));
-
-                    @SuppressWarnings("unchecked")
-                    List<Map<String, Object>> itens = (List<Map<String, Object>>) n.get("itensProdutos");
-                    if (itens != null && !itens.isEmpty()) {
-                        sb.append("   📦 **Produtos:** ");
-                        for (int i = 0; i < itens.size(); i++) {
-                            Map<String, Object> it = itens.get(i);
-                            if (i > 0) sb.append(", ");
-                            sb.append(it.get("nomeProduto")).append(" (").append(it.get("quantidade")).append(" ").append(it.get("unidade"))
-                              .append(" x R$ ").append(it.get("precoUnitario")).append(")");
-                        }
-                        sb.append("\n");
-                    }
-
-                    @SuppressWarnings("unchecked")
-                    List<Map<String, Object>> pags = (List<Map<String, Object>>) n.get("pagamentos");
-                    if (pags != null && !pags.isEmpty()) {
-                        sb.append("   💳 **Pagamentos:** ");
-                        for (int j = 0; j < pags.size(); j++) {
-                            Map<String, Object> pg = pags.get(j);
-                            if (j > 0) sb.append(", ");
-                            sb.append(pg.get("forma")).append(" (R$ ").append(pg.get("valorFinal")).append(" - ").append(pg.get("tipo")).append(")");
-                        }
-                        sb.append("\n");
-                    }
-                    sb.append("\n");
                 }
             }
             return sb.toString().trim();
@@ -744,44 +923,40 @@ public class GeminiAgenteOperacional {
             String tipoNota;
             if (nota instanceof NotaCompra) tipoNota = "Nota Fiscal de Compra";
             else if (nota instanceof NotaVenda) tipoNota = "Nota Fiscal de Venda";
-            else if (nota instanceof NotaPerda) tipoNota = "Nota de Perda Operacional / Estoque";
+            else if (nota instanceof NotaPerda) tipoNota = "Nota de Perda";
             else if (nota instanceof NotaDevolucao) tipoNota = "Nota Fiscal de Devolução";
             else tipoNota = nota.getClass().getSimpleName();
 
-            String pessoaLabel = nota instanceof NotaCompra ? "Fornecedor" : (nota instanceof NotaPerda ? "Fornecedor / Responsável" : "Cliente");
-            String nomePessoa = nota.getPessoa() != null ? nota.getPessoa().getNome() : (nota instanceof NotaPerda ? "Estoque Interno" : "Consumidor Padrão");
+            String pessoaLabel = nota instanceof NotaCompra ? "Fornecedor" : (nota instanceof NotaPerda ? "Responsável" : "Cliente");
+            String nomePessoa = nota.getPessoa() != null ? CompiladorInstrucoesCurtaService.limparNomeExibicao(nota.getPessoa().getNome(), null) : (nota instanceof NotaPerda ? "Estoque Interno" : "Consumidor Padrão");
             StringBuilder sb = new StringBuilder();
-            sb.append("🧾 **").append(tipoNota).append(" #").append(nota.getId()).append("**\n");
-            sb.append("• **").append(pessoaLabel).append(":** ").append(nomePessoa).append("\n");
-            sb.append("• **Descrição:** ").append(nota.getDescricao() != null ? nota.getDescricao() : "Sem descrição").append("\n");
-            if (nota instanceof NotaPerda np && np.getTipoPerda() != null) {
-                sb.append("• **Tipo de Perda:** ").append(np.getTipoPerda()).append("\n");
-            }
-            sb.append("• **Data:** ").append(nota.getDataGerada() != null ? nota.getDataGerada().toLocalDate() : java.time.LocalDate.now()).append("\n");
-            sb.append("• **Valor Total (Custo/Líquido):** R$ ").append(nota.getValorTotal() != null ? nota.getValorTotal().toPlainString() : "0.00").append("\n");
+            sb.append(tipoNota).append(" #").append(nota.getId()).append(" — ")
+              .append(pessoaLabel).append(": ").append(nomePessoa)
+              .append(", Data: ").append(nota.getDataGerada() != null ? nota.getDataGerada().toLocalDate() : java.time.LocalDate.now())
+              .append(", Total: R$ ").append(nota.getValorTotal() != null ? nota.getValorTotal().toPlainString() : "0.00").append("\n");
             if (nota.getItens() != null && !nota.getItens().isEmpty()) {
-                sb.append("📦 **Itens Registrados (").append(nota.getItens().size()).append("):**\n");
+                sb.append("  Itens (").append(nota.getItens().size()).append("):\n");
                 for (Item<? extends Produto> it : nota.getItens()) {
-                    String nomeProd = it.getProduto() != null ? it.getProduto().getNome() : "Item";
+                    String nomeProd = it.getProduto() != null ? CompiladorInstrucoesCurtaService.limparNomeExibicao(it.getProduto().getNome(), null) : "Item";
                     String um = it.getProduto() != null && it.getProduto().getUm() != null ? it.getProduto().getUm().getSigla() : "UN";
-                    sb.append(String.format("   • %s: %s %s x R$ %s = R$ %s\n",
+                    sb.append(String.format("    %s: %s %s x R$ %s = R$ %s\n",
                             nomeProd, it.getQuantidade(), um, it.getValor(), it.getSubtotal()));
                 }
             }
             return sb.toString().trim();
         }
         if (dados instanceof Pessoa pes) {
-            return String.format(
-                    "👤 **Dados do Cliente / Pessoa:**\n• **ID:** #%d\n• **Nome / Razão Social:** %s\n• **Limite de Crédito:** R$ %s",
-                    pes.getId(), pes.getNome(), pes.getLimite() != null ? pes.getLimite() : "0.00");
+            return String.format("#%d - %s — Limite de crédito: R$ %s",
+                    pes.getId(), CompiladorInstrucoesCurtaService.limparNomeExibicao(pes.getNome(), null),
+                    pes.getLimite() != null ? pes.getLimite() : "0.00");
         }
         if (dados instanceof BigDecimal bd) {
-            return "📊 **Saldo / Valor:** R$ " + bd.toPlainString();
+            return "Saldo/Valor: R$ " + bd.toPlainString();
         }
         if (dados instanceof Boolean b) {
-            return b ? "✅ Operação concluída com sucesso." : "⚠️ A operação não teve efeito.";
+            return b ? "Operação concluída com sucesso." : "A operação não teve efeito.";
         }
-        return "✅ **Resultado [" + (rota != null ? rota.getDescricaoOperacao() : "OK") + "]:**\n" + dados;
+        return String.valueOf(dados);
     }
 
     private Long extrairIdLong(Map<String, Object> params, String chave) {

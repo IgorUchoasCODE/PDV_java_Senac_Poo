@@ -1,6 +1,7 @@
 package br.com.senac.repository.dao.nota;
 
 import br.com.senac.repository.dao.JPAUtil;
+import br.com.senac.repository.dao.PadraoDAO;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.ParameterMode;
 import jakarta.persistence.StoredProcedureQuery;
@@ -16,7 +17,48 @@ import java.util.Map;
  * roda no MySQL; o Java apenas converte o ResultSet em linhas (Map coluna -> valor).
  * Cada chamada usa seu próprio EntityManager (seguro para Virtual Threads).
  */
-public class EstatisticaDAO {
+public class EstatisticaDAO implements PadraoDAO<Map<String, Object>, Long> {
+
+    @Override
+    public Map<String, Object> salvar(Map<String, Object> entidade) {
+        return atualizar(entidade);
+    }
+
+    @Override
+    public Map<String, Object> atualizar(Map<String, Object> entidade) {
+        recalcularEstatisticasFatores();
+        return entidade != null ? entidade : new LinkedHashMap<>();
+    }
+
+    @Override
+    public Map<String, Object> buscarPorId(Long idProduto) {
+        if (idProduto == null) return null;
+        List<Map<String, Object>> lista = estatisticaFatoresProduto(idProduto);
+        return lista.isEmpty() ? null : lista.get(0);
+    }
+
+    @Override
+    public List<Map<String, Object>> listarTodos() {
+        return estatisticaFatoresProduto(null);
+    }
+
+    @Override
+    public boolean deletar(Long idProduto) {
+        if (idProduto == null) return false;
+        if (isBloqueadoParaBandejaIA(idProduto)) {
+            throw new IllegalStateException("Estatística do produto #" + idProduto + " está bloqueada na Bandeja de Contexto da IA.");
+        }
+        return executarComFallbackReacao(() -> {
+            try (EntityManager em = JPAUtil.getEntityManager()) {
+                return em.unwrap(org.hibernate.Session.class).doReturningWork(conn -> {
+                    try (var ps = conn.prepareStatement("DELETE FROM fator_externo_estatistica WHERE id_produto = ?")) {
+                        ps.setLong(1, idProduto);
+                        return ps.executeUpdate() > 0;
+                    }
+                });
+            }
+        }, e -> false);
+    }
 
     public List<Map<String, Object>> demandaMensalCliente(Long idCliente, Long idProduto, Integer mesAlvo) {
         return chamar("sp_prever_demanda_mensal_cliente",

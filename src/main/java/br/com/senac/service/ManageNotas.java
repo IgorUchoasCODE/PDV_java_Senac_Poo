@@ -1,5 +1,7 @@
 package br.com.senac.service;
 
+import br.com.senac.integracao.IntegradorRelatorioFatorExternoService;
+import br.com.senac.integracao.RelatorioIntegradoFatorExterno;
 import br.com.senac.integracao.calendario.CalendarioService;
 import br.com.senac.integracao.clima.ClimaService;
 import br.com.senac.integracao.eventos.MinisterioCulturaService;
@@ -304,5 +306,20 @@ public class ManageNotas {
             acumuladoPorPadrao.merge(padrao, n.getValorTotal(), BigDecimal::add);
         }
         return acumuladoPorPadrao;
+    }
+
+    /**
+     * Retorna o integrador padronizado que consolida relatórios de Clima, Rios, Calendário e Eventos citando cada Nota.
+     */
+    public RelatorioIntegradoFatorExterno obterIntegradorRelatorioFatorExterno() {
+        return new IntegradorRelatorioFatorExternoService(provedoresExternos);
+    }
+
+    public String gerarRelatorioIntegradoCitandoNotas(List<? extends Nota> notas) {
+        return obterIntegradorRelatorioFatorExterno().gerarRelatorioConsolidadoCitandoNotas(notas);
+    }
+
+    public List<Map<String, Object>> estruturarRelatorioIntegradoCitandoNotas(List<? extends Nota> notas) {
+        return obterIntegradorRelatorioFatorExterno().estruturarRelatorioIntegradoNotas(notas);
     }
 }

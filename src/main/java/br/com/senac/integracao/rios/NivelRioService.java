@@ -221,4 +221,12 @@ public class NivelRioService implements ProvedorFatorExterno {
         cacheRioAtual6Horas.entrySet().removeIf(e -> !e.getValue().isValido());
         cacheRioDiarioAtual6Horas.entrySet().removeIf(e -> !e.getValue().isValido());
     }
+
+    @Override
+    public String extrairDetalheVinculo(VinculoFatorExternoNota vinculo) {
+        if (vinculo == null || vinculo.getNivelRioRegistrado() == null) return "N/A";
+        NivelRioDiario r = vinculo.getNivelRioRegistrado();
+        return String.format(Locale.US, "Vazão: %.2f m³/s (Média: %.2f, Máx: %.2f, Mín: %.2f m³/s)",
+                r.vazaoM3s(), r.vazaoMediaM3s(), r.vazaoMaxM3s(), r.vazaoMinM3s());
+    }
 }

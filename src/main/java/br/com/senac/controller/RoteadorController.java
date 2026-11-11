@@ -112,6 +112,7 @@ public class RoteadorController {
                     inicializarSistemaCompleto();
                     yield "Dados padrão (Um, FormaPagamento e Cliente Padrão) inicializados com sucesso.";
                 }
+                case BUSCA_PADRAO_IA -> executarBuscaPadraoLeituraIA(p);
 
                 // 2. PRODUTO
                 case PRODUTO_UNIDADE_LISTAR -> produtoController.listarUnidadesMedida();
@@ -161,21 +162,29 @@ public class RoteadorController {
                     );
                     yield produtoController.buscarPorId(lng(p, "idProdutoKit"));
                 }
-                case PRODUTO_CATALOGO_LISTAR -> produtoController.listarTodosProdutos();
-                case PRODUTO_CATALOGO_BUSCAR -> {
-                    if (p.containsKey("id")) {
-                        yield produtoController.buscarPorId(lng(p, "id"));
+                case PRODUTO_CATALOGO_LISTAR -> {
+                    if (bool(p, "apenasEstoqueValido", false) || bool(p, "comEstoqueValido", false)) {
+                        yield produtoController.listarProdutosComEstoqueValido();
                     }
-                    String termo = str(p, "nome", str(p, "termo", ""));
-                    var encontrados = produtoController.buscarPorTermo(termo);
-                    if (encontrados.size() == 1) {
-                        yield encontrados.get(0);
-                    }
-                    if (!encontrados.isEmpty()) {
-                        yield encontrados;
-                    }
-                    yield produtoController.buscarPorNome(termo);
+                    yield produtoController.listarTodosProdutos();
                 }
+                case PRODUTO_CATALOGO_BUSCAR -> {
+                    boolean apenasEstoqueValido = bool(p, "apenasEstoqueValido", false) || bool(p, "comEstoqueValido", false);
+                    Long id = p.containsKey("id") ? lng(p, "id") : lng(p, "idProduto");
+                    String termo = str(p, "nome", str(p, "termo", null));
+                    yield produtoController.buscarEspecificoOuListarParaEscolha(id, termo, apenasEstoqueValido);
+                }
+                case PRODUTO_BUSCAR_UNICO -> {
+                    Long id = p.containsKey("id") ? lng(p, "id") : lng(p, "idProduto");
+                    String termo = str(p, "nome", str(p, "termo", null));
+                    yield produtoController.buscarEspecificoOuListarParaEscolha(id, termo, false);
+                }
+                case PRODUTO_ESTOQUE_VALIDO_BUSCAR_UNICO -> {
+                    Long id = p.containsKey("id") ? lng(p, "id") : lng(p, "idProduto");
+                    String termo = str(p, "nome", str(p, "termo", null));
+                    yield produtoController.buscarEspecificoOuListarParaEscolha(id, termo, true);
+                }
+                case PRODUTO_ESTOQUE_VALIDO_LISTAR -> produtoController.listarProdutosComEstoqueValido();
                 case PRODUTO_CATALOGO_ATUALIZAR -> {
                     Long id = lng(p, "idProduto");
                     String nomeAtual = str(p, "nomeAtual", null);
@@ -278,10 +287,16 @@ public class RoteadorController {
                 );
                 case PESSOA_LISTAR_CLIENTES -> pessoaController.listarClientes();
                 case PESSOA_LISTAR_FORNECEDORES -> pessoaController.listarFornecedores();
-                case PESSOA_BUSCAR -> pessoaController.buscarPessoasPorTermo(
-                        str(p, "termo", str(p, "nome", str(p, "documento", ""))),
-                        str(p, "papel", null)
-                );
+                case PESSOA_BUSCAR, PESSOA_BUSCAR_UNICA -> {
+                    String termo = str(p, "termo", str(p, "nome", str(p, "documento", str(p, "registro", null))));
+                    Long id = p.containsKey("idPessoa") ? lng(p, "idPessoa") : lng(p, "id");
+                    yield pessoaController.buscarEspecificaOuListarParaEscolha(id, termo, str(p, "papel", null));
+                }
+                case PESSOA_REGISTRO_BUSCAR_UNICO -> {
+                    String tipo = str(p, "tipoDocumento", str(p, "tipo", null));
+                    String num = str(p, "numeroRegistro", str(p, "documento", str(p, "registro", str(p, "termo", ""))));
+                    yield pessoaController.buscarPessoaPorRegistroUnico(tipo, num);
+                }
                 case PESSOA_HISTORICO_COMPLETO -> pessoaController.consultarHistoricoCompletoPessoa(
                         lng(p, "idPessoa"),
                         str(p, "termo", str(p, "nome", str(p, "documento", null))),
@@ -348,10 +363,45 @@ public class RoteadorController {
 
                 // 5. ESTOQUE
                 case ESTOQUE_SALDO_CONSOLIDADO -> estoqueController.consultarSaldoTotalProduto(lng(p, "idProduto"));
-                case ESTOQUE_FILA_LOTES_FIFO -> estoqueController.listarLotesDisponiveisFIFO(lng(p, "idProduto"));
-                case ESTOQUE_BUSCAR_LOTE_ESPECIFICO -> estoqueController.buscarLoteEspecificoPorId(
-                        lng(p, "idLote") != null ? lng(p, "idLote") : lng(p, "idItemLote")
-                );
+                case ESTOQUE_FILA_LOTES_FIFO -> {
+                    Long idProd = lng(p, "idProduto");
+                    if (idProd == null) {
+                        yield estoqueController.listarTodosLotesComEstoqueValido();
+                    }
+                    if (bool(p, "unico", false) || bool(p, "informacaoUnica", false)) {
+                        yield estoqueController.buscarPrimeiroLoteComEstoqueValido(idProd);
+                    }
+                    yield estoqueController.listarLotesDisponiveisFIFO(idProd);
+                }
+                case ESTOQUE_LOTES_VALIDOS_LISTAR -> {
+                    Long idProd = lng(p, "idProduto");
+                    if (idProd != null) {
+                        yield estoqueController.listarLotesDisponiveisFIFO(idProd);
+                    }
+                    yield estoqueController.listarTodosLotesComEstoqueValido();
+                }
+                case ESTOQUE_LOTE_VALIDO_BUSCAR_UNICO -> {
+                    Long idLote = lng(p, "idLote") != null ? lng(p, "idLote") : lng(p, "idItemLote");
+                    if (idLote != null) {
+                        yield estoqueController.buscarLoteEspecificoPorId(idLote);
+                    }
+                    Long idProd = lng(p, "idProduto");
+                    if (idProd != null) {
+                        yield estoqueController.buscarPrimeiroLoteComEstoqueValido(idProd);
+                    }
+                    List<Item<? extends Produto>> todosValidos = estoqueController.listarTodosLotesComEstoqueValido();
+                    yield todosValidos.isEmpty() ? null : todosValidos.get(0);
+                }
+                case ESTOQUE_BUSCAR_LOTE_ESPECIFICO -> {
+                    Long idLote = lng(p, "idLote") != null ? lng(p, "idLote") : lng(p, "idItemLote");
+                    if (idLote != null) {
+                        yield estoqueController.buscarLoteEspecificoPorId(idLote);
+                    }
+                    if (p.containsKey("idProduto")) {
+                        yield estoqueController.buscarPrimeiroLoteComEstoqueValido(lng(p, "idProduto"));
+                    }
+                    yield null;
+                }
                 case ESTOQUE_LOTES_PROXIMOS_VALIDADE -> estoqueController.consultarLotesProximosAoVencimento(
                         p.get("dataLimite") instanceof LocalDate ld ? ld : LocalDate.now().plusMonths(3)
                 );
@@ -409,19 +459,20 @@ public class RoteadorController {
                     String cupom = str(p, "cupom", null);
                     BigDecimal desconto = p.containsKey("descontoCupom") ? bd(p, "descontoCupom", "0.00")
                             : (p.containsKey("descontoGlobal") ? bd(p, "descontoGlobal", "0.00") : BigDecimal.ZERO);
-                    yield notaController.emitirVendaFIFO(cliente, descricao, itens, pags, cupom, desconto);
+                    NotaVenda nv = notaController.emitirVendaFIFO(cliente, descricao, itens, pags, cupom, desconto, resolverDataHoraNota(p));
+                    yield nv;
                 }
                 case NOTA_VENDA_EMITIR_BALCAO_CLIENTE_PADRAO -> {
                     Map<Produto, BigDecimal> itens = resolverItensVenda(p);
                     List<NotaPagamento> pags = extrairPagamentos(p);
-                    yield notaController.emitirVendaBalcaoClienteNaoRegistradoFIFO(itens, pags);
+                    yield notaController.emitirVendaBalcaoClienteNaoRegistradoFIFO(itens, pags, resolverDataHoraNota(p));
                 }
                 case NOTA_VENDA_EMITIR_LOTE_DESEJAVEL -> {
                     Pessoa cliente = resolverCliente(p);
                     String descricao = str(p, "descricao", "Venda Lote Desejável");
                     Map<Long, BigDecimal> lotes = resolverLotesDesejados(p);
                     List<NotaPagamento> pags = extrairPagamentos(p);
-                    yield notaController.emitirVendaPorLoteDesejado(cliente, descricao, lotes, pags);
+                    yield notaController.emitirVendaPorLoteDesejado(cliente, descricao, lotes, pags, resolverDataHoraNota(p));
                 }
                 case NOTA_VENDA_PROCEDURE_MYSQL_FIFO -> {
                     notaController.executarBaixaViaProcedureMySqlFIFO(
@@ -496,6 +547,27 @@ public class RoteadorController {
                             bool(p, "geraPerdaFornecedor", false)
                     );
                 }
+                case NOTA_BUSCAR_UNICA -> {
+                    Long idNota = p.containsKey("idNota") ? lng(p, "idNota") : lng(p, "id");
+                    yield notaController.buscarNotaPorId(idNota);
+                }
+                case NOTA_LISTAR_PADRAO -> {
+                    if (p.containsKey("idPessoa")) {
+                        yield notaController.listarNotasPorPessoa(lng(p, "idPessoa"));
+                    }
+                    String tipo = str(p, "tipoNota", str(p, "tipo", "TODAS")).toUpperCase(Locale.ROOT);
+                    yield switch (tipo) {
+                        case "COMPRA", "NOTACOMPRA" -> notaController.listarNotasPorTipo(NotaCompra.class);
+                        case "VENDA", "NOTAVENDA" -> notaController.listarNotasPorTipo(NotaVenda.class);
+                        case "DEVOLUCAO", "NOTADEVOLUCAO" -> notaController.listarNotasPorTipo(NotaDevolucao.class);
+                        case "PERDA", "NOTAPERDA" -> notaController.listarNotasPorTipo(NotaPerda.class);
+                        default -> notaController.listarTodasNotas();
+                    };
+                }
+                case NOTA_DEFINIR_DATA -> {
+                    Long idNota = p.containsKey("idNota") ? lng(p, "idNota") : lng(p, "id");
+                    yield notaController.definirDataNota(idNota, resolverDataHoraNota(p));
+                }
 
                 // 7. RELATORIO
                 case RELATORIO_LUCRO_CONTABIL_BACEN -> notaController.consultarRelatorioLucroContabilBacen(
@@ -535,12 +607,93 @@ public class RoteadorController {
                         p.containsKey("idProduto") ? lng(p, "idProduto") : null);
                 case FATOR_EXTERNO_EVENTOS_LISTAR -> estatisticaController.eventosPersistidos(inteiro(p, "limite", 100));
                 case FATOR_EXTERNO_RESOLVER_PENDENCIAS -> manageNotas.resolverFatoresExternosPendentes();
+                case FATOR_EXTERNO_RELATORIO_INTEGRADO_NOTAS -> notaController.gerarRelatorioIntegradoPadraoNotas(
+                        p.containsKey("idNota") ? lng(p, "idNota") : (p.containsKey("id") ? lng(p, "id") : null)
+                );
             };
 
             return RespostaEndpoint.ok(rota, rota.getDescricaoOperacao(), resultado);
         } catch (Exception e) {
             return RespostaEndpoint.erro(rota.getCaminhoRota(), e.getMessage());
         }
+    }
+
+    /**
+     * Rota de busca padrão universal estruturada para leitura da IA em qualquer DAO do sistema,
+     * com suporte a retorno único (informação única), filtro de estoque válido, fallback de reação
+     * e indicação de bloqueio na Bandeja de Contexto da IA.
+     */
+    private Map<String, Object> executarBuscaPadraoLeituraIA(Map<String, Object> p) {
+        String entidade = str(p, "entidade", "PRODUTO").trim().toUpperCase(Locale.ROOT);
+        Long id = p.containsKey("id") ? lng(p, "id") : (p.containsKey("idProduto") ? lng(p, "idProduto")
+                : (p.containsKey("idPessoa") ? lng(p, "idPessoa") : (p.containsKey("idNota") ? lng(p, "idNota") : lng(p, "idLote"))));
+        String termo = str(p, "termo", str(p, "nome", str(p, "documento", str(p, "registro", null))));
+        boolean apenasEstoqueValido = bool(p, "apenasEstoqueValido", false) || bool(p, "comEstoqueValido", false);
+        boolean unico = bool(p, "unico", id != null || (termo != null && !termo.isBlank()));
+
+        Map<String, Object> respostaIA = new LinkedHashMap<>();
+        respostaIA.put("entidadeConsultada", entidade);
+        respostaIA.put("modoRetorno", unico ? "UNICO" : "LISTA");
+
+        Object dados = switch (entidade) {
+            case "PRODUTO", "PRODUTOS" -> {
+                if (unico || id != null || (termo != null && !termo.isBlank())) {
+                    yield produtoController.buscarEspecificoOuListarParaEscolha(id, termo, apenasEstoqueValido);
+                }
+                yield apenasEstoqueValido
+                        ? produtoController.listarProdutosComEstoqueValido()
+                        : produtoController.listarTodosProdutos();
+            }
+            case "PRODUTO_ESTOQUE_VALIDO", "ESTOQUE_VALIDO_UNICO" ->
+                    produtoController.buscarEspecificoOuListarParaEscolha(id, termo, true);
+            case "PRODUTOS_ESTOQUE_VALIDO", "ESTOQUE_VALIDO" ->
+                    produtoController.listarProdutosComEstoqueValido();
+            case "PESSOA", "PESSOAS", "CLIENTE", "FORNECEDOR" -> {
+                String papelFiltro = ("CLIENTE".equals(entidade) || "FORNECEDOR".equals(entidade))
+                        ? entidade
+                        : str(p, "papel", null);
+                if (unico || id != null || (termo != null && !termo.isBlank())) {
+                    yield pessoaController.buscarEspecificaOuListarParaEscolha(id, termo, papelFiltro);
+                }
+                yield "FORNECEDOR".equals(papelFiltro)
+                        ? pessoaController.listarFornecedores()
+                        : pessoaController.listarClientes();
+            }
+            case "REGISTRO", "DOCUMENTO" ->
+                    pessoaController.buscarPessoaPorRegistroUnico(str(p, "tipoDocumento", null), termo != null ? termo : "");
+            case "LOTE_VALIDO", "LOTE" -> {
+                if (id != null) {
+                    Item<? extends Produto> lote = estoqueController.buscarLoteEspecificoPorId(id);
+                    if (lote != null) yield lote;
+                    yield estoqueController.buscarPrimeiroLoteComEstoqueValido(id);
+                }
+                List<Item<? extends Produto>> validos = estoqueController.listarTodosLotesComEstoqueValido();
+                yield validos.isEmpty() ? null : validos.get(0);
+            }
+            case "LOTES_VALIDOS", "LOTES" ->
+                    id != null ? estoqueController.listarLotesDisponiveisFIFO(id)
+                            : estoqueController.listarTodosLotesComEstoqueValido();
+            case "NOTA", "NOTAS" -> {
+                if (unico && id != null) {
+                    yield notaController.buscarNotaPorId(id);
+                }
+                yield notaController.listarTodasNotas();
+            }
+            case "UNIDADE_MEDIDA", "UM" -> produtoController.listarUnidadesMedida();
+            case "FORMA_PAGAMENTO", "PAGAMENTO" -> pagamentoController.listarFormasPagamentoAtivas();
+            case "FATOR_EXTERNO", "FATOR_EXTERNO_NOTAS", "RELATORIO_FATOR_EXTERNO" ->
+                    notaController.gerarRelatorioIntegradoPadraoNotas(id);
+            default -> produtoController.listarTodosProdutos();
+        };
+
+        boolean bloqueado = id != null && br.com.senac.repository.dao.PadraoDAO.BLOQUEIOS_BANDEJA_IA.keySet().stream()
+                .anyMatch(k -> k.endsWith(":" + id));
+        respostaIA.put("bloqueadoBandejaIA", bloqueado);
+        respostaIA.put("encontrado", dados != null && (!(dados instanceof Collection<?> c) || !c.isEmpty()));
+        respostaIA.put("quantidadeRegistros", dados instanceof Collection<?> c ? c.size() : (dados != null ? 1 : 0));
+        respostaIA.put("dados", dados);
+        respostaIA.put("resumoLeituraIA", dados != null ? dados.toString() : "Nenhum registro encontrado.");
+        return respostaIA;
     }
 
     /**
@@ -627,7 +780,8 @@ public class RoteadorController {
         }
 
         String descricao = str(p, "descricao", "Compra de estoque");
-        NotaCompra nota = new NotaCompra(fornecedor, descricao);
+        LocalDateTime dataNota = resolverDataHoraNota(p);
+        NotaCompra nota = new NotaCompra(fornecedor, descricao, dataNota);
 
         Object itensObj = p.get("itens");
         if (itensObj == null) itensObj = p.get("produtos");
@@ -721,6 +875,8 @@ public class RoteadorController {
             for (Pessoa f : fornecedores) {
                 if (f.getNome().toLowerCase(Locale.ROOT).contains(termo.toLowerCase(Locale.ROOT))) return f;
             }
+            List<Pessoa> porSigla = br.com.senac.repository.dao.BuscaPalavrasParciaisUtil.filtrarEOrdenar(fornecedores, Pessoa::getNome, termo);
+            if (!porSigla.isEmpty()) return porSigla.get(0);
         }
         List<Pessoa> fornecedores = pessoaController.listarFornecedores();
         if (!fornecedores.isEmpty()) {
@@ -753,6 +909,8 @@ public class RoteadorController {
             for (Pessoa c : clientes) {
                 if (c.getNome().toLowerCase(Locale.ROOT).contains(termo.toLowerCase(Locale.ROOT))) return c;
             }
+            List<Pessoa> porSigla = br.com.senac.repository.dao.BuscaPalavrasParciaisUtil.filtrarEOrdenar(clientes, Pessoa::getNome, termo);
+            if (!porSigla.isEmpty()) return porSigla.get(0);
         }
         return null;
     }
@@ -875,6 +1033,26 @@ public class RoteadorController {
         return null;
     }
 
+    private LocalDateTime resolverDataHoraNota(Map<String, Object> map) {
+        if (map == null) return LocalDateTime.now();
+        Object v = map.get("dataGerada");
+        if (v == null) v = map.get("dataNota");
+        if (v == null) v = map.get("data");
+        if (v instanceof LocalDateTime ldt) return ldt;
+        if (v instanceof LocalDate ld) return ld.atTime(java.time.LocalTime.now());
+        if (v != null && !v.toString().isBlank()) {
+            String s = v.toString().trim();
+            try {
+                return LocalDateTime.parse(s);
+            } catch (Exception ignored) {}
+            try {
+                return LocalDate.parse(s.length() >= 10 ? s.substring(0, 10) : s).atTime(java.time.LocalTime.now());
+            } catch (Exception ignored) {}
+        }
+        return LocalDateTime.now();
+    }
+
+    @SuppressWarnings("unchecked")
     private List<NotaPagamento> extrairPagamentos(Map<String, Object> p) {
         Object pags = p.get("pagamentos");
         if (pags instanceof List<?> list) {
@@ -882,6 +1060,20 @@ public class RoteadorController {
             for (Object el : list) {
                 if (el instanceof NotaPagamento np) {
                     res.add(np);
+                } else if (el instanceof Map<?, ?> rawMap) {
+                    Map<String, Object> pm = (Map<String, Object>) rawMap;
+                    String codigoForma = str(pm, "codigoForma", str(pm, "forma", str(pm, "nome", "PIX"))).trim().toUpperCase(Locale.ROOT);
+                    BigDecimal valor = bd(pm, "valor", "0.00");
+                    int parcelas = inteiro(pm, "parcelas", inteiro(pm, "quantidadeParcelas", 1));
+                    if (parcelas > 1) {
+                        res.add(pagamentoController.criarPagamentoParcelado(codigoForma, valor, parcelas));
+                    } else if ("BOLETO".equalsIgnoreCase(codigoForma) || "PRAZO".equalsIgnoreCase(str(pm, "modalidade", ""))) {
+                        LocalDate venc = resolverValidadeItem(pm);
+                        if (venc == null) venc = LocalDate.now().plusDays(30);
+                        res.add(pagamentoController.criarPagamentoAPrazo(codigoForma, valor, venc));
+                    } else {
+                        res.add(pagamentoController.criarPagamentoAVista(codigoForma, valor, valor, BigDecimal.ZERO));
+                    }
                 }
             }
             return res;

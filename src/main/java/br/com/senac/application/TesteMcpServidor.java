@@ -54,7 +54,8 @@ public class TesteMcpServidor {
                     { "jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {} }
                     """);
             JsonNode toolsArr = respTools.path("result").path("tools");
-            afirmar(toolsArr.isArray() && toolsArr.size() == 63, "tools/list retornou exatamente as 63 rotas mapeadas (Total: " + toolsArr.size() + ")");
+            int totalRotasEsperadas = br.com.senac.controller.RotaSistema.values().length;
+            afirmar(toolsArr.isArray() && toolsArr.size() == totalRotasEsperadas, "tools/list retornou exatamente as " + totalRotasEsperadas + " rotas mapeadas (Total: " + toolsArr.size() + ")");
 
             boolean achouBuscar = false;
             boolean achouExcluir = false;
