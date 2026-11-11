@@ -33,9 +33,9 @@ public class TesteGeminiIntegracao {
             afirmar(config.getTemperature() == 0.2, "Temperatura padrão de precisão é 0.2");
             afirmar(config.getMaxOutputTokens() == 4096, "Limite de saída é 4096 tokens");
 
-            // 2. Teste do Gerador de Tools (63 Rotas)
+            // 2. Teste do Gerador de Tools (Rotas do Sistema)
             List<Map<String, Object>> tools = GeminiToolRegistry.gerarDeclaracoesTodasTools();
-            afirmar(tools.size() == 63, "Exatamente 63 ferramentas mapeadas para a IA Gemini (Total: " + tools.size() + ")");
+            afirmar(tools.size() == RotaSistema.values().length, "Todas as ferramentas mapeadas para a IA Gemini (Total: " + tools.size() + ")");
 
             for (Map<String, Object> tool : tools) {
                 String name = (String) tool.get("name");
@@ -136,8 +136,9 @@ public class TesteGeminiIntegracao {
 
             // 8. Teste de Ciclo Completo de Produto (Criar -> Atualizar Preço -> Excluir com Confirmação)
             RoteadorController roteador = new RoteadorController();
+            String nomeProdUnico = "Produto Teste 86 " + System.currentTimeMillis();
             var respCriar = roteador.executarEndpoint(RotaSistema.PRODUTO_FISICO_CADASTRAR, Map.of(
-                    "nome", "Produto Teste 86",
+                    "nome", nomeProdUnico,
                     "descricao", "Item para teste de ciclo de vida",
                     "precoVenda", "99.90",
                     "siglaUm", "UN",

@@ -1,5 +1,5 @@
 $content = Get-Content "target\cp.txt" -Raw
-$cpStr = $content.Trim()
+$cpStr = $content.Trim() -replace 'C:\\Users\\[^\\]+\\.m2\\repository', "$env:USERPROFILE\.m2\repository"
 if ($cpStr.StartsWith('-cp ')) {
     $cpStr = $cpStr.Substring(4).Trim().Trim('"')
 }

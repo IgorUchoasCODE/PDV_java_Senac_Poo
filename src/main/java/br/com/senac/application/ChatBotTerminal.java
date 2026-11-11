@@ -55,8 +55,21 @@ public class ChatBotTerminal {
             }
 
             if (entrada.equalsIgnoreCase(":limpar") || entrada.equalsIgnoreCase(":cls") || entrada.equalsIgnoreCase(":clear")) {
+                agente.fecharJanelaContexto(sessaoTerminal);
                 limparTela();
                 exibirBanner(agente);
+                System.out.println(VERDE + "✔ Janela de contexto e bandeja foram reiniciadas limpas." + RESET);
+                continue;
+            }
+
+            if (entrada.equalsIgnoreCase(":bandeja") || entrada.equalsIgnoreCase(":tray")) {
+                System.out.println("\n" + CIANO + agente.obterBandeja(sessaoTerminal).formatarVisualizacao() + RESET);
+                continue;
+            }
+
+            if (entrada.equalsIgnoreCase(":fechar")) {
+                agente.fecharJanelaContexto(sessaoTerminal);
+                System.out.println(VERDE + "✔ Janela de contexto encerrada com sucesso. Sessão limpa e pronta!" + RESET);
                 continue;
             }
 
@@ -180,30 +193,34 @@ public class ChatBotTerminal {
         System.out.println(" • Rotas Oficiais: " + CIANO + RotaSistema.values().length + " rotas do RoteadorController integradas" + RESET);
         System.out.println(CIANO + "--------------------------------------------------------------------------------" + RESET);
         System.out.println(" Digite em linguagem natural (ex: 'qual o preço do produto 86?', 'listar produtos')");
-        System.out.println(" Comandos: " + NEGRITO + ":ajuda" + RESET + " | " + NEGRITO + ":rotas" + RESET + " | " + NEGRITO + ":persona <texto>" + RESET + " | " + NEGRITO + ":audio <arq>" + RESET + " | " + NEGRITO + ":sair" + RESET);
+        System.out.println(" Comandos: " + NEGRITO + ":ajuda" + RESET + " | " + NEGRITO + ":bandeja" + RESET + " | " + NEGRITO + ":fechar" + RESET + " | " + NEGRITO + ":rotas" + RESET + " | " + NEGRITO + ":persona <texto>" + RESET + " | " + NEGRITO + ":sair" + RESET);
         System.out.println(CIANO + "================================================================================" + RESET);
     }
 
     private static void exibirAjuda() {
         System.out.println("\n" + NEGRITO + CIANO + "📖 COMANDOS DISPONÍVEIS NO TERMINAL:" + RESET);
         System.out.println("  • " + VERDE + "<texto livre>" + RESET + "       : Envia comando em linguagem natural para a IA.");
-        System.out.println("  • " + VERDE + ":rotas" + RESET + "              : Exibe o catálogo completo de 63 rotas mapeadas.");
+        System.out.println("  • " + VERDE + ":bandeja" + RESET + "            : Exibe o status atual da Bandeja de Contexto (instruções validadas e pendentes).");
+        System.out.println("  • " + VERDE + ":fechar" + RESET + "             : Encerra e limpa a janela de contexto atual (descarta pendências e limpa memória).");
+        System.out.println("  • " + VERDE + ":rotas" + RESET + "              : Exibe o catálogo completo de rotas oficiais mapeadas.");
         System.out.println("  • " + VERDE + ":audio <arquivo>" + RESET + "     : Envia um arquivo de áudio (.wav, .mp3, .webm) para transcrição e ação.");
         System.out.println("  • " + VERDE + ":imagem <arquivo>" + RESET + "    : Envia foto ou scan (.png, .jpg) para análise multimodal.");
         System.out.println("  • " + VERDE + ":persona <texto>" + RESET + "    : Injeta nova personalidade e tom de voz na IA em tempo real.");
         System.out.println("  • " + VERDE + ":manual" + RESET + "             : Exibe o manual autoexplicativo gerado dinamicamente.");
-        System.out.println("  • " + VERDE + ":limpar" + RESET + "             : Limpa o console.");
+        System.out.println("  • " + VERDE + ":limpar" + RESET + "             : Limpa o console e reseta a janela de contexto.");
         System.out.println("  • " + VERDE + ":sair" + RESET + "               : Encerra o ChatBot.");
         System.out.println("\n" + NEGRITO + "EXEMPLOS DE USO:" + RESET);
-        System.out.println("  > " + CIANO + "qual o preço do produto 86?" + RESET);
+        System.out.println("  > " + CIANO + "cadastrar produto Leite um=UN" + RESET + " (adiciona à bandeja para confirmação)");
         System.out.println("  > " + CIANO + "altere o preço do produto 86 para 120 reais" + RESET);
         System.out.println("  > " + CIANO + "apague o produto 86" + RESET + " (o sistema pedirá confirmação antes)");
+        System.out.println("  > " + CIANO + "sim" + RESET + " (executa todas as instruções validadas da bandeja e fecha o contexto)");
+        System.out.println("  > " + CIANO + "nao" + RESET + " (descarta as instruções da bandeja e fecha o contexto)");
         System.out.println("  > " + CIANO + "listar todos os clientes cadastrados" + RESET);
         System.out.println("  > " + CIANO + "verifique o saldo consolidado do produto 86" + RESET);
     }
 
     private static void exibirCatalogoRotas() {
-        System.out.println("\n" + NEGRITO + CIANO + "📋 CATÁLOGO DAS 63 ROTAS DE CONTROLE (ROTEADORCONTROLLER):" + RESET);
+        System.out.println("\n" + NEGRITO + CIANO + "📋 CATÁLOGO DAS ROTAS DE CONTROLE (ROTEADORCONTROLLER):" + RESET);
         for (RotaSistema r : RotaSistema.values()) {
             System.out.printf(" • %-35s [%-10s] %s%n", r.name(), r.getModulo(), r.getDescricaoOperacao());
         }
