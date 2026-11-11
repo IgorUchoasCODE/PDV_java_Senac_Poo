@@ -48,16 +48,17 @@ public final class ManualInstrucoesIA {
         sb.append("- Se for só conversa, ou se faltar informação: `\"acoes\": []` e pergunte em `mensagem`.\n\n");
 
         sb.append("## 3. Regras semânticas (como entender o usuário)\n");
-        sb.append("1. NUNCA invente IDs. Se o usuário citar só o nome (\"apagar o cliente Igor\"), use primeiro uma rota de busca/listagem ")
-          .append("(ex: PESSOA_LISTAR_CLIENTES, PRODUTO_CATALOGO_BUSCAR) e, em `mensagem`, diga o que vai procurar. ")
-          .append("Quando o usuário voltar com o ID ou o resultado, aí sim use a rota de ação.\n");
-        sb.append("2. Ações destrutivas (risco ALTO: excluir, remover, cancelar, baixar perda) devem ser enviadas normalmente. ")
-          .append("O SISTEMA pergunta a confirmação ao usuário e só executa após \"sim\". Não peça confirmação no JSON.\n");
-        sb.append("3. Formatos: dinheiro, preço, quantidade e limite = TEXTO com ponto decimal (\"49.90\", \"1.000000\"); ")
+        sb.append("1. ATUALIZAÇÃO E EXCLUSÃO PELO NOME: Se o usuário pedir para atualizar ou alterar produto citando o nome atual ")
+          .append("(ex: 'quero alterar o nome do produto ovos para Ovos branco tipo A' ou 'mude o preço de ovos para 10.00'), ")
+          .append("use DIRETAMENTE a rota de atualização correspondente (ex: PRODUTO_CATALOGO_ATUALIZAR com nomeAtual='ovos' e novoNome='Ovos branco tipo A', ")
+          .append("ou PRODUTO_CATALOGO_ATUALIZAR_PRECO com nomeProduto='ovos' e novoPreco='10.00'). O sistema resolve o produto no banco pelo nome automaticamente!\n");
+        sb.append("2. BANDEJA DE CONTEXTO E HUMAN-IN-THE-LOOP: O sistema gerencia uma BANDEJA DE CONTEXTO. Todas as ações de cadastro, ")
+          .append("atualização e exclusão geradas ficam retidas e validadas na bandeja. O sistema solicita confirmação ('SIM') ao usuário ")
+          .append("e executa todas as instruções em lote, fechando a janela de contexto ao concluir. Não peça confirmação no JSON.\n");
+        sb.append("3. NUNCA invente IDs fictícios. Se o usuário quiser excluir uma pessoa e não souber o ID, use PESSOA_BUSCAR ou PESSOA_LISTAR_CLIENTES.\n");
+        sb.append("4. Formatos: dinheiro, preço, quantidade e limite = TEXTO com ponto decimal (\"49.90\", \"1.000000\"); ")
           .append("IDs e contagens = número; datas = \"AAAA-MM-DD\"; verdadeiro/falso = true/false; CPF/CNPJ com pontuação.\n");
-        sb.append("4. Pedidos independentes na mesma frase => várias ações na lista. ")
-          .append("Pedidos que dependem do resultado de outro => envie só o primeiro passo.\n");
-        sb.append("5. Em dúvida entre ler e alterar, escolha LER (busca/listagem). Nunca altere dados sem pedido claro.\n");
+        sb.append("5. Pedidos independentes na mesma frase => várias ações na lista (ex: cadastrar múltiplos produtos ou produto e unidade).\n");
         sb.append("6. Mantenha `mensagem` curta, clara e sem termos técnicos (nada de nomes de rota para o usuário).\n\n");
 
         sb.append("### Dicionário rápido (frase do usuário -> rota)\n");
@@ -132,6 +133,9 @@ public final class ManualInstrucoesIA {
                     ex.put(campo, valorExemplo((Map<String, Object>) def));
                 }
             }
+            if (ex.isEmpty() && props.containsKey("idProduto")) {
+                ex.put("idProduto", 1);
+            }
         }
         Map<String, Object> chamada = new LinkedHashMap<>();
         chamada.put("rota", r.name());
@@ -193,10 +197,40 @@ public final class ManualInstrucoesIA {
     /** Parâmetros obrigatórios ausentes (ou em branco) na chamada. Lista vazia = chamada completa. */
     public static List<String> obrigatoriosFaltando(RotaSistema r, Map<String, Object> params) {
         List<String> faltando = new ArrayList<>();
+        if (r == null) return faltando;
+
         for (String campo : obrigatorios(r)) {
             Object v = params != null ? params.get(campo) : null;
             if (v == null || (v instanceof String s && s.isBlank())) faltando.add(campo);
         }
+
+        // Validações semânticas adicionais para rotas que aceitam identificação por ID ou Nome:
+        if (r == RotaSistema.PRODUTO_CATALOGO_ATUALIZAR) {
+            boolean temIdentificador = (params != null && params.get("idProduto") != null) ||
+                    (params != null && params.get("nomeAtual") != null && !params.get("nomeAtual").toString().isBlank());
+            if (!temIdentificador) {
+                faltando.add("idProduto");
+            }
+            boolean temDadoAtualizacao = (params != null && params.get("novoNome") != null && !params.get("novoNome").toString().isBlank()) ||
+                    (params != null && params.get("nome") != null && !params.get("nome").toString().isBlank()) ||
+                    (params != null && params.get("descricao") != null && !params.get("descricao").toString().isBlank());
+            if (!temDadoAtualizacao) {
+                faltando.add("novoNome");
+            }
+        } else if (r == RotaSistema.PRODUTO_CATALOGO_ATUALIZAR_PRECO) {
+            boolean temIdentificador = (params != null && params.get("idProduto") != null) ||
+                    (params != null && params.get("nomeProduto") != null && !params.get("nomeProduto").toString().isBlank());
+            if (!temIdentificador) {
+                faltando.add("idProduto");
+            }
+        } else if (r == RotaSistema.PRODUTO_CATALOGO_EXCLUIR) {
+            boolean temIdentificador = (params != null && params.get("idProduto") != null) ||
+                    (params != null && params.get("nomeProduto") != null && !params.get("nomeProduto").toString().isBlank());
+            if (!temIdentificador) {
+                faltando.add("idProduto");
+            }
+        }
+
         return faltando;
     }
 

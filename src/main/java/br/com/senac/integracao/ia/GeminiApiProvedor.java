@@ -39,7 +39,7 @@ public class GeminiApiProvedor implements ProvedorIA {
     @Override
     public RespostaIA conversar(PedidoIA pedido) throws Exception {
         GeminiClientService.RespostaGemini r = pedido.anexo() == null
-                ? client.conversarComTools(pedido.mensagem(), null)
+                ? client.conversarComTools(pedido.mensagem(), pedido.historico())
                 : client.conversarMultimodal(pedido.mensagem(), pedido.anexo(), pedido.mimeType());
 
         List<ChamadaFerramenta> chamadas = r.getChamadasTools().stream()

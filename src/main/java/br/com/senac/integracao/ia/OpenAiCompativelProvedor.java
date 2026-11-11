@@ -62,12 +62,24 @@ public class OpenAiCompativelProvedor implements ProvedorIA {
             tools.add(tool);
         }
 
+        List<Map<String, Object>> messages = new ArrayList<>();
+        messages.add(Map.of("role", "system", "content", textoSistema));
+        if (pedido.historico() != null && !pedido.historico().isEmpty()) {
+            for (Map<String, Object> h : pedido.historico()) {
+                String role = String.valueOf(h.get("role"));
+                if ("model".equals(role)) role = "assistant";
+                Object parts = h.get("parts");
+                if (parts instanceof List<?> list && !list.isEmpty() && list.get(0) instanceof Map<?, ?> m && m.containsKey("text")) {
+                    messages.add(Map.of("role", role, "content", String.valueOf(m.get("text"))));
+                }
+            }
+        }
+        messages.add(Map.of("role", "user", "content", pedido.mensagem()));
+
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", cfg.getOpenaiModelo());
         body.put("temperature", 0.2);
-        body.put("messages", List.of(
-                Map.of("role", "system", "content", textoSistema),
-                Map.of("role", "user", "content", pedido.mensagem())));
+        body.put("messages", messages);
         body.put("tools", tools);
 
         HttpRequest.Builder rb = HttpRequest.newBuilder()

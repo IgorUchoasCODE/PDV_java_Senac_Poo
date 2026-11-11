@@ -27,7 +27,10 @@ public interface ProvedorIA {
     /** Envia o pedido e devolve a interpretação da IA. */
     RespostaIA conversar(PedidoIA pedido) throws Exception;
 
-    record PedidoIA(String mensagem, byte[] anexo, String mimeType) {
+    record PedidoIA(String mensagem, byte[] anexo, String mimeType, List<Map<String, Object>> historico) {
+        public PedidoIA(String mensagem, byte[] anexo, String mimeType) {
+            this(mensagem, anexo, mimeType, List.of());
+        }
     }
 
     /** Uma rota que a IA quer executar. {@code rota} aceita o nome do enum ou o nome da função. */
