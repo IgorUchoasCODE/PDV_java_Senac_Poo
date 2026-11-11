@@ -17,30 +17,37 @@ public class GeminiToolRegistry {
         DESTRUTIVO       // Exige confirmação explícita do usuário (Human-in-the-Loop)
     }
 
+    private static List<Map<String, Object>> cacheDeclaracoesTools;
+    private static List<Map<String, Object>> cacheToolsWrapper;
+
     /**
      * Retorna a lista completa de Function Declarations compatíveis com a especificação da API Gemini.
      */
-    public static List<Map<String, Object>> gerarDeclaracoesTodasTools() {
-        List<Map<String, Object>> tools = new ArrayList<>();
-
-        for (RotaSistema rota : RotaSistema.values()) {
-            Map<String, Object> func = new LinkedHashMap<>();
-            func.put("name", rota.getNomeFuncaoGemini());
-            func.put("description", construirDescricaoEnriquecida(rota));
-            func.put("parameters", mapearParametrosRota(rota));
-            tools.add(func);
+    public static synchronized List<Map<String, Object>> gerarDeclaracoesTodasTools() {
+        if (cacheDeclaracoesTools == null) {
+            List<Map<String, Object>> tools = new ArrayList<>();
+            for (RotaSistema rota : RotaSistema.values()) {
+                Map<String, Object> func = new LinkedHashMap<>();
+                func.put("name", rota.getNomeFuncaoGemini());
+                func.put("description", construirDescricaoEnriquecida(rota));
+                func.put("parameters", mapearParametrosRota(rota));
+                tools.add(func);
+            }
+            cacheDeclaracoesTools = Collections.unmodifiableList(tools);
         }
-
-        return tools;
+        return cacheDeclaracoesTools;
     }
 
     /**
      * Retorna a lista encapsulada dentro da chave 'tools' pronta para envio ao endpoint do Gemini.
      */
-    public static List<Map<String, Object>> gerarToolsWrapper() {
-        Map<String, Object> wrapper = new LinkedHashMap<>();
-        wrapper.put("function_declarations", gerarDeclaracoesTodasTools());
-        return Collections.singletonList(wrapper);
+    public static synchronized List<Map<String, Object>> gerarToolsWrapper() {
+        if (cacheToolsWrapper == null) {
+            Map<String, Object> wrapper = new LinkedHashMap<>();
+            wrapper.put("function_declarations", gerarDeclaracoesTodasTools());
+            cacheToolsWrapper = Collections.singletonList(wrapper);
+        }
+        return cacheToolsWrapper;
     }
 
     /**
@@ -86,8 +93,10 @@ public class GeminiToolRegistry {
                 1. COMUNICAÇÃO NATURAL E EXECUTIVA: Fale sempre em português claro, direto, amigável e educado, aderindo à personalidade definida acima. Explique sempre o que você fez ou encontrou de forma resumida e profissional. NUNCA cuspa objetos técnicos brutos ou códigos incompreensíveis.
                 2. CONSULTAS E BUSCAS: Ao buscar produtos ou clientes, apresente os itens encontrados com ID, Nome e Preço (ex: 'Encontrei o produto #86: Monitor Gamer 27 (R$ 1.250,00)').
                 3. MODIFICAÇÕES (PREÇO, DADOS): Ao atualizar qualquer informação, confirme o novo valor com clareza (ex: 'Preço do produto #86 atualizado para R$ 1.100,00 com sucesso!').
-                4. AÇÕES DESTRUTIVAS (DELETAR, APAGAR, BAIXAR PERDAS): Ao identificar uma solicitação de exclusão, acione a ferramenta correspondente. O sistema de proteção exibirá automaticamente a solicitação de confirmação para o usuário.
-                5. PADRÃO CONTÁBIL BACEN: Todas as operações financeiras e margens seguem o padrão Banco Central do Brasil (HALF_EVEN, 2 casas decimais).
+                4. ATUALIZAÇÃO PELO NOME: Se o usuário pedir para atualizar o nome, descrição ou preço de um produto citando o nome (ex: 'quero alterar o nome do produto ovos para Ovos branco tipo A' ou 'mude o preço de ovos para 12.00'), acione IMEDIATAMENTE a ferramenta de atualização (PRODUTO_CATALOGO_ATUALIZAR com nomeAtual='ovos' e novoNome='Ovos branco tipo A', ou PRODUTO_CATALOGO_ATUALIZAR_PRECO com nomeProduto='ovos' e novoPreco='12.00'). NÃO chame busca se a intenção já for de atualizar!
+                5. AÇÕES DESTRUTIVAS (DELETAR, APAGAR, BAIXAR PERDAS): Ao identificar uma solicitação de exclusão, acione a ferramenta correspondente. O sistema exibirá a solicitação de confirmação na bandeja para o usuário.
+                6. BANDEJA DE CONTEXTO: O sistema retém ações de cadastro e mutação em uma bandeja de contexto para confirmação e execução conjunta em lote (Human-in-the-Loop), encerrando a janela de contexto após a execução.
+                7. PADRÃO CONTÁBIL BACEN: Todas as operações financeiras e margens seguem o padrão Banco Central do Brasil (HALF_EVEN, 2 casas decimais).
                 """);
 
         Map<String, Object> part = new HashMap<>();
@@ -173,19 +182,21 @@ public class GeminiToolRegistry {
                 props.put("nome", prop("STRING", "Nome exato ou parcial do produto (opcional)"));
             }
             case PRODUTO_CATALOGO_ATUALIZAR -> {
-                props.put("idProduto", prop("INTEGER", "ID do produto no catálogo"));
-                props.put("nome", prop("STRING", "Novo nome do produto (opcional)"));
+                props.put("idProduto", prop("INTEGER", "ID numérico do produto no catálogo (opcional se informar nomeAtual)"));
+                props.put("nomeAtual", prop("STRING", "Nome atual ou parcial do produto para identificação (opcional se informar idProduto)"));
+                props.put("novoNome", prop("STRING", "Novo nome cadastral a ser gravado no produto (opcional)"));
+                props.put("nome", prop("STRING", "Novo nome do produto (alias para novoNome)"));
                 props.put("descricao", prop("STRING", "Nova descrição detalhada do produto (opcional)"));
-                required.add("idProduto");
             }
             case PRODUTO_CATALOGO_ATUALIZAR_PRECO -> {
-                props.put("idProduto", prop("INTEGER", "ID do produto no catálogo"));
+                props.put("idProduto", prop("INTEGER", "ID do produto no catálogo (opcional se informar nomeProduto)"));
+                props.put("nomeProduto", prop("STRING", "Nome atual ou parcial do produto para identificação (opcional se informar idProduto)"));
                 props.put("novoPreco", prop("STRING", "Novo preço de venda em R$ (ex: '49.90')"));
-                required.addAll(Arrays.asList("idProduto", "novoPreco"));
+                required.add("novoPreco");
             }
             case PRODUTO_CATALOGO_EXCLUIR -> {
-                props.put("idProduto", prop("INTEGER", "ID do produto a ser excluído permanentemente"));
-                required.add("idProduto");
+                props.put("idProduto", prop("INTEGER", "ID do produto a ser excluído permanentemente (opcional se informar nomeProduto)"));
+                props.put("nomeProduto", prop("STRING", "Nome do produto a ser excluído (opcional se informar idProduto)"));
             }
             case PRODUTO_IMAGEM_ADICIONAR -> {
                 props.put("idProduto", prop("INTEGER", "ID do produto"));

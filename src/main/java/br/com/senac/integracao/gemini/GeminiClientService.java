@@ -28,6 +28,7 @@ public class GeminiClientService {
     private final GeminiConfig config;
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
+    private volatile String modeloAtivoFixado = null;
 
     public GeminiClientService() {
         this(GeminiConfig.getInstancia());
@@ -128,8 +129,15 @@ public class GeminiClientService {
         String jsonBody = objectMapper.writeValueAsString(payloadMap);
 
         List<String> modelosParaTentar = new ArrayList<>();
-        modelosParaTentar.add(config.getModel());
-        for (String fb : Arrays.asList("gemini-3.5-flash", "gemini-flash-lite-latest", "gemini-3.5-flash-lite")) {
+        // 1. Se já encontrou um modelo funcional nesta sessão, prioriza-o imediatamente (Zero latência de retentativa)
+        if (modeloAtivoFixado != null) {
+            modelosParaTentar.add(modeloAtivoFixado);
+        }
+        String modeloConfig = config.getModel();
+        if (modeloConfig != null && !modelosParaTentar.contains(modeloConfig)) {
+            modelosParaTentar.add(modeloConfig);
+        }
+        for (String fb : Arrays.asList("gemini-3-flash-preview", "gemini-3.1-flash-lite", "gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-3.8-flash")) {
             if (!modelosParaTentar.contains(fb)) {
                 modelosParaTentar.add(fb);
             }
@@ -139,38 +147,43 @@ public class GeminiClientService {
         for (String modeloAtual : modelosParaTentar) {
             String endpointUrl = config.getEndpointUrl(modeloAtual);
 
-            for (int tentativa = 1; tentativa <= 2; tentativa++) {
-                try {
-                    HttpRequest request = HttpRequest.newBuilder()
-                            .uri(URI.create(endpointUrl))
-                            .header("Content-Type", "application/json")
-                            .timeout(Duration.ofSeconds(config.getTimeoutSeconds()))
-                            .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
-                            .build();
+            try {
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(endpointUrl))
+                        .header("Content-Type", "application/json")
+                        .timeout(Duration.ofSeconds(15))
+                        .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                        .build();
 
-                    HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-                    if (response.statusCode() == 200) {
-                        return objectMapper.readTree(response.body());
+                if (response.statusCode() == 200) {
+                    if (!modeloAtual.equals(this.modeloAtivoFixado)) {
+                        this.modeloAtivoFixado = modeloAtual;
+                        System.out.println("⚡ [GeminiClient] Modelo fixado com sucesso: " + modeloAtual + " (alta velocidade)");
                     }
-
-                    if (response.statusCode() == 503 || response.statusCode() == 429) {
-                        ultimoErro = "HTTP " + response.statusCode() + " (" + modeloAtual + "): " + response.body();
-                        System.err.println("Aviso: Modelo " + modeloAtual + " com alta demanda (" + response.statusCode() + "). Tentativa " + tentativa + " de 2...");
-                        Thread.sleep(1000L * tentativa);
-                        continue;
-                    }
-
-                    throw new IOException("Erro da API Gemini (HTTP " + response.statusCode() + "): " + response.body());
-
-                } catch (IOException e) {
-                    if (e.getMessage() != null && e.getMessage().contains("HTTP 400")) {
-                        throw e;
-                    }
-                    ultimoErro = e.getMessage();
+                    return objectMapper.readTree(response.body());
                 }
+
+                if (response.statusCode() == 503 || response.statusCode() == 429) {
+                    ultimoErro = "HTTP " + response.statusCode() + " (" + modeloAtual + "): " + response.body();
+                    System.err.println("Aviso: Modelo " + modeloAtual + " sobrecarregado (" + response.statusCode() + "). Alternando imediatamente para o próximo modelo...");
+                    continue;
+                }
+
+                if (response.statusCode() == 404) {
+                    ultimoErro = "HTTP 404: modelo não disponível (" + modeloAtual + ")";
+                    continue;
+                }
+
+                throw new IOException("Erro da API Gemini (HTTP " + response.statusCode() + "): " + response.body());
+
+            } catch (IOException e) {
+                if (e.getMessage() != null && e.getMessage().contains("HTTP 400")) {
+                    throw e;
+                }
+                ultimoErro = e.getMessage();
             }
-            System.err.println("Alternando automaticamente para o próximo modelo disponível...");
         }
 
         throw new IOException("Não foi possível obter resposta da API Gemini após tentativas com múltiplos modelos. Último erro: " + ultimoErro);
