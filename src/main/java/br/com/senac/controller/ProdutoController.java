@@ -158,35 +158,68 @@ public class ProdutoController {
 
     // ==================== ROTAS DE MANUTENÇÃO (EXCLUSÃO E PREÇO) ====================
 
+    public List<Produto> buscarPorTermo(String termo) {
+        return produtoDAO.buscarPorTermo(termo);
+    }
+
     public boolean excluirProduto(Long idProduto) {
-        Produto p = produtoDAO.buscarPorId(idProduto);
-        if (p == null) {
-            throw new IllegalArgumentException("Produto não encontrado com ID: " + idProduto);
+        return excluirProdutoPorIdOuNome(idProduto, null);
+    }
+
+    public boolean excluirProdutoPorIdOuNome(Long idProduto, String nomeProduto) {
+        Produto p = null;
+        if (idProduto != null) {
+            p = produtoDAO.buscarPorId(idProduto);
         }
-        produtoDAO.deletar(idProduto);
+        if (p == null && nomeProduto != null && !nomeProduto.isBlank()) {
+            p = produtoDAO.buscarPorNome(nomeProduto);
+        }
+        if (p == null) {
+            throw new IllegalArgumentException("Produto não encontrado para exclusão (ID: " + idProduto + ", Nome: " + nomeProduto + ").");
+        }
+        produtoDAO.deletar(p.getId());
         return true;
     }
 
     public Produto atualizarPrecoVenda(Long idProduto, BigDecimal novoPreco) {
-        Produto p = produtoDAO.buscarPorId(idProduto);
+        return atualizarPrecoVendaPorIdOuNome(idProduto, null, novoPreco);
+    }
+
+    public Produto atualizarPrecoVendaPorIdOuNome(Long idProduto, String nomeProduto, BigDecimal novoPreco) {
+        Produto p = null;
+        if (idProduto != null) {
+            p = produtoDAO.buscarPorId(idProduto);
+        }
+        if (p == null && nomeProduto != null && !nomeProduto.isBlank()) {
+            p = produtoDAO.buscarPorNome(nomeProduto);
+        }
         if (p == null) {
-            throw new IllegalArgumentException("Produto não encontrado com ID: " + idProduto);
+            throw new IllegalArgumentException("Produto não encontrado para atualização de preço.");
         }
         p.setPrecoVenda(novoPreco);
-        produtoDAO.salvar(p);
-        return p;
+        return produtoDAO.atualizar(p);
     }
 
     public Produto atualizarProduto(Long idProduto, String novoNome, String novaDescricao) {
-        Produto p = produtoDAO.buscarPorId(idProduto);
+        return atualizarProdutoPorIdOuNome(idProduto, null, novoNome, novaDescricao);
+    }
+
+    public Produto atualizarProdutoPorIdOuNome(Long idProduto, String nomeAtual, String novoNome, String novaDescricao) {
+        Produto p = null;
+        if (idProduto != null) {
+            p = produtoDAO.buscarPorId(idProduto);
+        }
+        if (p == null && nomeAtual != null && !nomeAtual.isBlank()) {
+            p = produtoDAO.buscarPorNome(nomeAtual);
+        }
         if (p == null) {
-            throw new IllegalArgumentException("Produto não encontrado com ID: " + idProduto);
+            throw new IllegalArgumentException("Produto não encontrado para atualização (ID: " + idProduto + ", Nome: " + nomeAtual + ").");
         }
         if (novoNome != null && !novoNome.isBlank()) {
-            p.setNome(novoNome);
+            p.setNome(novoNome.trim());
         }
         if (novaDescricao != null) {
-            p.setDescricao(novaDescricao);
+            p.setDescricao(novaDescricao.trim());
         }
         return produtoDAO.atualizar(p);
     }
