@@ -27,3 +27,10 @@ Write-Host "--- Executando Teste de Todas as 72 Rotas (TesteEndpointsControllers
 
 Write-Host "--- Executando Teste da Bandeja de Contexto e Emissão de Notas (TesteBandejaContexto) ---" -ForegroundColor Cyan
 & java "-Dfile.encoding=UTF-8" -cp "$cp;$dir\target\classes" br.com.senac.application.TesteBandejaContexto
+
+
+Write-Host "--- Executando Teste da Bandeja Passo a Passo (TesteBandejaPassoAPasso) ---" -ForegroundColor Cyan
+& java "-Dfile.encoding=UTF-8" -cp "$cp;$dir\target\classes" br.com.senac.application.TesteBandejaPassoAPasso
+
+Write-Host "--- Executando Teste do Parser AST e Pré-processador (TesteParserEPreProcessador) ---" -ForegroundColor Cyan
+& java "-Dfile.encoding=UTF-8" -cp "$cp;$dir\target\classes" br.com.senac.application.TesteParserEPreProcessador

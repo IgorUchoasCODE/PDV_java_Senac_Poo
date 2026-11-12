@@ -15,6 +15,7 @@ import br.com.senac.integracao.ia.ProvedorIA.PedidoIA;
 import br.com.senac.integracao.ia.ProvedorIA.RespostaIA;
 import br.com.senac.integracao.ia.ProvedorIAFactory;
 import br.com.senac.integracao.ia.RelatorioExecucaoBandeja;
+import br.com.senac.integracao.ia.parser.PreProcessadorMensagem;
 import br.com.senac.repository.modal.nota.*;
 import br.com.senac.repository.modal.pessoa.Pessoa;
 import br.com.senac.repository.modal.produto.Produto;
@@ -28,7 +29,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 /**
  * Agente Operacional do Sistema Sazonalisei.
  * Orquestra: Usuário -> ProvedorIA (qualquer IA) -> validação -> Bandeja de Contexto (Human-in-the-Loop)
- * -> concorrência segura (Virtual Threads) -> RoteadorController.
+ * -> execução sequencial com trava por recurso -> RoteadorController.
  *
  * Funciona de dois jeitos:
  *  1. Com provedor de API (Gemini API, Ollama/OpenAI-compatível): o sistema chama a IA sozinho.
@@ -42,6 +43,8 @@ public class GeminiAgenteOperacional {
     private final ConfirmacaoAcaoGatekeeper gatekeeper;
     private final ConcorrenciaSeguraEngine concorrenciaEngine;
     private final CompiladorInstrucoesCurtaService compiladorInstrucoesCurta;
+    private final br.com.senac.integracao.ia.bandeja.ExecutorBandeja executorBandeja;
+    private final PreProcessadorMensagem preProcessador = new PreProcessadorMensagem();
     private volatile ProvedorIA provedor;
 
     // Bandejas de Operações e Contexto ativas por sessão do usuário
@@ -94,6 +97,7 @@ public class GeminiAgenteOperacional {
         this.gatekeeper = gatekeeper;
         this.concorrenciaEngine = concorrenciaEngine;
         this.compiladorInstrucoesCurta = new CompiladorInstrucoesCurtaService(roteadorController);
+        this.executorBandeja = new br.com.senac.integracao.ia.bandeja.ExecutorBandeja(roteadorController);
         this.provedor = ProvedorIAFactory.criar(geminiClient);
     }
 
@@ -153,6 +157,19 @@ public class GeminiAgenteOperacional {
             return respostaCompilada;
         }
 
+        // Navegação da bandeja em linguagem simples ("próxima", "executar OP-2", "pular OP-1"):
+        // resolvida localmente, sem chamar a IA.
+        BandejaOperacoesContexto bandejaAtiva = bandejasPorSessao.get(idSessao);
+        if (bandejaAtiva != null && bandejaAtiva.temItens()) {
+            var comando = br.com.senac.integracao.ia.bandeja.ComandoBandeja.interpretar(msg);
+            if (comando.isPresent()) {
+                String respostaBandeja = processarComandoBandeja(idSessao, bandejaAtiva, comando.get());
+                registrarNoHistorico(idSessao, "user", msg);
+                registrarNoHistorico(idSessao, "model", respostaBandeja);
+                return respostaBandeja;
+            }
+        }
+
         if (temConfirmacaoPendente(idSessao)) {
             DecisaoConfirmacao d = DecisaoConfirmacao.interpretar(msg);
             if (d != DecisaoConfirmacao.INDEFINIDA) {
@@ -164,7 +181,7 @@ public class GeminiAgenteOperacional {
         }
 
         // Busca direta por sigla fora de $$ (ex: "procura produto o.b.a", "procura prodito >oba", "cliente i.s.u")
-        // Executada em paralelo via Virtual Thread sem fechar a bandeja de espera!
+        // Executada em sequência, sem fechar a bandeja de espera!
         String buscaRapidaSigla = tentarResolverBuscaSiglaForaDeDsl(idSessao, msg);
         if (buscaRapidaSigla != null) {
             registrarNoHistorico(idSessao, "user", msg);
@@ -177,7 +194,12 @@ public class GeminiAgenteOperacional {
 
         try {
             List<Map<String, Object>> historico = obterHistoricoSessao(idSessao);
-            RespostaIA respostaIA = provedor.conversar(new PedidoIA(msg, null, null, historico));
+            var preProc = preProcessador.processar(msg);
+            String msgParaIA = msg;
+            if (!preProc.entidades().isEmpty()) {
+                msgParaIA = msg + "\n\n" + preProc.gerarContextoSemantico();
+            }
+            RespostaIA respostaIA = provedor.conversar(new PedidoIA(msgParaIA, null, null, historico));
             String resposta = processarRespostaIA(idSessao, respostaIA);
             registrarNoHistorico(idSessao, "user", msg);
             registrarNoHistorico(idSessao, "model", resposta);
@@ -191,7 +213,7 @@ public class GeminiAgenteOperacional {
     /**
      * Detecta comandos de janela (abrir>janela>...), buscas em sequência/contexto ("agora o fornecedor dessa nota",
      * "os produtos dessa nota", "os contatos dele", "os pagamentos dessa nota") e buscas por sigla realizadas fora de {@code $$}
-     * e executa imediatamente em uma Virtual Thread, mantendo intactas eventuais instruções de C=, U=, D= na bandeja.
+     * e executa imediatamente na thread atual, mantendo intactas eventuais instruções de C=, U=, D= na bandeja.
      */
     private String tentarResolverBuscaSiglaForaDeDsl(String idSessao, String msg) {
         if (msg == null || msg.isBlank()) return null;
@@ -241,6 +263,34 @@ public class GeminiAgenteOperacional {
                     idSessao, "$$ R= #Nota id> " + mNota.group(1) + ";", obterBandeja(idSessao), () -> fecharJanelaContexto(idSessao));
         }
 
+        // Busca direta de Produto por ID em linguagem natural (ex: "ver produto 189", "id 189", "produto #189", "189")
+        java.util.regex.Matcher mProdId = java.util.regex.Pattern
+                .compile("(?i)^(?:ver|mostrar|mostra|consultar|consulta|buscar|busca|procurar|procura)?\\s*(?:o\\s+)?(?:produto|item)?\\s*(?:id|c[oó]digo|#)?\\s*#?(\\d+)\\s*$")
+                .matcher(texto);
+        if (mProdId.matches()) {
+            return compiladorInstrucoesCurta.compilarEProcessar(
+                    idSessao, "$$ R= #Produto id> " + mProdId.group(1) + ";", obterBandeja(idSessao), () -> fecharJanelaContexto(idSessao));
+        }
+
+        // Busca direta de Pessoa por ID em linguagem natural (ex: "ver cliente 2", "pessoa 3")
+        java.util.regex.Matcher mPesId = java.util.regex.Pattern
+                .compile("(?i)^(?:ver|mostrar|mostra|consultar|consulta|buscar|busca|procurar|procura)?\\s*(?:a\\s+|o\\s+)?(?:pessoa|cliente|fornecedor)\\s*(?:id|c[oó]digo|#)?\\s*#?(\\d+)\\s*$")
+                .matcher(texto);
+        if (mPesId.matches()) {
+            return compiladorInstrucoesCurta.compilarEProcessar(
+                    idSessao, "$$ R= #Pessoa id> " + mPesId.group(1) + ";", obterBandeja(idSessao), () -> fecharJanelaContexto(idSessao));
+        }
+
+        // Perguntas contextuais sobre o produto em foco ("o que vem nele?", "quais os componentes?", "é conjunto?", etc.)
+        if (lower.matches(".*\\b(o\\s*que\\s+vem\\s+nel[ea]|o\\s*que\\s+tem\\s+dentr?o|quais\\s+(?:s[aã]o\\s+)?os\\s+componentes|quais\\s+(?:s[aã]o\\s+)?os\\s+itens|itens\\s+do\\s+kit|componentes\\s+do\\s+kit|esse\\s+produto\\s+[eé]\\s+conjunto|[eé]\\s+conjunto)\\b.*")) {
+            var foco = compiladorInstrucoesCurta.obterFocoSessao(idSessao);
+            Long idProdFoco = foco != null ? foco.getIdUltimoProduto() : null;
+            if (idProdFoco != null) {
+                return compiladorInstrucoesCurta.compilarEProcessar(
+                        idSessao, "$$ R= #Produto id> " + idProdFoco + ";", obterBandeja(idSessao), () -> fecharJanelaContexto(idSessao));
+            }
+        }
+
         // Não intercepta intenções de escrita/exclusão/atualização
         if (lower.matches(".*\\b(criar|cria|cadastrar|cadastra|atualizar|atualiza|mudar|muda|alterar|altera|apagar|apaga|excluir|exclui|deletar|deleta|remover|remove|comprar|vender)\\b.*")) {
             return null;
@@ -266,15 +316,15 @@ public class GeminiAgenteOperacional {
         final String termoFinal = termo.isBlank() ? texto : termo;
 
         try {
+            var foco = compiladorInstrucoesCurta.obterFocoSessao(idSessao);
             String resultadoLeitura = concorrenciaEngine.submeterTarefa(
-                    () -> compiladorInstrucoesCurta.processarLeitura(entidadeAlvo, Map.of("nm", termoFinal)),
-                    null // Leitura livre em Virtual Thread
+                    () -> compiladorInstrucoesCurta.processarLeituraComFocoECascata(entidadeAlvo, Map.of("nm", termoFinal), List.of(), foco),
+                    null // Leitura livre, sem trava de recurso
             ).get();
 
             BandejaOperacoesContexto bandeja = bandejasPorSessao.get(idSessao);
             if (bandeja != null && bandeja.temItens()) {
-                return resultadoLeitura + "\n\nObservação: você continua com " + bandeja.totalItens()
-                        + " instrução(ões) aguardando confirmação na bandeja.";
+                return resultadoLeitura + "\n\n" + bandeja.formatarVisualizacao();
             }
             return resultadoLeitura;
         } catch (Exception ignored) {
@@ -361,6 +411,10 @@ public class GeminiAgenteOperacional {
     }
 
     private String processarRespostaIA(String idSessao, RespostaIA resp) {
+        return processarRespostaIAComLoop(idSessao, resp, 0);
+    }
+
+    private String processarRespostaIAComLoop(String idSessao, RespostaIA resp, int nivelLoop) {
         if (!resp.temChamadas()) {
             BandejaOperacoesContexto bandeja = bandejasPorSessao.get(idSessao);
             String textoIA = resp.texto() != null && !resp.texto().isBlank()
@@ -372,20 +426,80 @@ public class GeminiAgenteOperacional {
             return textoIA;
         }
 
-        if (resp.chamadas().size() > 1) {
-            for (ChamadaFerramenta chamada : resp.chamadas()) {
-                despacharChamadaTool(idSessao, chamada);
+        List<ChamadaFerramenta> chamadas = resp.chamadas();
+        List<ChamadaFerramenta> chamadasEscrita = new ArrayList<>();
+        List<ChamadaFerramenta> chamadasLeitura = new ArrayList<>();
+
+        for (ChamadaFerramenta c : chamadas) {
+            RotaSistema rota = roteadorController.resolverRota(c.rota());
+            GeminiToolRegistry.NivelRiscoOperacao risco = rota != null
+                    ? GeminiToolRegistry.classificarRisco(rota)
+                    : GeminiToolRegistry.NivelRiscoOperacao.READ_ONLY;
+            if (risco == GeminiToolRegistry.NivelRiscoOperacao.READ_ONLY) {
+                chamadasLeitura.add(c);
+            } else {
+                chamadasEscrita.add(c);
             }
-            BandejaOperacoesContexto bandeja = obterBandeja(idSessao);
+        }
+
+        StringBuilder resultadosLeitura = new StringBuilder();
+        for (ChamadaFerramenta c : chamadasLeitura) {
+            String res = despacharChamadaTool(idSessao, c);
+            if (res != null && !res.isBlank()) {
+                if (resultadosLeitura.length() > 0) resultadosLeitura.append("\n\n");
+                resultadosLeitura.append(res);
+            }
+        }
+
+        // Se a IA chamou apenas ferramentas de leitura, mas o usuário tinha intenção de criar/emitir ou se houver loop
+        if (chamadasEscrita.isEmpty() && !chamadasLeitura.isEmpty() && nivelLoop < 2 && provedor != null) {
+            try {
+                List<Map<String, Object>> historico = obterHistoricoSessao(idSessao);
+                String promptFollowUp = "Resultados das consultas realizadas no sistema:\n"
+                        + resultadosLeitura.toString() + "\n\n"
+                        + "Com base nas entidades e IDs acima, conclua a operação solicitada pelo usuário "
+                        + "(ex: emitir nota fiscal de compra/venda, cadastrar produto/kit, etc.) chamando a ferramenta de escrita apropriada com os IDs numéricos encontrados.";
+                RespostaIA followUpResp = provedor.conversar(new PedidoIA(promptFollowUp, null, null, historico));
+                if (followUpResp.temChamadas()) {
+                    return processarRespostaIAComLoop(idSessao, followUpResp, nivelLoop + 1);
+                }
+            } catch (Exception ignored) {}
+        }
+
+        StringBuilder retornoEscritas = new StringBuilder();
+        for (ChamadaFerramenta c : chamadasEscrita) {
+            String r = despacharChamadaTool(idSessao, c);
+            if (r != null && !r.isBlank()) {
+                if (retornoEscritas.length() > 0) retornoEscritas.append("\n\n");
+                retornoEscritas.append(r);
+            }
+        }
+
+        BandejaOperacoesContexto bandeja = obterBandeja(idSessao);
+        if (bandeja.temItens()) {
+            if (bandeja.totalItens() == 1) {
+                Deque<String> fila = ticketsPendentesPorSessao.get(idSessao);
+                if (fila != null && !fila.isEmpty()) {
+                    ConfirmacaoAcaoGatekeeper.TicketConfirmacao t = gatekeeper.buscarTicket(fila.peekFirst());
+                    if (t != null) return montarPergunta(t);
+                }
+            }
             return bandeja.formatarVisualizacao();
         }
 
-        StringBuilder sb = new StringBuilder();
+        StringBuilder finalOutput = new StringBuilder();
         if (resp.texto() != null && !resp.texto().isBlank()) {
-            sb.append(resp.texto()).append("\n\n");
+            finalOutput.append(resp.texto()).append("\n\n");
         }
-        sb.append(despacharChamadaTool(idSessao, resp.chamadas().get(0)));
-        return sb.toString().trim();
+        if (retornoEscritas.length() > 0) {
+            finalOutput.append(retornoEscritas).append("\n\n");
+        }
+        if (resultadosLeitura.length() > 0) {
+            finalOutput.append(resultadosLeitura);
+        }
+
+        String strFinal = finalOutput.toString().trim();
+        return strFinal.isBlank() ? "Operação concluída com sucesso." : strFinal;
     }
 
     private String despacharChamadaTool(String idSessao, ChamadaFerramenta chamada) {
@@ -535,6 +649,66 @@ public class GeminiAgenteOperacional {
 
     // ==================== CONFIRMAÇÃO E BANDEJA ====================
 
+    /**
+     * Executa um comando de navegação da bandeja (próxima, executar OP-n, pular, retomar, anterior, ir para).
+     * Cada execução confere o banco antes e depois. Quando não sobra nada em aberto, a janela é fechada.
+     */
+    private String processarComandoBandeja(String idSessao, BandejaOperacoesContexto bandeja,
+                                           br.com.senac.integracao.ia.bandeja.ComandoBandeja cmd) {
+        switch (cmd.acao()) {
+            case EXECUTAR_ITEM, EXECUTAR_PROXIMO -> {
+                var passo = cmd.acao() == br.com.senac.integracao.ia.bandeja.ComandoBandeja.Acao.EXECUTAR_ITEM
+                        ? executorBandeja.executarPorId(bandeja, cmd.alvo())
+                        : executorBandeja.executarProximo(bandeja);
+                if (passo != null && passo.dados() != null) {
+                    var foco = compiladorInstrucoesCurta.obterFocoSessao(idSessao);
+                    if (passo.dados() instanceof Produto p) foco.registrarProdutoEmFoco(p);
+                    else if (passo.dados() instanceof Pessoa pes) foco.registrarPessoaEmFoco(pes);
+                    else if (passo.dados() instanceof Nota n) foco.registrarNotaEmFoco(n);
+                }
+                StringBuilder sb = new StringBuilder(passo.formatarTexto());
+                if (bandeja.itensEmAberto().isEmpty()) {
+                    fecharJanelaContexto(idSessao);
+                    sb.append("\n\nA bandeja está vazia, tudo foi tratado.");
+                } else {
+                    sb.append("\n\n").append(bandeja.formatarVisualizacao());
+                }
+                return sb.toString();
+            }
+            case PULAR -> {
+                var item = executorBandeja.pular(bandeja, cmd.alvo());
+                if (item == null) return "Não encontrei essa instrução na bandeja.\n\n" + bandeja.formatarVisualizacao();
+                return "Deixei " + item.getIdItem() + " para depois. Para voltar a ela, diga \"retomar " + item.getIdItem() + "\".\n\n"
+                        + bandeja.formatarVisualizacao();
+            }
+            case RETOMAR -> {
+                var item = executorBandeja.retomar(bandeja, cmd.alvo());
+                if (item == null) return "Não encontrei essa instrução na bandeja.\n\n" + bandeja.formatarVisualizacao();
+                return item.getIdItem() + " voltou para a fila.\n\n" + bandeja.formatarVisualizacao();
+            }
+            case ANTERIOR -> {
+                var item = bandeja.moverAnterior();
+                return item == null ? "A bandeja está vazia." : descreverItemBandeja(item, bandeja);
+            }
+            case IR_PARA -> {
+                var item = bandeja.irPara(cmd.alvo());
+                return item == null ? "Não encontrei essa instrução na bandeja.\n\n" + bandeja.formatarVisualizacao()
+                        : descreverItemBandeja(item, bandeja);
+            }
+            default -> {
+                return bandeja.formatarVisualizacao();
+            }
+        }
+    }
+
+    private String descreverItemBandeja(ItemBandeja item, BandejaOperacoesContexto bandeja) {
+        return "Instrução " + item.getIdItem() + ": " + item.getDescricaoAmigavel()
+                + "\nSituação: " + item.getStatus()
+                + (item.isPendente() ? "\nFalta informar: " + item.getCamposFaltantes() : "")
+                + (item.getMensagemErro() != null ? "\nÚltimo erro: " + item.getMensagemErro() : "")
+                + "\n\nPara executar só esta, diga \"executar " + item.getIdItem() + "\".";
+    }
+
     public boolean temConfirmacaoPendente(String idSessao) {
         BandejaOperacoesContexto b = bandejasPorSessao.get(idSessao);
         if (b != null && b.temItensValidados()) {
@@ -557,6 +731,18 @@ public class GeminiAgenteOperacional {
                     }
                     RelatorioExecucaoBandeja rel = bandeja.executarTodasValidadas(roteadorController);
                     String relatorioFormatado = formatarRelatorioExecucaoBandeja(rel);
+                    var focoSessao = compiladorInstrucoesCurta.obterFocoSessao(idSessao);
+                    if (focoSessao != null && rel != null && rel.detalhes() != null) {
+                        for (var det : rel.detalhes()) {
+                            if (det.dados() instanceof Produto p) {
+                                focoSessao.registrarProdutoEmFoco(p);
+                            } else if (det.dados() instanceof Pessoa pes) {
+                                focoSessao.registrarPessoaEmFoco(pes);
+                            } else if (det.dados() instanceof Nota n) {
+                                focoSessao.registrarNotaEmFoco(n);
+                            }
+                        }
+                    }
                     fecharJanelaContexto(idSessao);
                     return relatorioFormatado;
                 }
@@ -621,8 +807,9 @@ public class GeminiAgenteOperacional {
             var d = rel.detalhes().get(0);
             RotaSistema r = roteadorController.resolverRota(d.rota());
             sb.append("Operação confirmada e executada:\n");
+            Map<String, Object> paramsItem = d.parametros() != null ? d.parametros() : Collections.emptyMap();
             if (d.dados() != null) {
-                sb.append(formatarResultadoAmigavel(r, Collections.emptyMap(), d.dados())).append("\n");
+                sb.append(formatarResultadoAmigavel(r, paramsItem, d.dados())).append("\n");
             } else {
                 sb.append("  ").append(d.mensagem()).append("\n");
             }
@@ -643,7 +830,8 @@ public class GeminiAgenteOperacional {
             if (d.sucesso()) {
                 if (d.dados() != null) {
                     RotaSistema r = roteadorController.resolverRota(d.rota());
-                    sb.append("     ").append(formatarResultadoAmigavel(r, Collections.emptyMap(), d.dados()).replace("\n", "\n     ")).append("\n");
+                    Map<String, Object> paramsItem = d.parametros() != null ? d.parametros() : Collections.emptyMap();
+                    sb.append("     ").append(formatarResultadoAmigavel(r, paramsItem, d.dados()).replace("\n", "\n     ")).append("\n");
                 } else {
                     sb.append("     ").append(d.mensagem()).append("\n");
                 }
@@ -747,9 +935,21 @@ public class GeminiAgenteOperacional {
     /** Converte retornos Java em texto limpo e compreensível sem poluição de markdown. */
     private String formatarResultadoAmigavel(RotaSistema rota, Map<String, Object> params, Object dados) {
         if (rota == RotaSistema.PRODUTO_CATALOGO_ATUALIZAR_PRECO) {
-            String alvo = params.get("idProduto") != null ? "#" + params.get("idProduto") : String.valueOf(params.get("nomeProduto"));
+            if (dados instanceof Produto p) {
+                String umSigla = p.getUm() != null ? p.getUm().getSigla() : "UN";
+                String nomeProd = CompiladorInstrucoesCurtaService.limparNomeExibicao(p.getNome(), umSigla);
+                String preco = p.getPrecoVenda() != null
+                        ? p.getPrecoVenda().setScale(2, java.math.RoundingMode.HALF_EVEN).toPlainString()
+                        : "0.00";
+                return String.format("Preço atualizado com sucesso: o produto #%d (%s) agora custa R$ %s.",
+                        p.getId(), nomeProd, preco);
+            }
+            String alvo = (params != null && params.get("idProduto") != null)
+                    ? "#" + params.get("idProduto")
+                    : (params != null && params.get("nomeProduto") != null ? String.valueOf(params.get("nomeProduto")) : "selecionado");
+            String preco = params != null && params.get("novoPreco") != null ? String.valueOf(params.get("novoPreco")) : "0.00";
             return String.format("Preço atualizado com sucesso: o produto %s agora custa R$ %s.",
-                    alvo, params.get("novoPreco"));
+                    alvo, preco);
         }
         if (rota == RotaSistema.PRODUTO_CATALOGO_ATUALIZAR && dados instanceof Produto p) {
             String umSigla = p.getUm() != null ? p.getUm().getSigla() : "UN";
@@ -781,18 +981,7 @@ public class GeminiAgenteOperacional {
         }
 
         if (dados instanceof Produto p) {
-            String umSigla = p.getUm() != null ? p.getUm().getSigla() : "UN";
-            StringBuilder sb = new StringBuilder();
-            sb.append(String.format("#%d - %s (%s) — Preço de venda: R$ %s",
-                    p.getId(),
-                    CompiladorInstrucoesCurtaService.limparNomeExibicao(p.getNome(), umSigla),
-                    umSigla,
-                    p.getPrecoVenda() != null ? p.getPrecoVenda().setScale(2, java.math.RoundingMode.HALF_EVEN) : "0.00"));
-            if (p instanceof ProdutoFisico pf && pf.possuiDimensoesValidas()) {
-                sb.append(String.format(" — Dimensões: %scm x %scm x %scm, Peso: %skg",
-                        pf.getAlturaCm(), pf.getLarguraCm(), pf.getComprimentoCm(), pf.getPesoLiquidoKg()));
-            }
-            return sb.toString().trim();
+            return br.com.senac.integracao.ia.ferramentas.ResolvedorProduto.formatarDetalhesCompletosProduto(p, roteadorController);
         }
 
         if (dados instanceof List<?> lista) {
@@ -862,6 +1051,11 @@ public class GeminiAgenteOperacional {
                 }
                 return sb.toString().trim();
             }
+            if (lista.get(0) instanceof br.com.senac.repository.modal.pagamento.FormaPagamento) {
+                @SuppressWarnings("unchecked")
+                List<br.com.senac.repository.modal.pagamento.FormaPagamento> fps = (List<br.com.senac.repository.modal.pagamento.FormaPagamento>) lista;
+                return br.com.senac.integracao.ia.ferramentas.ResolvedorPagamento.formatarListaFormasPagamento(fps);
+            }
             if (lista.get(0) instanceof Nota) {
                 StringBuilder sb = new StringBuilder("Notas operacionais (" + lista.size() + " notas):\n");
                 for (Object item : lista) {
@@ -919,6 +1113,30 @@ public class GeminiAgenteOperacional {
             return sb.toString().trim();
         }
 
+        if (dados instanceof br.com.senac.repository.modal.pagamento.FormaPagamento fp) {
+            return br.com.senac.integracao.ia.ferramentas.ResolvedorPagamento.formatarDetalhesCompletosFormaPagamento(fp);
+        }
+
+        if (dados instanceof NotaPerda perda) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("📋 NOTA DE PERDA OPERACIONAL REGISTRADA (#").append(perda.getId()).append(")\n");
+            sb.append("  • Tipo da Perda: ").append(perda.getTipoPerda() != null ? perda.getTipoPerda() : "Estoque").append("\n");
+            sb.append("  • Descrição: ").append(perda.getDescricao() != null ? perda.getDescricao() : "Perda operacional").append("\n");
+            sb.append("  • Data: ").append(perda.getDataGerada() != null ? perda.getDataGerada().toLocalDate() : java.time.LocalDate.now()).append("\n");
+            sb.append("  • Custo Total da Perda: R$ ").append(perda.getValorCustoPerda() != null ? perda.getValorCustoPerda().toPlainString() : "0.00").append("\n");
+            sb.append("  • Análise de Validade / Ressarcimento: ")
+              .append(perda.isPerdaDentroDaValidade() ? "✔ Dentro da validade (Ressarcimento de fornecedor aplicável)" : "⚠️ Lote expirado (Isento de ressarcimento)").append("\n");
+            if (perda.getItens() != null && !perda.getItens().isEmpty()) {
+                sb.append("  • Itens baixados (").append(perda.getItens().size()).append("):\n");
+                for (Item<? extends Produto> it : perda.getItens()) {
+                    String nm = it.getProduto() != null ? CompiladorInstrucoesCurtaService.limparNomeExibicao(it.getProduto().getNome(), null) : "Item";
+                    sb.append(String.format("    - %s: %s un x R$ %s (Validade: %s)\n",
+                            nm, it.getQuantidade(), it.getValor(), it.getDataValidade() != null ? it.getDataValidade() : "Sem validade"));
+                }
+            }
+            return sb.toString().trim();
+        }
+
         if (dados instanceof Nota nota) {
             String tipoNota;
             if (nota instanceof NotaCompra) tipoNota = "Nota Fiscal de Compra";
@@ -946,9 +1164,7 @@ public class GeminiAgenteOperacional {
             return sb.toString().trim();
         }
         if (dados instanceof Pessoa pes) {
-            return String.format("#%d - %s — Limite de crédito: R$ %s",
-                    pes.getId(), CompiladorInstrucoesCurtaService.limparNomeExibicao(pes.getNome(), null),
-                    pes.getLimite() != null ? pes.getLimite() : "0.00");
+            return br.com.senac.integracao.ia.ferramentas.ResolvedorPessoa.formatarDetalhesCompletosPessoa(pes, roteadorController);
         }
         if (dados instanceof BigDecimal bd) {
             return "Saldo/Valor: R$ " + bd.toPlainString();
@@ -1002,5 +1218,9 @@ public class GeminiAgenteOperacional {
 
     public ConfirmacaoAcaoGatekeeper getGatekeeper() {
         return gatekeeper;
+    }
+
+    public PreProcessadorMensagem getPreProcessador() {
+        return preProcessador;
     }
 }

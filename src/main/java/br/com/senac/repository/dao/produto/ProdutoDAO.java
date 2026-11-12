@@ -20,6 +20,7 @@ public class ProdutoDAO implements PadraoDAO<Produto, Long> {
         if (produto != null && produto.getId() != null && isBloqueadoParaBandejaIA(produto.getId())) {
             throw new IllegalStateException("Produto #" + produto.getId() + " está bloqueado na Bandeja de Contexto da IA.");
         }
+        validarChaveUnica(produto);
         return executarComFallbackReacao(() -> {
             EntityManager em = JPAUtil.getEntityManager();
             EntityTransaction tx = em.getTransaction();
@@ -46,13 +47,7 @@ public class ProdutoDAO implements PadraoDAO<Produto, Long> {
                 em.close();
             }
         }, e -> {
-            // Fallback reativo: se já existir um produto com mesmo nome único, atualiza ou retorna o existente
-            if (produto != null && produto.getNome() != null) {
-                Produto existente = buscarPorNomeExato(produto.getNome());
-                if (existente != null) {
-                    return existente;
-                }
-            }
+            // Nunca devolve outro produto como se fosse o que foi pedido: o erro chega ao usuário.
             if (e instanceof RuntimeException re) throw re;
             throw new RuntimeException(e);
         });
@@ -63,6 +58,7 @@ public class ProdutoDAO implements PadraoDAO<Produto, Long> {
         if (produto != null && produto.getId() != null && isBloqueadoParaBandejaIA(produto.getId())) {
             throw new IllegalStateException("Produto #" + produto.getId() + " está bloqueado na Bandeja de Contexto da IA.");
         }
+        validarChaveUnica(produto);
         EntityManager em = JPAUtil.getEntityManager();
         EntityTransaction tx = em.getTransaction();
         try {
@@ -75,6 +71,71 @@ public class ProdutoDAO implements PadraoDAO<Produto, Long> {
             throw e;
         } finally {
             em.close();
+        }
+    }
+
+    // ==================== CHAVE ÚNICA: NOME + UNIDADE + CONJUNTO ====================
+
+    /**
+     * Garante a regra de negócio: o mesmo produto (nome + unidade de medida + conjunto) não pode existir
+     * duas vezes. O mesmo nome é permitido em outra unidade ou como conjunto/simples.
+     *
+     * @throws IllegalArgumentException com mensagem clara quando já existe
+     */
+    public void validarChaveUnica(Produto produto) {
+        if (produto == null || produto.getNome() == null || produto.getNome().isBlank()) return;
+        String sigla = produto.getUm() != null ? produto.getUm().getSigla() : null;
+        Produto outro = buscarPorChaveUnica(produto.getNome(), sigla, produto.isConjunto());
+        if (outro != null && !java.util.Objects.equals(outro.getId(), produto.getId())) {
+            throw new IllegalArgumentException(montarMensagemDuplicado(produto.getNome(), sigla, produto.isConjunto(), outro.getId()));
+        }
+    }
+
+    /** Mensagem padrão para a chave duplicada (reutilizada por validadores e pelo chat). */
+    public static String montarMensagemDuplicado(String nome, String sigla, boolean conjunto, Long idExistente) {
+        return "Já existe o produto \"" + nome.trim() + "\" na unidade " + (sigla != null ? sigla : "sem unidade")
+                + (conjunto ? " como conjunto" : " como produto simples")
+                + (idExistente != null ? " (#" + idExistente + ")" : "")
+                + ". Use outro nome ou outra unidade de medida.";
+    }
+
+    /**
+     * Busca EXATA (sem aproximação) pela chave natural nome + unidade + conjunto.
+     * Diferente de {@link #buscarPorNome(String)}, nunca devolve um produto de nome parecido.
+     *
+     * @param siglaUm sigla da unidade (ex.: "UN") ou {@code null} para produto sem unidade
+     */
+    public Produto buscarPorChaveUnica(String nome, String siglaUm, boolean conjunto) {
+        if (nome == null || nome.isBlank()) return null;
+        String jpql = "SELECT p FROM Produto p LEFT JOIN p.um u WHERE LOWER(TRIM(p.nome)) = LOWER(TRIM(:nome)) "
+                + "AND p.isConjunto = :conjunto "
+                + (siglaUm == null ? "AND p.um IS NULL " : "AND UPPER(u.sigla) = UPPER(:sigla) ")
+                + "ORDER BY p.id";
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            var q = em.createQuery(jpql, Produto.class)
+                    .setParameter("nome", nome.trim())
+                    .setParameter("conjunto", conjunto);
+            if (siglaUm != null) {
+                q.setParameter("sigla", siglaUm.trim());
+            }
+            List<Produto> lista = q.setMaxResults(1).getResultList();
+            return lista.isEmpty() ? null : lista.get(0);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** Todos os produtos com exatamente este nome (podem ser vários, em unidades diferentes). */
+    public List<Produto> listarPorNomeExato(String nome) {
+        if (nome == null || nome.isBlank()) return List.of();
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            return em.createQuery(
+                            "SELECT p FROM Produto p LEFT JOIN FETCH p.um WHERE LOWER(TRIM(p.nome)) = LOWER(TRIM(:nome)) ORDER BY p.id",
+                            Produto.class)
+                    .setParameter("nome", nome.trim())
+                    .getResultList();
+        } catch (Exception e) {
+            return List.of();
         }
     }
 
@@ -182,6 +243,12 @@ public class ProdutoDAO implements PadraoDAO<Produto, Long> {
     public List<Produto> buscarPorTermo(String termo) {
         if (termo == null || termo.isBlank()) return List.of();
         String t = termo.trim();
+        if (t.matches("^#?\\d+$")) {
+            try {
+                Produto porId = buscarPorId(Long.parseLong(t.replace("#", "")));
+                if (porId != null) return List.of(porId);
+            } catch (Exception ignored) {}
+        }
         try (EntityManager em = JPAUtil.getEntityManager()) {
             List<Produto> diretos = em.createQuery(
                     "SELECT p FROM Produto p LEFT JOIN FETCH p.um WHERE LOWER(p.nome) LIKE LOWER(:termo) ORDER BY p.id",
@@ -214,11 +281,25 @@ public class ProdutoDAO implements PadraoDAO<Produto, Long> {
         if (nomeOuTermo == null || nomeOuTermo.isBlank()) {
             return apenasEstoqueValido ? listarProdutosComEstoqueValido() : listarTodos();
         }
+        if (nomeOuTermo.trim().matches("^#?\\d+$")) {
+            try {
+                Long idParsed = Long.parseLong(nomeOuTermo.trim().replace("#", ""));
+                Produto porId = apenasEstoqueValido
+                        ? buscarUnicoComEstoqueValido(idParsed, null)
+                        : buscarPorId(idParsed);
+                if (porId != null) return porId;
+            } catch (Exception ignored) {}
+        }
         List<Produto> base = apenasEstoqueValido ? listarProdutosComEstoqueValido() : listarTodos();
-        for (Produto p : base) {
-            if (BuscaPalavrasParciaisUtil.isMatchExato(p.getNome(), nomeOuTermo)) {
-                return p;
-            }
+        // Mesmo nome em unidades diferentes: devolve a lista para o usuário escolher, em vez de adivinhar.
+        List<Produto> exatos = base.stream()
+                .filter(p -> BuscaPalavrasParciaisUtil.isMatchExato(p.getNome(), nomeOuTermo))
+                .toList();
+        if (exatos.size() == 1) {
+            return exatos.get(0);
+        }
+        if (exatos.size() > 1) {
+            return exatos;
         }
         List<Produto> candidatos = BuscaPalavrasParciaisUtil.filtrarEOrdenar(base, Produto::getNome, nomeOuTermo);
         if (candidatos.isEmpty()) {

@@ -5,19 +5,14 @@ import java.io.FileInputStream;
 import java.util.Properties;
 
 /**
- * Configuração de qual IA está ativa. Arquivo: config/ia.properties
- * <pre>
- * ia.provedor=gemini          # gemini | openai (Ollama/LM Studio/OpenAI) | manual (sem API)
- * ia.openai.url=http://localhost:11434/v1
- * ia.openai.modelo=llama3.1
- * ia.openai.chave=
- * </pre>
- * A variável de ambiente IA_PROVEDOR sobrescreve o arquivo.
+ * Configuração de qual IA está ativa e das APIs gratuitas disponíveis. Arquivo: config/ia.properties
  */
 public class ConfigIA {
 
     private String provedor = "gemini";
-    private String provedoresFailover = "gemini,openai";
+    private String provedoresFailover = "gemini,groq,openrouter,cerebras,mistral,openai";
+
+    // Provedor Local / OpenAI compatível
     private String openaiUrl = "http://localhost:11434/v1";
     private String openaiModelo = "llama3.1";
     private String openaiChave = "";
@@ -25,6 +20,19 @@ public class ConfigIA {
     private String openai2Url = "";
     private String openai2Modelo = "";
     private String openai2Chave = "";
+
+    // Provedores Gratuitos de Nuvem
+    private String groqChave = "";
+    private String groqModelo = "llama-3.3-70b-versatile";
+
+    private String openrouterChave = "";
+    private String openrouterModelo = "meta-llama/llama-3.3-70b-instruct:free";
+
+    private String cerebrasChave = "";
+    private String cerebrasModelo = "llama3.1-8b";
+
+    private String mistralChave = "";
+    private String mistralModelo = "mistral-small-latest";
 
     private static ConfigIA instancia;
 
@@ -53,6 +61,19 @@ public class ConfigIA {
         openai2Url = valor(p, "ia.openai2.url", openai2Url);
         openai2Modelo = valor(p, "ia.openai2.modelo", openai2Modelo);
         openai2Chave = valor(p, "ia.openai2.chave", openai2Chave);
+
+        groqChave = valor(p, "ia.groq.chave", groqChave);
+        groqModelo = valor(p, "ia.groq.modelo", groqModelo);
+
+        openrouterChave = valor(p, "ia.openrouter.chave", openrouterChave);
+        openrouterModelo = valor(p, "ia.openrouter.modelo", openrouterModelo);
+
+        cerebrasChave = valor(p, "ia.cerebras.chave", cerebrasChave);
+        cerebrasModelo = valor(p, "ia.cerebras.modelo", cerebrasModelo);
+
+        mistralChave = valor(p, "ia.mistral.chave", mistralChave);
+        mistralModelo = valor(p, "ia.mistral.modelo", mistralModelo);
+
         try {
             openaiTimeoutSegundos = Integer.parseInt(valor(p, "ia.openai.timeout.segundos", String.valueOf(openaiTimeoutSegundos)));
         } catch (NumberFormatException ignored) {
@@ -101,7 +122,7 @@ public class ConfigIA {
     }
 
     public String getOpenai2Url() {
-        return openai2Url;
+        return openai2Url.endsWith("/") ? openai2Url.substring(0, openai2Url.length() - 1) : openai2Url;
     }
 
     public String getOpenai2Modelo() {
@@ -110,5 +131,37 @@ public class ConfigIA {
 
     public String getOpenai2Chave() {
         return openai2Chave;
+    }
+
+    public String getGroqChave() {
+        return groqChave;
+    }
+
+    public String getGroqModelo() {
+        return groqModelo;
+    }
+
+    public String getOpenrouterChave() {
+        return openrouterChave;
+    }
+
+    public String getOpenrouterModelo() {
+        return openrouterModelo;
+    }
+
+    public String getCerebrasChave() {
+        return cerebrasChave;
+    }
+
+    public String getCerebrasModelo() {
+        return cerebrasModelo;
+    }
+
+    public String getMistralChave() {
+        return mistralChave;
+    }
+
+    public String getMistralModelo() {
+        return mistralModelo;
     }
 }

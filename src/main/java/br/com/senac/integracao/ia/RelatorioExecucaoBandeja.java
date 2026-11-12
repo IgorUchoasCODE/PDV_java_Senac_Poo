@@ -30,6 +30,11 @@ public record RelatorioExecucaoBandeja(
             String descricao,
             boolean sucesso,
             String mensagem,
-            Object dados
-    ) {}
+            Object dados,
+            java.util.Map<String, Object> parametros
+    ) {
+        public ItemExecutado(String idItem, String rota, String descricao, boolean sucesso, String mensagem, Object dados) {
+            this(idItem, rota, descricao, sucesso, mensagem, dados, Collections.emptyMap());
+        }
+    }
 }

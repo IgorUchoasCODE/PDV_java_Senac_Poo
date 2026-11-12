@@ -12,16 +12,13 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
 
 /**
- * Cliente HTTP não-bloqueante para a API Google Gemini 3.8 Flash baseado em Virtual Threads (Java 21+).
+ * Cliente HTTP para a API Google Gemini 3.8 Flash.
  * Suporta:
  * 1. Text Generation e Multi-turn Chat
- * 2. Function Calling / Tool Calling com as 60 rotas do RotaSistema
+ * 2. Function Calling / Tool Calling com as rotas do RotaSistema
  * 3. Entrada Multimodal (Áudio de microfone / Voz e Documentos/Imagens)
- * 4. Execução concorrente assíncrona segura
  */
 public class GeminiClientService {
 
@@ -36,9 +33,8 @@ public class GeminiClientService {
 
     public GeminiClientService(GeminiConfig config) {
         this.config = config;
-        // Instancia HttpClient nativo do Java 21 gerenciado por Virtual Threads
+        // HttpClient nativo do Java 21 com o executor padrão (sem Virtual Threads)
         this.httpClient = HttpClient.newBuilder()
-                .executor(Executors.newVirtualThreadPerTaskExecutor())
                 .connectTimeout(Duration.ofSeconds(15))
                 .build();
 
@@ -110,19 +106,6 @@ public class GeminiClientService {
 
         JsonNode root = executarRequisicaoGemini(payload);
         return interpretarResposta(root);
-    }
-
-    /**
-     * Execução concorrente assíncrona usando CompletableFuture e Virtual Threads.
-     */
-    public CompletableFuture<RespostaGemini> conversarComToolsAsync(String mensagemUsuario) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                return conversarComTools(mensagemUsuario, null);
-            } catch (Exception e) {
-                throw new RuntimeException("Erro na execução concorrente do Gemini: " + e.getMessage(), e);
-            }
-        }, Executors.newVirtualThreadPerTaskExecutor());
     }
 
     private JsonNode executarRequisicaoGemini(Map<String, Object> payloadMap) throws IOException, InterruptedException {

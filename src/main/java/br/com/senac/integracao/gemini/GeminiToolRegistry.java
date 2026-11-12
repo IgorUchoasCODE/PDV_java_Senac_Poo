@@ -123,7 +123,7 @@ public class GeminiToolRegistry {
             }
             case PRODUTO_FISICO_CADASTRAR -> {
                 props.put("nome", prop("STRING", "Nome completo do produto físico"));
-                props.put("descricao", prop("STRING", "Descrição detalhada do produto"));
+                props.put("descricao", prop("STRING", "Descrição detalhada do produto. Ao cadastrar um kit composto, chame também produto_kit_adicionar_componente para incluir os itens componentes na mesma resposta"));
                 props.put("precoVenda", prop("STRING", "Preço de venda sugerido em R$ (ex: '199.90')"));
                 props.put("siglaUm", prop("STRING", "Sigla da Unidade de Medida (padrão: 'UN')"));
                 props.put("alturaCm", prop("STRING", "Altura em centímetros (opcional, padrão: 0.00)"));
@@ -149,8 +149,8 @@ public class GeminiToolRegistry {
                 required.add("nome");
             }
             case PRODUTO_KIT_ADICIONAR_COMPONENTE -> {
-                props.put("idProdutoKit", prop("INTEGER", "ID do produto kit/conjunto"));
-                props.put("idProdutoComponente", prop("INTEGER", "ID do produto componente"));
+                props.put("idProdutoKit", prop("INTEGER", "ID numérico do produto kit/conjunto (ou 'OP-1' se o kit foi agendado para criação no mesmo lote)"));
+                props.put("idProdutoComponente", prop("INTEGER", "ID numérico do produto componente"));
                 props.put("quantidade", prop("STRING", "Quantidade fracionada do componente"));
                 required.addAll(Arrays.asList("idProdutoKit", "idProdutoComponente", "quantidade"));
             }

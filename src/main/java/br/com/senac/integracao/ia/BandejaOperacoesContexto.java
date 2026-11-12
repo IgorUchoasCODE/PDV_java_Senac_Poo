@@ -5,6 +5,9 @@ import br.com.senac.controller.RotaSistema;
 import br.com.senac.controller.RoteadorController;
 import br.com.senac.integracao.gemini.GeminiToolRegistry;
 import br.com.senac.repository.dao.PadraoDAO;
+import br.com.senac.repository.modal.nota.Nota;
+import br.com.senac.repository.modal.pessoa.Pessoa;
+import br.com.senac.repository.modal.produto.Produto;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -111,7 +114,20 @@ public class BandejaOperacoesContexto {
      * impedindo mutações concorrentes conflitantes e protegendo a integridade dos dados.
      */
     private void registrarBloqueioRecursoNaBandeja(RotaSistema rota, Map<String, Object> params) {
-        if (rota == null || params == null || params.isEmpty()) return;
+        String chave = chaveBloqueio(rota, params);
+        if (chave != null) {
+            PadraoDAO.BLOQUEIOS_BANDEJA_IA.put(chave, new PadraoDAO.BloqueioBandejaInfo(
+                    chave,
+                    idSessao,
+                    "Retido na Bandeja de Contexto da IA (" + rota.name() + ")",
+                    LocalDateTime.now().plusMinutes(10)
+            ));
+        }
+    }
+
+    /** Monta a chave do recurso (ex.: {@code ProdutoDAO:10}) ou {@code null} se a instrução não aponta para um registro. */
+    private String chaveBloqueio(RotaSistema rota, Map<String, Object> params) {
+        if (rota == null || params == null || params.isEmpty()) return null;
         Object idAlvo = params.get("idProduto");
         String prefixo = "ProdutoDAO";
         if (idAlvo == null && params.containsKey("idPessoa")) {
@@ -124,15 +140,92 @@ public class BandejaOperacoesContexto {
             idAlvo = params.get("idImagem");
             prefixo = "ProdutoImagemDAO";
         }
-        if (idAlvo != null) {
-            String chave = prefixo + ":" + idAlvo;
-            PadraoDAO.BLOQUEIOS_BANDEJA_IA.put(chave, new PadraoDAO.BloqueioBandejaInfo(
-                    chave,
-                    idSessao,
-                    "Retido na Bandeja de Contexto da IA (" + rota.name() + ")",
-                    LocalDateTime.now().plusMinutes(10)
-            ));
+        return idAlvo != null ? prefixo + ":" + idAlvo : null;
+    }
+
+    /**
+     * Solta a trava do registro deste item para que a execução dele não seja barrada pela própria bandeja.
+     * Usado na execução passo a passo; as travas dos itens que seguem abertos são reaplicadas depois
+     * por {@link #reaplicarBloqueiosEmAberto()}.
+     */
+    public synchronized void liberarBloqueioParaExecucao(ItemBandeja item) {
+        if (item == null) return;
+        String chave = chaveBloqueio(item.getRota(), item.getParametros());
+        if (chave != null) {
+            PadraoDAO.BLOQUEIOS_BANDEJA_IA.remove(chave);
         }
+    }
+
+    /** Recoloca a trava de todos os itens que ainda não foram concluídos. */
+    public synchronized void reaplicarBloqueiosEmAberto() {
+        for (ItemBandeja it : itens) {
+            if (!it.isConcluido()) {
+                registrarBloqueioRecursoNaBandeja(it.getRota(), it.getParametros());
+            }
+        }
+    }
+
+    // ==================== NAVEGAÇÃO (cursor) ====================
+
+    private volatile int cursor = 0;
+
+    /** Posição atual (0-based) do cursor de navegação. */
+    public int getCursor() {
+        return Math.max(0, Math.min(cursor, Math.max(0, itens.size() - 1)));
+    }
+
+    /** Item apontado pelo cursor, ou {@code null} se a bandeja estiver vazia. */
+    public synchronized ItemBandeja itemSobCursor() {
+        return itens.isEmpty() ? null : itens.get(getCursor());
+    }
+
+    /** Move o cursor para a instrução seguinte (circular) e a devolve. */
+    public synchronized ItemBandeja moverProximo() {
+        if (itens.isEmpty()) return null;
+        cursor = (getCursor() + 1) % itens.size();
+        return itens.get(cursor);
+    }
+
+    /** Move o cursor para a instrução anterior (circular) e a devolve. */
+    public synchronized ItemBandeja moverAnterior() {
+        if (itens.isEmpty()) return null;
+        cursor = (getCursor() - 1 + itens.size()) % itens.size();
+        return itens.get(cursor);
+    }
+
+    /** Posiciona o cursor em uma instrução pelo ID (OP-2) ou índice (2). Devolve o item ou {@code null}. */
+    public synchronized ItemBandeja irPara(String idOuIndice) {
+        ItemBandeja alvo = buscarItemPorIdOuIndice(idOuIndice);
+        if (alvo != null) {
+            cursor = itens.indexOf(alvo);
+        }
+        return alvo;
+    }
+
+    /**
+     * Próxima instrução pronta para executar, partindo do cursor e percorrendo a bandeja
+     * de forma circular (ignora pendentes, puladas e já executadas).
+     */
+    public synchronized ItemBandeja proximaExecutavel() {
+        int n = itens.size();
+        for (int i = 0; i < n; i++) {
+            ItemBandeja it = itens.get((getCursor() + i) % n);
+            if (it.isValido()) {
+                return it;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Instruções que ainda dependem de ação do usuário: prontas, com dados faltando, puladas
+     * ou que falharam (podem ser corrigidas e executadas de novo).
+     */
+    public synchronized List<ItemBandeja> itensEmAberto() {
+        return itens.stream()
+                .filter(i -> i.isValido() || i.isPendente() || i.isPulado()
+                        || i.getStatus() == ItemBandeja.StatusItem.FALHA_EXECUCAO)
+                .toList();
     }
 
     /**
@@ -159,20 +252,29 @@ public class BandejaOperacoesContexto {
         int sucessos = 0;
         int falhas = 0;
         List<RelatorioExecucaoBandeja.ItemExecutado> detalhes = new ArrayList<>();
+        Map<String, Long> idsCriadosPorItem = new LinkedHashMap<>();
 
         for (ItemBandeja item : validados) {
             try {
+                // Resolve referências a itens anteriores executados no mesmo lote (ex.: idProdutoKit = "OP-1")
+                resolverReferenciasDinamicas(item, idsCriadosPorItem);
+
                 RespostaEndpoint<Object> resp = roteador.executarEndpoint(item.getRota(), item.getParametros());
                 if (resp.sucesso()) {
                     sucessos++;
                     item.setResultadoExecucao(resp.dados());
+                    Long idGerado = extrairIdResultado(resp.dados());
+                    if (idGerado != null) {
+                        idsCriadosPorItem.put(item.getIdItem().toUpperCase(Locale.ROOT), idGerado);
+                    }
                     detalhes.add(new RelatorioExecucaoBandeja.ItemExecutado(
                             item.getIdItem(),
                             item.getRota().name(),
                             item.getDescricaoAmigavel(),
                             true,
                             resp.mensagem() != null ? resp.mensagem() : "Executado com sucesso.",
-                            resp.dados()
+                            resp.dados(),
+                            item.getParametros()
                     ));
                 } else {
                     falhas++;
@@ -183,7 +285,8 @@ public class BandejaOperacoesContexto {
                             item.getDescricaoAmigavel(),
                             false,
                             resp.mensagem() != null ? resp.mensagem() : "Falha na execução.",
-                            null
+                            null,
+                            item.getParametros()
                     ));
                 }
             } catch (Exception e) {
@@ -195,7 +298,8 @@ public class BandejaOperacoesContexto {
                         item.getDescricaoAmigavel(),
                         false,
                         "Erro inesperado: " + e.getMessage(),
-                        null
+                        null,
+                        item.getParametros()
                 ));
             }
         }
@@ -314,9 +418,10 @@ public class BandejaOperacoesContexto {
         for (int i = 0; i < itens.size(); i++) {
             ItemBandeja item = itens.get(i);
             String statusTxt = switch (item.getStatus()) {
-                case VALIDADO -> "VALIDADO";
-                case PENDENTE_DADOS -> "PENDENTE DADOS";
-                case EXECUTADO_SUCESSO -> "EXECUTADO";
+                case VALIDADO -> "PRONTA";
+                case PENDENTE_DADOS -> "FALTAM DADOS";
+                case PULADO -> "PULADA";
+                case EXECUTADO_SUCESSO -> "EXECUTADA";
                 case FALHA_EXECUCAO -> "ERRO";
             };
 
@@ -331,10 +436,41 @@ public class BandejaOperacoesContexto {
         if (pendentes > 0) {
             sb.append("\nInforme os dados que faltam acima para concluir.");
         } else if (validados > 0) {
-            sb.append("\nConfirma a execução? Digite SIM para salvar ou NÃO para cancelar.\n")
+            sb.append("\nVocê pode executar uma por vez: diga \"próxima\" ou \"executar OP-1\". ")
+              .append("Para deixar uma para depois: \"pular OP-1\".\n")
+              .append("Confirma a execução de todas? Digite SIM para salvar ou NÃO para cancelar.\n")
               .append("[BOTAO_CONFIRMAR:SIM] [BOTAO_CANCELAR:NAO]");
         }
 
         return sb.toString().trim();
+    }
+
+    private void resolverReferenciasDinamicas(ItemBandeja item, Map<String, Long> idsCriados) {
+        if (idsCriados == null || idsCriados.isEmpty()) return;
+        Map<String, Object> p = item.getParametrosModificaveis();
+        for (Map.Entry<String, Object> entry : new ArrayList<>(p.entrySet())) {
+            Object valor = entry.getValue();
+            if (valor instanceof String str) {
+                String chave = str.trim().toUpperCase(Locale.ROOT);
+                if (idsCriados.containsKey(chave)) {
+                    entry.setValue(idsCriados.get(chave));
+                }
+            }
+        }
+    }
+
+    private static Long extrairIdResultado(Object res) {
+        if (res instanceof Produto prod) return prod.getId();
+        if (res instanceof Nota nota) return nota.getId();
+        if (res instanceof Pessoa pes) return pes.getId();
+        if (res != null) {
+            try {
+                var m = res.getClass().getMethod("getId");
+                Object id = m.invoke(res);
+                if (id instanceof Long l) return l;
+                if (id instanceof Number n) return n.longValue();
+            } catch (Exception ignored) {}
+        }
+        return null;
     }
 }

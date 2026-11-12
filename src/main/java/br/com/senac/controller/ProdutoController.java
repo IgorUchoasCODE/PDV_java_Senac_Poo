@@ -81,7 +81,12 @@ public class ProdutoController {
             BigDecimal pesoBrutoKg,
             BigDecimal pesoLiquidoKg) {
 
-        Um um = umDAO.buscarPorSigla(siglaUm != null ? siglaUm : "UN");
+        String sigla = siglaUm != null && !siglaUm.isBlank() ? siglaUm.trim() : "UN";
+        Um um = umDAO.buscarPorSigla(sigla);
+        if (um == null) {
+            throw new IllegalArgumentException("A unidade de medida \"" + sigla + "\" não está cadastrada. "
+                    + "Cadastre a unidade antes ou use uma existente (ex.: UN, KG, CX).");
+        }
         ProdutoFisico pf = new ProdutoFisico(nome, um, alturaCm, larguraCm, comprimentoCm, pesoBrutoKg, pesoLiquidoKg);
         pf.setDescricao(descricao);
         pf.setPrecoVenda(precoVenda);
@@ -184,13 +189,7 @@ public class ProdutoController {
     }
 
     public boolean excluirProdutoPorIdOuNome(Long idProduto, String nomeProduto) {
-        Produto p = null;
-        if (idProduto != null) {
-            p = produtoDAO.buscarPorId(idProduto);
-        }
-        if (p == null && nomeProduto != null && !nomeProduto.isBlank()) {
-            p = produtoDAO.buscarPorNome(nomeProduto);
-        }
+        Produto p = resolverPorIdOuNome(idProduto, nomeProduto);
         if (p == null) {
             throw new IllegalArgumentException("Produto não encontrado para exclusão (ID: " + idProduto + ", Nome: " + nomeProduto + ").");
         }
@@ -203,13 +202,7 @@ public class ProdutoController {
     }
 
     public Produto atualizarPrecoVendaPorIdOuNome(Long idProduto, String nomeProduto, BigDecimal novoPreco) {
-        Produto p = null;
-        if (idProduto != null) {
-            p = produtoDAO.buscarPorId(idProduto);
-        }
-        if (p == null && nomeProduto != null && !nomeProduto.isBlank()) {
-            p = produtoDAO.buscarPorNome(nomeProduto);
-        }
+        Produto p = resolverPorIdOuNome(idProduto, nomeProduto);
         if (p == null) {
             throw new IllegalArgumentException("Produto não encontrado para atualização de preço.");
         }
@@ -222,13 +215,7 @@ public class ProdutoController {
     }
 
     public Produto atualizarProdutoPorIdOuNome(Long idProduto, String nomeAtual, String novoNome, String novaDescricao) {
-        Produto p = null;
-        if (idProduto != null) {
-            p = produtoDAO.buscarPorId(idProduto);
-        }
-        if (p == null && nomeAtual != null && !nomeAtual.isBlank()) {
-            p = produtoDAO.buscarPorNome(nomeAtual);
-        }
+        Produto p = resolverPorIdOuNome(idProduto, nomeAtual);
         if (p == null) {
             throw new IllegalArgumentException("Produto não encontrado para atualização (ID: " + idProduto + ", Nome: " + nomeAtual + ").");
         }
@@ -239,5 +226,43 @@ public class ProdutoController {
             p.setDescricao(novaDescricao.trim());
         }
         return produtoDAO.atualizar(p);
+    }
+
+    // ==================== CHAVE ÚNICA (NOME + UNIDADE + CONJUNTO) ====================
+
+    /** Busca EXATA pela chave natural do produto. Nunca devolve um produto de nome parecido. */
+    public Produto buscarPorChaveUnica(String nome, String siglaUm, boolean conjunto) {
+        return produtoDAO.buscarPorChaveUnica(nome, siglaUm, conjunto);
+    }
+
+    /** Todos os produtos com exatamente este nome (um por unidade/tipo). */
+    public List<Produto> listarPorNomeExato(String nome) {
+        return produtoDAO.listarPorNomeExato(nome);
+    }
+
+    public boolean unidadeExiste(String sigla) {
+        return sigla != null && umDAO.buscarPorSigla(sigla.trim()) != null;
+    }
+
+    /**
+     * Localiza o produto por código ou por nome. Se o nome existir em mais de uma unidade, não adivinha:
+     * pede o código com a lista das opções.
+     */
+    private Produto resolverPorIdOuNome(Long id, String nome) {
+        Produto p = id != null ? produtoDAO.buscarPorId(id) : null;
+        if (p != null || nome == null || nome.isBlank()) {
+            return p;
+        }
+        List<Produto> exatos = produtoDAO.listarPorNomeExato(nome);
+        if (exatos.size() > 1) {
+            StringBuilder sb = new StringBuilder("Há mais de um produto chamado \"" + nome.trim() + "\". Informe o código:");
+            for (Produto o : exatos) {
+                sb.append(" #").append(o.getId()).append(" (")
+                        .append(o.getUm() != null ? o.getUm().getSigla() : "sem unidade")
+                        .append(o.isConjunto() ? ", conjunto" : "").append(");");
+            }
+            throw new IllegalArgumentException(sb.toString());
+        }
+        return exatos.size() == 1 ? exatos.get(0) : produtoDAO.buscarPorNome(nome);
     }
 }

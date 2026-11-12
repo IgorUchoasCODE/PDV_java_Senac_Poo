@@ -67,6 +67,34 @@ public final class ProvedorIAFactory {
     private static ProvedorIA instanciarIndividual(String id, GeminiClientService geminiClient, ConfigIA cfg) {
         return switch (id) {
             case "gemini" -> new GeminiApiProvedor(geminiClient);
+            case "groq" -> new OpenAiCompativelProvedor(
+                    "groq",
+                    "https://api.groq.com/openai/v1",
+                    cfg.getGroqModelo(),
+                    cfg.getGroqChave(),
+                    30
+            );
+            case "openrouter" -> new OpenAiCompativelProvedor(
+                    "openrouter",
+                    "https://openrouter.ai/api/v1",
+                    cfg.getOpenrouterModelo(),
+                    cfg.getOpenrouterChave(),
+                    60
+            );
+            case "cerebras" -> new OpenAiCompativelProvedor(
+                    "cerebras",
+                    "https://api.cerebras.ai/v1",
+                    cfg.getCerebrasModelo(),
+                    cfg.getCerebrasChave(),
+                    30
+            );
+            case "mistral" -> new OpenAiCompativelProvedor(
+                    "mistral",
+                    "https://api.mistral.ai/v1",
+                    cfg.getMistralModelo(),
+                    cfg.getMistralChave(),
+                    45
+            );
             case "openai", "ollama", "lmstudio", "local" -> new OpenAiCompativelProvedor();
             case "openai2", "secundario", "backup" -> new OpenAiCompativelProvedor(
                     "openai-secundario",

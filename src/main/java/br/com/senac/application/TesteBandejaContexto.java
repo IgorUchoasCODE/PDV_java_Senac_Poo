@@ -95,7 +95,7 @@ public class TesteBandejaContexto {
             // 6. Visualização formatada da Bandeja
             String visualizacao = bandeja.formatarVisualizacao();
             afirmar(visualizacao.contains("BANDEJA DE CONTEXTO ATIVA"), "Visualização da bandeja contém título oficial.");
-            afirmar(visualizacao.contains("VALIDADO"), "Visualização exibe o status VALIDADO das instruções.");
+            afirmar(visualizacao.contains("PRONTA"), "Visualização exibe a situação PRONTA das instruções.");
             afirmar(visualizacao.contains("PRODUTO_CATALOGO_ATUALIZAR"), "Visualização lista a rota de atualização.");
 
             // 7. Confirmação e Execução em Lote da Bandeja

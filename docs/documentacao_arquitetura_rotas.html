@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Documentação Completa - 55 Rotas da Arquitetura Sazonalisei</title>
+    <title>Documentação Completa - 84 Rotas da Arquitetura Sazonalisei</title>
     <style>
         :root {
             --bg-body: #0d1117; --bg-card: #161b22; --bg-card-alt: #1c2128; --border: #30363d;
@@ -37,6 +37,7 @@
         .route-method.GET { background: var(--accent-green); color: #000; }
         .route-method.PUT { background: var(--accent-yellow); color: #000; }
         .route-method.POST { background: var(--primary); color: #000; }
+        .route-method.DELETE { background: var(--accent-red); color: #fff; }
         .route-path-text { font-family: var(--font-mono); font-size: 0.95rem; color: var(--text-bright); font-weight: 600; margin-left: 8px; }
         .gemini-tool { font-family: var(--font-mono); font-size: 0.78rem; color: var(--accent-purple); background: rgba(188, 140, 255, 0.12); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(188, 140, 255, 0.3); }
         .endpoint-body { padding: 18px; }
@@ -58,7 +59,7 @@
 <body>
     <nav id="sidebar">
         <div class="sidebar-header">
-            <h1>Sazonalisei <span style="font-size:0.75rem; color:var(--primary); border:1px solid var(--primary); padding:1px 6px; border-radius:8px;">55 Rotas</span></h1>
+            <h1>Sazonalisei <span style="font-size:0.75rem; color:var(--primary); border:1px solid var(--primary); padding:1px 6px; border-radius:8px;">84 Rotas</span></h1>
             <p style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">Arquitetura & Mapeamento Integral</p>
         </div>
         <div class="search-box">
@@ -67,15 +68,24 @@
         <div class="nav-sections">
             <div class="nav-group-title">SISTEMA</div>
             <a href="#ep-SISTEMA_INICIALIZAR_DADOS_PADRAO" class="nav-item">/sistema/inicializar</a>
+            <a href="#ep-BUSCA_PADRAO_IA" class="nav-item">/ia/busca-padrao</a>
             <div class="nav-group-title">PRODUTO</div>
             <a href="#ep-PRODUTO_UNIDADE_LISTAR" class="nav-item">/produtos/unidades/listar</a>
             <a href="#ep-PRODUTO_UNIDADE_CADASTRAR" class="nav-item">/produtos/unidades/cadastrar</a>
+            <a href="#ep-PRODUTO_UNIDADE_ATUALIZAR" class="nav-item">/produtos/unidades/atualizar</a>
+            <a href="#ep-PRODUTO_UNIDADE_EXCLUIR" class="nav-item">/produtos/unidades/excluir</a>
             <a href="#ep-PRODUTO_FISICO_CADASTRAR" class="nav-item">/produtos/fisico/cadastrar</a>
             <a href="#ep-PRODUTO_FISICO_ATUALIZAR_DIMENSOES" class="nav-item">/produtos/fisico/dimensoes</a>
             <a href="#ep-PRODUTO_DIGITAL_CADASTRAR" class="nav-item">/produtos/digital/cadastrar</a>
             <a href="#ep-PRODUTO_KIT_ADICIONAR_COMPONENTE" class="nav-item">/produtos/kit/componente</a>
             <a href="#ep-PRODUTO_CATALOGO_LISTAR" class="nav-item">/produtos/catalogo/listar</a>
             <a href="#ep-PRODUTO_CATALOGO_BUSCAR" class="nav-item">/produtos/catalogo/buscar</a>
+            <a href="#ep-PRODUTO_BUSCAR_UNICO" class="nav-item">/produtos/buscar-unico</a>
+            <a href="#ep-PRODUTO_ESTOQUE_VALIDO_BUSCAR_UNICO" class="nav-item">/produtos/estoque-valido/buscar-unico</a>
+            <a href="#ep-PRODUTO_ESTOQUE_VALIDO_LISTAR" class="nav-item">/produtos/estoque-valido/listar</a>
+            <a href="#ep-PRODUTO_CATALOGO_ATUALIZAR" class="nav-item">/produtos/catalogo/atualizar</a>
+            <a href="#ep-PRODUTO_CATALOGO_ATUALIZAR_PRECO" class="nav-item">/produtos/catalogo/atualizar-preco</a>
+            <a href="#ep-PRODUTO_CATALOGO_EXCLUIR" class="nav-item">/produtos/catalogo/excluir</a>
             <a href="#ep-PRODUTO_IMAGEM_ADICIONAR" class="nav-item">/produtos/imagens/adicionar</a>
             <a href="#ep-PRODUTO_IMAGEM_LISTAR" class="nav-item">/produtos/imagens/listar</a>
             <a href="#ep-PRODUTO_IMAGEM_PRINCIPAL_OBTER" class="nav-item">/produtos/imagens/principal</a>
@@ -83,18 +93,27 @@
             <a href="#ep-PRODUTO_IMAGEM_REMOVER" class="nav-item">/produtos/imagens/remover</a>
             <div class="nav-group-title">PESSOA</div>
             <a href="#ep-PESSOA_CLIENTE_PADRAO_OBTER" class="nav-item">/pessoas/clientes/padrao</a>
+            <a href="#ep-PESSOA_SIMPLES_CADASTRAR" class="nav-item">/pessoas/cadastrar</a>
             <a href="#ep-PESSOA_CLIENTE_PF_CADASTRAR" class="nav-item">/pessoas/clientes/pf/cadastrar</a>
             <a href="#ep-PESSOA_CLIENTE_PJ_CADASTRAR" class="nav-item">/pessoas/clientes/pj/cadastrar</a>
             <a href="#ep-PESSOA_CLIENTE_ATUALIZAR_LIMITE" class="nav-item">/pessoas/clientes/limite</a>
+            <a href="#ep-PESSOA_DADOS_ATUALIZAR" class="nav-item">/pessoas/atualizar</a>
             <a href="#ep-PESSOA_FORNECEDOR_PJ_CADASTRAR" class="nav-item">/pessoas/fornecedores/pj/cadastrar</a>
             <a href="#ep-PESSOA_FORNECEDOR_PF_CADASTRAR" class="nav-item">/pessoas/fornecedores/pf/cadastrar</a>
             <a href="#ep-PESSOA_REGISTRO_ADICIONAR" class="nav-item">/pessoas/registros/adicionar</a>
             <a href="#ep-PESSOA_LISTAR_CLIENTES" class="nav-item">/pessoas/clientes/listar</a>
             <a href="#ep-PESSOA_LISTAR_FORNECEDORES" class="nav-item">/pessoas/fornecedores/listar</a>
+            <a href="#ep-PESSOA_BUSCAR" class="nav-item">/pessoas/buscar</a>
+            <a href="#ep-PESSOA_BUSCAR_UNICA" class="nav-item">/pessoas/buscar-unica</a>
+            <a href="#ep-PESSOA_REGISTRO_BUSCAR_UNICO" class="nav-item">/pessoas/registros/buscar-unico</a>
+            <a href="#ep-PESSOA_HISTORICO_COMPLETO" class="nav-item">/pessoas/historico-completo</a>
+            <a href="#ep-PESSOA_CLIENTE_EXCLUIR" class="nav-item">/pessoas/clientes/excluir</a>
             <div class="nav-group-title">PAGAMENTO</div>
             <a href="#ep-PAGAMENTO_FORMA_LISTAR_ATIVAS" class="nav-item">/pagamentos/formas/ativas</a>
+            <a href="#ep-PAGAMENTO_FORMA_CADASTRAR" class="nav-item">/pagamentos/formas/cadastrar</a>
             <a href="#ep-PAGAMENTO_FORMA_CUSTOMIZAR_REGRAS" class="nav-item">/pagamentos/formas/customizar</a>
             <a href="#ep-PAGAMENTO_FORMA_ALTERAR_STATUS" class="nav-item">/pagamentos/formas/status</a>
+            <a href="#ep-PAGAMENTO_FORMA_EXCLUIR" class="nav-item">/pagamentos/formas/excluir</a>
             <a href="#ep-PAGAMENTO_CRIAR_A_VISTA" class="nav-item">/pagamentos/criar/a-vista</a>
             <a href="#ep-PAGAMENTO_CRIAR_A_PRAZO" class="nav-item">/pagamentos/criar/a-prazo</a>
             <a href="#ep-PAGAMENTO_CRIAR_PARCELADO" class="nav-item">/pagamentos/criar/parcelado</a>
@@ -102,6 +121,8 @@
             <div class="nav-group-title">ESTOQUE</div>
             <a href="#ep-ESTOQUE_SALDO_CONSOLIDADO" class="nav-item">/estoque/saldo-consolidado</a>
             <a href="#ep-ESTOQUE_FILA_LOTES_FIFO" class="nav-item">/estoque/lotes-fifo</a>
+            <a href="#ep-ESTOQUE_LOTES_VALIDOS_LISTAR" class="nav-item">/estoque/lotes-validos/listar</a>
+            <a href="#ep-ESTOQUE_LOTE_VALIDO_BUSCAR_UNICO" class="nav-item">/estoque/lotes-validos/buscar-unico</a>
             <a href="#ep-ESTOQUE_BUSCAR_LOTE_ESPECIFICO" class="nav-item">/estoque/lote/buscar</a>
             <a href="#ep-ESTOQUE_LOTES_PROXIMOS_VALIDADE" class="nav-item">/estoque/lotes/validade</a>
             <a href="#ep-ESTOQUE_BAIXAR_PERDA_DIRETA" class="nav-item">/estoque/perda/baixar</a>
@@ -115,6 +136,9 @@
             <a href="#ep-NOTA_VENDA_PROCEDURE_MYSQL_FIFO" class="nav-item">/notas/venda/procedure-fifo</a>
             <a href="#ep-NOTA_VENDA_PROCEDURE_MYSQL_LOTE" class="nav-item">/notas/venda/procedure-lote</a>
             <a href="#ep-NOTA_DEVOLUCAO_REGISTRAR" class="nav-item">/notas/devolucao/registrar</a>
+            <a href="#ep-NOTA_BUSCAR_UNICA" class="nav-item">/notas/buscar-unica</a>
+            <a href="#ep-NOTA_LISTAR_PADRAO" class="nav-item">/notas/listar</a>
+            <a href="#ep-NOTA_DEFINIR_DATA" class="nav-item">/notas/definir-data</a>
             <div class="nav-group-title">RELATORIO</div>
             <a href="#ep-RELATORIO_LUCRO_CONTABIL_BACEN" class="nav-item">/relatorios/lucro-contabil-bacen</a>
             <a href="#ep-RELATORIO_PERDAS_POR_FORNECEDOR" class="nav-item">/relatorios/perdas-fornecedor</a>
@@ -134,19 +158,22 @@
             <div class="nav-group-title">FATOR_EXTERNO</div>
             <a href="#ep-FATOR_EXTERNO_EVENTOS_LISTAR" class="nav-item">/fatores-externos/eventos</a>
             <a href="#ep-FATOR_EXTERNO_RESOLVER_PENDENCIAS" class="nav-item">/fatores-externos/resolver-pendencias</a>
+            <a href="#ep-FATOR_EXTERNO_RELATORIO_INTEGRADO_NOTAS" class="nav-item">/fatores-externos/relatorio-integrado-notas</a>
         </div>
     </nav>
     <main id="content">
         <header style="margin-bottom:24px; border-bottom:1px solid var(--border); padding-bottom:16px;">
-            <h1 style="font-size:2rem; color:var(--text-bright);">Documentação da Arquitetura: 60 Rotas</h1>
+            <h1 style="font-size:2rem; color:var(--text-bright);">Documentação da Arquitetura: 84 Rotas</h1>
             <p style="color:var(--text-muted); font-size:1rem;">Mapeamento detalhado das camadas: <strong>Banco de Dados (MySQL) &rarr; DAO &rarr; Entity (JPA) &rarr; Service (Regras/BACEN) &rarr; Controller &rarr; Retorno Estruturado</strong>.</p>
         </header>
         <div class="stats">
-            <div class="stat-card"><div class="num">60</div><div class="label">Rotas Mapeadas (100%)</div></div>
+            <div class="stat-card"><div class="num">84</div><div class="label">Rotas Mapeadas (100%)</div></div>
             <div class="stat-card"><div class="num">8</div><div class="label">Módulos Funcionais</div></div>
             <div class="stat-card"><div class="num">9</div><div class="label">Stored Procedures</div></div>
             <div class="stat-card"><div class="num">8</div><div class="label">Views Otimizadas</div></div>
         </div>
+        
+        
         <div class="endpoint-card" id="ep-SISTEMA_INICIALIZAR_DADOS_PADRAO">
             <div class="endpoint-top">
                 <div>
@@ -189,14 +216,71 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">Nenhum parâmetro obrigatório.</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<String></div>
                 <div class="response-box">{"sucesso": true, "modulo": "SISTEMA", "caminhoRota": "/sistema/inicializar", "dados": "Dados padrão (Um, FormaPagamento e Cliente Padrão) inicializados com sucesso."}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-BUSCA_PADRAO_IA">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method POST">POST</span>
+                    <span class="route-path-text">/ia/busca-padrao</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#2 (SISTEMA)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: busca_padrao_ia</span>
             </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Executa busca padrão estruturada para leitura da IA em qualquer DAO (produto, pessoa, registro, estoque_valido, lote_valido, nota, unidade_medida, forma_pagamento, fator_externo).</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">produto, pessoa, nota, unidade_medida, forma_pagamento, registro</div>
+                        <div class="arch-sub">SELECTs otimizados por PK ou termo com índices parciais.</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">PadraoDAO, ProdutoDAO, PessoaDAO, NotaDAO</div>
+                        <div class="arch-sub">Despacho polimórfico de leitura unificada.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Produto, Pessoa, Nota, Um, FormaPagamento</div>
+                        <div class="arch-sub">Mapeamento JPA das entidades de catálogo e operacionais.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">RoteadorController.executarBuscaPadraoLeituraIA()</div>
+                        <div class="arch-sub">Normalização de filtros (id, termo, único) para leitura de IA.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">RoteadorController.executarEndpoint()</div>
+                        <div class="arch-sub">Despachante central para Function Calling da IA Gemini.</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">entidade: String (obrigatório: 'PRODUTO', 'PESSOA', 'NOTA', etc.), id: Long (opcional), termo: String (opcional), unico: Boolean (opcional)</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Object></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "SISTEMA",
+  "caminhoRota": "/ia/busca-padrao",
+  "dados": {
+    "id": 86,
+    "nome": "Ovo Branco Tipo A",
+    "precoVenda": 18.90,
+    "isDigital": false,
+    "isConjunto": false,
+    "siglaUm": "UN",
+    "estoqueValido": 45.0
+  }
+}</div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PRODUTO_UNIDADE_LISTAR">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/produtos/unidades/listar</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#2 (PRODUTO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#3 (PRODUTO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: produto_unidade_listar</span>
             </div>
@@ -233,14 +317,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">Nenhum parâmetro.</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Um>></div>
                 <div class="response-box">{"sucesso": true, "dados": [{"id": 1, "sigla": "UN", "base": 1.0}, {"id": 2, "sigla": "KG", "base": 0.001}]}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PRODUTO_UNIDADE_CADASTRAR">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/produtos/unidades/cadastrar</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#3 (PRODUTO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#4 (PRODUTO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: produto_unidade_cadastrar</span>
             </div>
@@ -277,14 +361,119 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">sigla (String), nome (String), descricao (String), base (BigDecimal)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Um></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 11, "sigla": "TON", "nome": "Tonelada", "base": 0.000001}}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-PRODUTO_UNIDADE_ATUALIZAR">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method PUT">PUT</span>
+                    <span class="route-path-text">/produtos/unidades/atualizar</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#5 (PRODUTO)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: produto_unidade_atualizar</span>
             </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Atualiza os dados cadastrais (nome, descrição, base de fracionamento) de uma Unidade de Medida existente pela sigla.</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">unidade_medida</div>
+                        <div class="arch-sub">UPDATE unidade_medida SET nome = ?, descricao = ?, base = ? WHERE sigla = ?</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">UmDAO.atualizar(), UmDAO.buscarPorSigla()</div>
+                        <div class="arch-sub">Busca prévia via JPQL e merge da entidade Um.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Um</div>
+                        <div class="arch-sub">Entidade JPA com colunas sigla (UK), nome, descricao e base DECIMAL(19,6).</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">ProdutoController.atualizarUnidadeMedida()</div>
+                        <div class="arch-sub">Valida existência da sigla e fator positivo de fracionamento.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">ProdutoController.atualizarUnidadeMedida()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">sigla: String (obrigatório), nome: String (opcional), descricao: String (opcional), base: BigDecimal (opcional, padrão 1.000000)</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Um></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "PRODUTO",
+  "caminhoRota": "/produtos/unidades/atualizar",
+  "dados": {
+    "id": 3,
+    "sigla": "DZ",
+    "nome": "Dúzia Especial",
+    "descricao": "Cartela com 12 unidades fracionáveis",
+    "base": 1.000000
+  }
+}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-PRODUTO_UNIDADE_EXCLUIR">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method PUT">DELETE</span>
+                    <span class="route-path-text">/produtos/unidades/excluir</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#6 (PRODUTO)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: produto_unidade_excluir</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Exclui definitivamente uma Unidade de Medida cadastrada pela sigla caso não possua produtos vinculados.</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">unidade_medida</div>
+                        <div class="arch-sub">DELETE FROM unidade_medida WHERE sigla = ? com verificação de FK em produto.</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">UmDAO.deletar(), UmDAO.buscarPorSigla()</div>
+                        <div class="arch-sub">Localiza pela sigla e remove via EntityManager curto.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Um</div>
+                        <div class="arch-sub">Entidade JPA de unidade fracionária.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">ProdutoController.excluirUnidadeMedida()</div>
+                        <div class="arch-sub">Garante integridade referencial antes da exclusão.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">ProdutoController.excluirUnidadeMedida()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">sigla: String (obrigatório)</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Boolean></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "PRODUTO",
+  "caminhoRota": "/produtos/unidades/excluir",
+  "dados": true,
+  "mensagem": "Unidade de medida DZ excluída com sucesso."
+}</div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PRODUTO_FISICO_CADASTRAR">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/produtos/fisico/cadastrar</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#4 (PRODUTO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#7 (PRODUTO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: produto_fisico_cadastrar</span>
             </div>
@@ -321,14 +510,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">nome (String), precoVenda (BigDecimal), siglaUm (String), alturaCm, larguraCm, comprimentoCm, pesoBrutoKg, pesoLiquidoKg (BigDecimal)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<ProdutoFisico></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 45, "nome": "Monitor Gamer 27 Pol", "precoVenda": 1499.90, "volumeM3": 0.0418, "pesoTaxavelFreteKg": 12.56}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PRODUTO_FISICO_ATUALIZAR_DIMENSOES">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method PUT">PUT</span>
                     <span class="route-path-text">/produtos/fisico/dimensoes</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#5 (PRODUTO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#8 (PRODUTO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: produto_fisico_atualizar_dimensoes</span>
             </div>
@@ -365,14 +554,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idProduto (Long), alturaCm, larguraCm, comprimentoCm, pesoBrutoKg, pesoLiquidoKg (BigDecimal)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<ProdutoFisico></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 45, "volumeM3": 0.0435, "pesoTaxavelFreteKg": 13.05}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PRODUTO_DIGITAL_CADASTRAR">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/produtos/digital/cadastrar</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#6 (PRODUTO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#9 (PRODUTO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: produto_digital_cadastrar</span>
             </div>
@@ -409,14 +598,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">nome (String), precoVenda (BigDecimal), links (List<LinkProdutoDigital>)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<ProdutoDigital></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 70, "nome": "E-book Gestão", "isDigital": true, "links": [{"titulo": "Acesso", "url": "https://..."}]}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PRODUTO_KIT_ADICIONAR_COMPONENTE">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/produtos/kit/componente</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#7 (PRODUTO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#10 (PRODUTO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: produto_kit_adicionar_componente</span>
             </div>
@@ -453,14 +642,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idProdutoKit (Long), idProdutoComponente (Long), quantidade (BigDecimal)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Produto></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 80, "nome": "Kit Gamer", "isConjunto": true, "itens": [{"idComponente": 1, "quantidade": 1.0}]}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PRODUTO_CATALOGO_LISTAR">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/produtos/catalogo/listar</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#8 (PRODUTO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#11 (PRODUTO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: produto_catalogo_listar</span>
             </div>
@@ -497,14 +686,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">Nenhum parâmetro.</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Produto>></div>
                 <div class="response-box">{"sucesso": true, "dados": [{"id": 1, "nome": "Mouse Gamer", "precoVenda": 199.90}, {"id": 45, "nome": "Monitor 27", "precoVenda": 1499.90}]}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PRODUTO_CATALOGO_BUSCAR">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/produtos/catalogo/buscar</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#9 (PRODUTO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#12 (PRODUTO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: produto_catalogo_buscar</span>
             </div>
@@ -541,14 +730,335 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">id (Long) OU nome (String)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Produto></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 1, "nome": "Mouse Gamer Sem Fio", "precoVenda": 199.90}}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-PRODUTO_BUSCAR_UNICO">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method GET">GET</span>
+                    <span class="route-path-text">/produtos/buscar-unico</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#13 (PRODUTO)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: produto_buscar_unico</span>
             </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Busca padrão de um único produto por ID ou Nome indexado para leitura da IA (compatível com siglas e busca parcial).</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">produto, unidade_medida, produto_imagem</div>
+                        <div class="arch-sub">SELECT p FROM Produto p LEFT JOIN FETCH p.um WHERE p.id = :id OR p.nome = :nome</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">ProdutoDAO.buscarPorId(), ProdutoDAO.buscarEspecificoOuListarParaEscolha()</div>
+                        <div class="arch-sub">Resolve produtos únicos ou lista de escolha.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Produto, Um</div>
+                        <div class="arch-sub">Entidade base com estratégias de herança para físico/digital.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">ProdutoController.buscarEspecificoOuListarParaEscolha()</div>
+                        <div class="arch-sub">Normaliza busca inteligente semântica.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">ProdutoController.buscarEspecificoOuListarParaEscolha()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">id: Long (opcional), idProduto: Long (opcional), nome: String (opcional), termo: String (opcional)</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Object></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "PRODUTO",
+  "caminhoRota": "/produtos/buscar-unico",
+  "dados": {
+    "id": 126,
+    "nome": "Caixa de Ovos DSL",
+    "precoVenda": 300.00,
+    "isDigital": false,
+    "isConjunto": false,
+    "um": { "sigla": "UN", "nome": "Unidade" }
+  }
+}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-PRODUTO_ESTOQUE_VALIDO_BUSCAR_UNICO">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method GET">GET</span>
+                    <span class="route-path-text">/produtos/estoque-valido/buscar-unico</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#14 (PRODUTO)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: produto_estoque_valido_buscar_unico</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Busca um único produto que possua estoque válido disponível (saldo FIFO > 0 e dentro do prazo de validade).</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">produto, nota_itens, nota</div>
+                        <div class="arch-sub">SELECT p FROM Produto p JOIN p.itens i WHERE i.saldoDisponivel > 0 AND i.validade >= CURDATE()</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">ProdutoDAO.buscarUnicoComEstoqueValido()</div>
+                        <div class="arch-sub">Consulta JPQL otimizada com projeção de lotes ativos.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Produto, Item</div>
+                        <div class="arch-sub">Associação entre produto e lotes FIFO em estoque.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">ProdutoController.buscarEspecificoOuListarParaEscolha()</div>
+                        <div class="arch-sub">Filtro booleano apenasEstoqueValido = true.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">ProdutoController.buscarEspecificoOuListarParaEscolha()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">id: Long (opcional), idProduto: Long (opcional), nome: String (opcional), termo: String (opcional)</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Produto></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "PRODUTO",
+  "caminhoRota": "/produtos/estoque-valido/buscar-unico",
+  "dados": {
+    "id": 86,
+    "nome": "Ovo Branco Tipo A",
+    "precoVenda": 18.90,
+    "isConjunto": false,
+    "um": { "sigla": "UN" }
+  }
+}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-PRODUTO_ESTOQUE_VALIDO_LISTAR">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method GET">GET</span>
+                    <span class="route-path-text">/produtos/estoque-valido/listar</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#15 (PRODUTO)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: produto_estoque_valido_listar</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Lista todos os produtos do catálogo que possuem saldo de estoque válido (lotes FIFO disponíveis e não vencidos).</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">vw_saldo_consolidado_estoque, produto</div>
+                        <div class="arch-sub">SELECT DISTINCT p FROM Produto p WHERE p.id IN (SELECT l.produto.id FROM Item l WHERE l.saldo > 0)</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">ProdutoDAO.listarProdutosComEstoqueValido()</div>
+                        <div class="arch-sub">Consulta JPQL com JOIN FETCH de Unidades de Medida.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Produto, Um</div>
+                        <div class="arch-sub">Mapeamento JPA com coleção de imagens e medidas.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">ProdutoController.listarProdutosComEstoqueValido()</div>
+                        <div class="arch-sub">Visão de catálogo pronta para faturamento imediato.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">ProdutoController.listarProdutosComEstoqueValido()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">Nenhum parâmetro obrigatório.</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Produto>></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "PRODUTO",
+  "caminhoRota": "/produtos/estoque-valido/listar",
+  "dados": [
+    { "id": 86, "nome": "Ovo Branco Tipo A", "precoVenda": 18.90, "siglaUm": "UN" },
+    { "id": 126, "nome": "Caixa de Ovos DSL", "precoVenda": 300.00, "siglaUm": "UN" }
+  ]
+}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-PRODUTO_CATALOGO_ATUALIZAR">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method PUT">PUT</span>
+                    <span class="route-path-text">/produtos/catalogo/atualizar</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#16 (PRODUTO)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: produto_catalogo_atualizar</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Atualiza o nome e descrição cadastrais de um produto no catálogo por ID ou Nome Atual.</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">produto</div>
+                        <div class="arch-sub">UPDATE produto SET nome = ?, descricao = ? WHERE id = ?</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">ProdutoDAO.atualizar(), ProdutoDAO.buscarPorId()</div>
+                        <div class="arch-sub">Merge atômico no banco com verificação de existência.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Produto</div>
+                        <div class="arch-sub">Entidade JPA com validações cadastrais.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">ProdutoController.atualizarProdutoPorIdOuNome()</div>
+                        <div class="arch-sub">Garante unicidade do nome e preserva integridade de dimensões.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">ProdutoController.atualizarProdutoPorIdOuNome()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idProduto: Long (opcional se nomeAtual), nomeAtual: String (opcional), novoNome: String (obrigatório), descricao: String (opcional)</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Produto></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "PRODUTO",
+  "caminhoRota": "/produtos/catalogo/atualizar",
+  "dados": {
+    "id": 86,
+    "nome": "Ovo Branco Tipo A Especial",
+    "descricao": "Cartela especial com ovos selecionados",
+    "precoVenda": 22.90
+  }
+}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-PRODUTO_CATALOGO_ATUALIZAR_PRECO">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method PUT">PUT</span>
+                    <span class="route-path-text">/produtos/catalogo/atualizar-preco</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#17 (PRODUTO)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: produto_catalogo_atualizar_preco</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Atualiza o preço de venda de um produto no catálogo por ID ou Nome, com histórico e recálculo de margem.</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">produto</div>
+                        <div class="arch-sub">UPDATE produto SET v_venda = ? WHERE id = ?</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">ProdutoDAO.atualizar(), ProdutoDAO.buscarPorId()</div>
+                        <div class="arch-sub">Atualização direta de precoVenda.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Produto</div>
+                        <div class="arch-sub">Campo precoVenda DECIMAL(19,2) arredondado em HALF_EVEN.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">ProdutoController.atualizarPrecoVendaPorIdOuNome()</div>
+                        <div class="arch-sub">Validação de valor positivo e recálculo BACEN.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">ProdutoController.atualizarPrecoVendaPorIdOuNome()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idProduto: Long (ou nomeProduto: String), novoPreco: BigDecimal (obrigatório)</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Produto></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "PRODUTO",
+  "caminhoRota": "/produtos/catalogo/atualizar-preco",
+  "dados": {
+    "id": 126,
+    "nome": "Caixa de Ovos DSL",
+    "precoVenda": 300.00,
+    "um": { "sigla": "UN" }
+  }
+}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-PRODUTO_CATALOGO_EXCLUIR">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method PUT">DELETE</span>
+                    <span class="route-path-text">/produtos/catalogo/excluir</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#18 (PRODUTO)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: produto_catalogo_excluir</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Exclui definitivamente um produto do catálogo pelo ID ou Nome caso não possua movimentações fiscais atreladas.</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">produto</div>
+                        <div class="arch-sub">DELETE FROM produto WHERE id = ?</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">ProdutoDAO.deletar(), ProdutoDAO.buscarPorId()</div>
+                        <div class="arch-sub">Execução do delete JPA com tratamento de integridade referencial.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Produto</div>
+                        <div class="arch-sub">Entidade base do catálogo.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">ProdutoController.excluirProdutoPorIdOuNome()</div>
+                        <div class="arch-sub">Bloqueio de exclusão em produtos com lotes ativos ou notas.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">ProdutoController.excluirProdutoPorIdOuNome()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idProduto: Long (ou nomeProduto: String)</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Boolean></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "PRODUTO",
+  "caminhoRota": "/produtos/catalogo/excluir",
+  "dados": true,
+  "mensagem": "Produto excluído com sucesso do catálogo."
+}</div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PRODUTO_IMAGEM_ADICIONAR">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/produtos/imagens/adicionar</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#10 (PRODUTO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#19 (PRODUTO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: produto_imagem_adicionar</span>
             </div>
@@ -585,14 +1095,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idProduto (Long), caminhoArquivo (String) OU base64 (String), nomeOriginal (String, opcional), isPrincipal (Boolean, opcional)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint&lt;ProdutoImagem&gt;</div>
                 <div class="response-box">{"sucesso": true, "modulo": "PRODUTO", "caminhoRota": "/produtos/imagens/adicionar", "dados": {"id": 1, "produtoId": 10, "nomeArquivo": "prod_10_44cd2701_179432.png", "caminhoArquivo": "storage/imagens/produtos/prod_10_44cd2701_179432.png", "formato": "PNG", "isPrincipal": true, "uriJavaFx": "file:/C:/workspace/Java/Sistema%20de%20Vendas/storage/imagens/produtos/prod_10_44cd2701_179432.png"}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PRODUTO_IMAGEM_LISTAR">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/produtos/imagens/listar</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#11 (PRODUTO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#20 (PRODUTO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: produto_imagem_listar</span>
             </div>
@@ -629,14 +1139,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idProduto (Long)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint&lt;List&lt;ProdutoImagem&gt;&gt;</div>
                 <div class="response-box">{"sucesso": true, "modulo": "PRODUTO", "caminhoRota": "/produtos/imagens/listar", "dados": [{"id": 1, "nomeArquivo": "prod_10_frente.png", "caminhoArquivo": "storage/imagens/produtos/prod_10_frente.png", "isPrincipal": true}, {"id": 2, "nomeArquivo": "prod_10_verso.jpg", "caminhoArquivo": "storage/imagens/produtos/prod_10_verso.jpg", "isPrincipal": false}]}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PRODUTO_IMAGEM_PRINCIPAL_OBTER">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/produtos/imagens/principal</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#12 (PRODUTO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#21 (PRODUTO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: produto_imagem_principal_obter</span>
             </div>
@@ -673,14 +1183,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idProduto (Long)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint&lt;ProdutoImagem&gt;</div>
                 <div class="response-box">{"sucesso": true, "modulo": "PRODUTO", "caminhoRota": "/produtos/imagens/principal", "dados": {"id": 1, "produtoId": 10, "caminhoArquivo": "storage/imagens/produtos/prod_10_frente.png", "isPrincipal": true, "uriJavaFx": "file:/C:/workspace/Java/Sistema%20de%20Vendas/storage/imagens/produtos/prod_10_frente.png"}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PRODUTO_IMAGEM_DEFINIR_PRINCIPAL">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method PUT">PUT</span>
                     <span class="route-path-text">/produtos/imagens/definir-principal</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#13 (PRODUTO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#22 (PRODUTO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: produto_imagem_definir_principal</span>
             </div>
@@ -717,14 +1227,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idProduto (Long), idImagem (Long)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint&lt;String&gt;</div>
                 <div class="response-box">{"sucesso": true, "modulo": "PRODUTO", "caminhoRota": "/produtos/imagens/definir-principal", "dados": "Imagem ID 2 definida como principal com sucesso."}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PRODUTO_IMAGEM_REMOVER">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method DELETE">DELETE</span>
                     <span class="route-path-text">/produtos/imagens/remover</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#14 (PRODUTO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#23 (PRODUTO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: produto_imagem_remover</span>
             </div>
@@ -761,14 +1271,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idImagem (Long), removerArquivoFisico (Boolean, padrão: true)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint&lt;Boolean&gt;</div>
                 <div class="response-box">{"sucesso": true, "modulo": "PRODUTO", "caminhoRota": "/produtos/imagens/remover", "dados": true}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PESSOA_CLIENTE_PADRAO_OBTER">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/pessoas/clientes/padrao</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#10 (PESSOA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#24 (PESSOA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: pessoa_cliente_padrao_obter</span>
             </div>
@@ -805,14 +1315,69 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">Nenhum parâmetro.</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<PessoaFisica></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 1, "nome": "CONSUMIDOR FINAL (NÃO REGISTRADO)", "cpf": "000.000.000-00", "limite": 0.00}}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-PESSOA_SIMPLES_CADASTRAR">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method POST">POST</span>
+                    <span class="route-path-text">/pessoas/cadastrar</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#25 (PESSOA)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: pessoa_simples_cadastrar</span>
             </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Cadastra pessoa com o nome e definição de papéis (cliente, fornecedor ou ambos), tornando o documento opcional.</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">pessoa, registro</div>
+                        <div class="arch-sub">INSERT INTO pessoa (nome, is_cliente, is_fornecedor, limite) VALUES (?, ?, ?, ?)</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">PessoaDAO.salvar()</div>
+                        <div class="arch-sub">Persistência genérica de pessoa física/jurídica simplificada.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Pessoa, Registro</div>
+                        <div class="arch-sub">Herança SINGLE_TABLE na tabela pessoa.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">PessoaController.cadastrarPessoaSimples()</div>
+                        <div class="arch-sub">Permite cadastros rápidos no balcão sem travar por CPF/CNPJ.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">PessoaController.cadastrarPessoaSimples()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">nome: String (obrigatório), isCliente: Boolean, isFornecedor: Boolean, documento: String (opcional), limite: BigDecimal (opcional)</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Pessoa></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "PESSOA",
+  "caminhoRota": "/pessoas/cadastrar",
+  "dados": {
+    "id": 15,
+    "nome": "Cliente Balcão Rápido",
+    "isCliente": true,
+    "isFornecedor": false,
+    "limite": 0.00
+  }
+}</div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PESSOA_CLIENTE_PF_CADASTRAR">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/pessoas/clientes/pf/cadastrar</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#11 (PESSOA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#26 (PESSOA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: pessoa_cliente_pf_cadastrar</span>
             </div>
@@ -849,14 +1414,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">nome (String), cpf (String), limite (BigDecimal)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<PessoaFisica></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 29, "nome": "Roberto Almeida", "cpf": "777.888.597-99", "limite": 5000.00}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PESSOA_CLIENTE_PJ_CADASTRAR">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/pessoas/clientes/pj/cadastrar</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#12 (PESSOA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#27 (PESSOA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: pessoa_cliente_pj_cadastrar</span>
             </div>
@@ -893,14 +1458,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">razaoSocial (String), cnpj (String), limite (BigDecimal)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<PessoaJuridica></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 30, "nome": "Tech Solutions LTDA", "cnpj": "12.345.678/0001-90", "limite": 20000.00}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PESSOA_CLIENTE_ATUALIZAR_LIMITE">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method PUT">PUT</span>
                     <span class="route-path-text">/pessoas/clientes/limite</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#13 (PESSOA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#28 (PESSOA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: pessoa_cliente_atualizar_limite</span>
             </div>
@@ -937,14 +1502,68 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idPessoa (Long), novoLimite (BigDecimal)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Pessoa></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 29, "nome": "Roberto Almeida", "limite": 8000.00}}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-PESSOA_DADOS_ATUALIZAR">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method PUT">PUT</span>
+                    <span class="route-path-text">/pessoas/atualizar</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#29 (PESSOA)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: pessoa_dados_atualizar</span>
             </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Atualiza os dados cadastrais (nome ou razão social) de uma pessoa pelo ID.</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">pessoa</div>
+                        <div class="arch-sub">UPDATE pessoa SET nome = ? WHERE id = ?</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">PessoaDAO.atualizar(), PessoaDAO.buscarPorId()</div>
+                        <div class="arch-sub">Merge de atualização cadastral.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Pessoa</div>
+                        <div class="arch-sub">Entidade base com polimorfismo PF/PJ.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">PessoaController.atualizarDadosCadastrais()</div>
+                        <div class="arch-sub">Garante preenchimento de nome válido.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">PessoaController.atualizarDadosCadastrais()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idPessoa: Long (obrigatório), novoNome: String (obrigatório)</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Pessoa></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "PESSOA",
+  "caminhoRota": "/pessoas/atualizar",
+  "dados": {
+    "id": 10,
+    "nome": "Roberto Almeida Silva",
+    "isCliente": true,
+    "limite": 12000.00
+  }
+}</div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PESSOA_FORNECEDOR_PJ_CADASTRAR">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/pessoas/fornecedores/pj/cadastrar</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#14 (PESSOA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#30 (PESSOA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: pessoa_fornecedor_pj_cadastrar</span>
             </div>
@@ -981,14 +1600,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">razaoSocial (String), cnpj (String)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<PessoaJuridica></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 31, "nome": "Fábrica Display Amazônia S.A.", "cnpj": "98.765.432/0001-10", "isFornecedor": true}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PESSOA_FORNECEDOR_PF_CADASTRAR">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/pessoas/fornecedores/pf/cadastrar</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#15 (PESSOA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#31 (PESSOA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: pessoa_fornecedor_pf_cadastrar</span>
             </div>
@@ -1025,14 +1644,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">nome (String), cpf (String)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<PessoaFisica></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 32, "nome": "João Produtor", "cpf": "111.222.333-44", "isFornecedor": true}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PESSOA_REGISTRO_ADICIONAR">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/pessoas/registros/adicionar</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#16 (PESSOA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#32 (PESSOA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: pessoa_registro_adicionar</span>
             </div>
@@ -1069,14 +1688,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idPessoa (Long), tipoDocumento (String), numeroRegistro (String)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Pessoa></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 31, "registros": [{"tipo": "IE", "registro": "04.123.456-7"}]}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PESSOA_LISTAR_CLIENTES">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/pessoas/clientes/listar</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#17 (PESSOA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#33 (PESSOA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: pessoa_listar_clientes</span>
             </div>
@@ -1113,14 +1732,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">Nenhum parâmetro.</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Pessoa>></div>
                 <div class="response-box">{"sucesso": true, "dados": [{"id": 1, "nome": "CONSUMIDOR FINAL"}, {"id": 29, "nome": "Roberto Almeida"}]}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PESSOA_LISTAR_FORNECEDORES">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/pessoas/fornecedores/listar</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#18 (PESSOA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#34 (PESSOA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: pessoa_listar_fornecedores</span>
             </div>
@@ -1157,14 +1776,285 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">Nenhum parâmetro.</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Pessoa>></div>
                 <div class="response-box">{"sucesso": true, "dados": [{"id": 1, "nome": "Distribuidora Tech"}, {"id": 31, "nome": "Fábrica Display S.A."}]}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-PESSOA_BUSCAR">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method GET">GET</span>
+                    <span class="route-path-text">/pessoas/buscar</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#35 (PESSOA)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: pessoa_buscar</span>
             </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Busca clientes e/ou fornecedores por termo livre (nome, CPF, CNPJ ou razão social).</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">pessoa, registro</div>
+                        <div class="arch-sub">SELECT DISTINCT p FROM Pessoa p LEFT JOIN p.registros r WHERE p.nome LIKE :t OR r.registro LIKE :t</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">PessoaDAO.buscarPorTermo()</div>
+                        <div class="arch-sub">Consulta JPQL multi-campos.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Pessoa, Registro</div>
+                        <div class="arch-sub">Mapeamento bidirecional pessoa-documentos.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">PessoaController.buscarPorTermo()</div>
+                        <div class="arch-sub">Filtro textual case-insensitive.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">PessoaController.buscarPorTermo()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">termo: String (obrigatório, ex: 'Roberto' ou '12.345')</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Pessoa>></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "PESSOA",
+  "caminhoRota": "/pessoas/buscar",
+  "dados": [
+    { "id": 10, "nome": "Roberto Almeida Silva", "isCliente": true, "limite": 12000.00 },
+    { "id": 12, "nome": "Roberto Carlos Ferragens", "isFornecedor": true, "limite": 0.00 }
+  ]
+}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-PESSOA_BUSCAR_UNICA">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method GET">GET</span>
+                    <span class="route-path-text">/pessoas/buscar-unica</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#36 (PESSOA)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: pessoa_buscar_unica</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Busca padrão de uma única pessoa por ID, documento/registro único ou Nome indexado para leitura da IA.</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">pessoa, registro</div>
+                        <div class="arch-sub">SELECT p FROM Pessoa p WHERE p.id = :id OR p.nome = :nome</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">PessoaDAO.buscarPorId(), PessoaDAO.buscarEspecificaOuListarParaEscolha()</div>
+                        <div class="arch-sub">Consulta com resolução determinística de foco.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Pessoa, Registro</div>
+                        <div class="arch-sub">Entidade JPA de cadastro de pessoa.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">PessoaController.buscarEspecificaOuListarParaEscolha()</div>
+                        <div class="arch-sub">Garante resolução de cliente ou fornecedor em foco.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">PessoaController.buscarEspecificaOuListarParaEscolha()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idPessoa: Long (opcional), termo: String (opcional), nome: String (opcional), documento: String (opcional)</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Pessoa></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "PESSOA",
+  "caminhoRota": "/pessoas/buscar-unica",
+  "dados": {
+    "id": 10,
+    "nome": "Roberto Almeida Silva",
+    "cpf": "777.888.999-99",
+    "isCliente": true,
+    "isFornecedor": false,
+    "limite": 12000.00
+  }
+}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-PESSOA_REGISTRO_BUSCAR_UNICO">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method GET">GET</span>
+                    <span class="route-path-text">/pessoas/registros/buscar-unico</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#37 (PESSOA)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: pessoa_registro_buscar_unico</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Busca uma única pessoa pelo documento/registro único (CPF, CNPJ, RG, CNH, IE, Título Eleitoral).</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">registro, pessoa</div>
+                        <div class="arch-sub">SELECT p FROM Pessoa p JOIN p.registros r WHERE r.tipo = :tipo AND r.registro = :num</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">PessoaDAO.buscarPorRegistroUnico()</div>
+                        <div class="arch-sub">Localização indexada por documento cadastral.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Registro, Pessoa</div>
+                        <div class="arch-sub">Relacionamento @OneToMany em cascata.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">PessoaController.buscarPessoaPorRegistroUnico()</div>
+                        <div class="arch-sub">Valida formatos e resolve a pessoa titular.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">PessoaController.buscarPessoaPorRegistroUnico()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">tipoDocumento: String (opcional, ex: 'CNH', 'RG', 'CNPJ'), numeroRegistro: String (obrigatório)</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Pessoa></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "PESSOA",
+  "caminhoRota": "/pessoas/registros/buscar-unico",
+  "dados": {
+    "id": 10,
+    "nome": "Roberto Almeida Silva",
+    "registros": [
+      { "tipo": "CNH", "registro": "04599887766" },
+      { "tipo": "CPF", "registro": "777.888.999-99" }
+    ]
+  }
+}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-PESSOA_HISTORICO_COMPLETO">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method GET">GET</span>
+                    <span class="route-path-text">/pessoas/historico-completo</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#38 (PESSOA)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: pessoa_historico_completo</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Consulta histórico 360º de cliente/fornecedor: cadastro, notas vinculadas, itens de produtos e pagamentos.</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">pessoa, nota, nota_itens, nota_pagamentos, registro</div>
+                        <div class="arch-sub">Consultas agrupadas com snapshots fiscais e financeiros.</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">PessoaDAO.buscarPorId(), NotaDAO.listarNotasPorPessoa()</div>
+                        <div class="arch-sub">Montagem de Dossiê 360º com dados consolidados.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Pessoa, Nota, Item, NotaPagamento</div>
+                        <div class="arch-sub">Agregação completa de entidades operacionais.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">PessoaController.consultarHistoricoCompletoPessoa()</div>
+                        <div class="arch-sub">Consolidação executiva para tomada de decisão e limites BACEN.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">PessoaController.consultarHistoricoCompletoPessoa()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idPessoa: Long (ou termo: String, papel: String)</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Map<String, Object>></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "PESSOA",
+  "caminhoRota": "/pessoas/historico-completo",
+  "dados": {
+    "pessoa": { "id": 10, "nome": "Roberto Almeida Silva", "limite": 12000.00 },
+    "totalNotas": 3,
+    "valorTotalMovimentado": 4599.70,
+    "notas": [
+      { "idNota": 42, "tipoNota": "NotaVenda", "dataGerada": "2026-11-12", "valorTotal": 3149.70 }
+    ],
+    "contatos": ["WHATSAPP: (11) 98888-7777", "EMAIL: roberto@gmail.com"]
+  }
+}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-PESSOA_CLIENTE_EXCLUIR">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method PUT">DELETE</span>
+                    <span class="route-path-text">/pessoas/clientes/excluir</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#39 (PESSOA)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: pessoa_cliente_excluir</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Exclui cliente/pessoa do sistema pelo ID caso não possua movimentações fiscais ou notas emitidas.</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">pessoa, registro</div>
+                        <div class="arch-sub">DELETE FROM pessoa WHERE id = ? com CASCADE em registros auxiliares.</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">PessoaDAO.deletar(), PessoaDAO.buscarPorId()</div>
+                        <div class="arch-sub">Exclusão segura com verificação de FKs operacionais.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Pessoa</div>
+                        <div class="arch-sub">Entidade base do cadastro de pessoas.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">PessoaController.excluirPessoa()</div>
+                        <div class="arch-sub">Garante que clientes com faturamento ou notas não sejam apagados.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">PessoaController.excluirPessoa()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idPessoa: Long (obrigatório)</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Boolean></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "PESSOA",
+  "caminhoRota": "/pessoas/clientes/excluir",
+  "dados": true,
+  "mensagem": "Cliente/Pessoa excluído com sucesso do sistema."
+}</div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PAGAMENTO_FORMA_LISTAR_ATIVAS">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/pagamentos/formas/ativas</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#19 (PAGAMENTO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#40 (PAGAMENTO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: pagamento_forma_listar_ativas</span>
             </div>
@@ -1201,14 +2091,71 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">Nenhum parâmetro.</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<FormaPagamento>></div>
                 <div class="response-box">{"sucesso": true, "dados": [{"codigo": "PIX", "descontoAVista": 5.0}, {"codigo": "CARTAO_CREDITO", "maxParcelas": 12}]}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-PAGAMENTO_FORMA_CADASTRAR">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method POST">POST</span>
+                    <span class="route-path-text">/pagamentos/formas/cadastrar</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#41 (PAGAMENTO)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: pagamento_forma_cadastrar</span>
             </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Cadastra nova Forma de Pagamento no sistema com parâmetros contábeis, taxas MDR operadora e regras de parcelamento.</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">forma_pagamento</div>
+                        <div class="arch-sub">INSERT INTO forma_pagamento (codigo, nome, taxa_operadora, ...) VALUES (...)</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">FormaPagamentoDAO.salvar()</div>
+                        <div class="arch-sub">Persistência atômica da forma com chave única de código.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">FormaPagamento</div>
+                        <div class="arch-sub">Entidade JPA com regras fiscais e juros moratórios.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">PagamentoController.cadastrarNovaFormaPagamento()</div>
+                        <div class="arch-sub">Validações contábeis BACEN para evitar spreads incorretos.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">PagamentoController.cadastrarNovaFormaPagamento()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">codigo: String (obrigatório), nome: String, permiteAVista: Boolean, permiteParcelado: Boolean, taxaOperadoraPercentual: BigDecimal</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<FormaPagamento></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "PAGAMENTO",
+  "caminhoRota": "/pagamentos/formas/cadastrar",
+  "dados": {
+    "id": 9,
+    "codigo": "VALE_ALIMENTACAO",
+    "nome": "Vale Alimentação Ticket",
+    "permiteAVista": true,
+    "permiteParcelado": false,
+    "taxaOperadoraPercentual": 2.5000,
+    "ativo": true
+  }
+}</div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PAGAMENTO_FORMA_CUSTOMIZAR_REGRAS">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method PUT">PUT</span>
                     <span class="route-path-text">/pagamentos/formas/customizar</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#20 (PAGAMENTO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#42 (PAGAMENTO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: pagamento_forma_customizar_regras</span>
             </div>
@@ -1245,14 +2192,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">codigo (String), taxaOperadoraPercentual, tarifaFixaOperadora, descontoAVistaPercentual, maxParcelas, maxParcelasSemJuros, taxaJurosMensal</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<FormaPagamento></div>
                 <div class="response-box">{"sucesso": true, "dados": {"codigo": "PIX", "descontoAVistaPercentual": 7.0000, "ativo": true}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PAGAMENTO_FORMA_ALTERAR_STATUS">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method PUT">PUT</span>
                     <span class="route-path-text">/pagamentos/formas/status</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#21 (PAGAMENTO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#43 (PAGAMENTO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: pagamento_forma_alterar_status</span>
             </div>
@@ -1289,14 +2236,64 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">codigo (String), ativo (Boolean)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<FormaPagamento></div>
                 <div class="response-box">{"sucesso": true, "dados": {"codigo": "CREDIARIO", "ativo": false}}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-PAGAMENTO_FORMA_EXCLUIR">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method PUT">DELETE</span>
+                    <span class="route-path-text">/pagamentos/formas/excluir</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#44 (PAGAMENTO)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: pagamento_forma_excluir</span>
             </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Exclui uma Forma de Pagamento cadastrada pelo código caso não esteja atrelada a títulos já lançados.</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">forma_pagamento</div>
+                        <div class="arch-sub">DELETE FROM forma_pagamento WHERE codigo = ?</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">FormaPagamentoDAO.deletar(), FormaPagamentoDAO.buscarPorCodigo()</div>
+                        <div class="arch-sub">Exclusão por código textual indexado.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">FormaPagamento</div>
+                        <div class="arch-sub">Entidade de modalidade financeira.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">PagamentoController.excluirFormaPagamento()</div>
+                        <div class="arch-sub">Verifica se há títulos dependentes da modalidade.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">PagamentoController.excluirFormaPagamento()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">codigo: String (obrigatório, ex: 'PAG_TESTE')</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Boolean></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "PAGAMENTO",
+  "caminhoRota": "/pagamentos/formas/excluir",
+  "dados": true,
+  "mensagem": "Forma de pagamento excluída com sucesso."
+}</div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PAGAMENTO_CRIAR_A_VISTA">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/pagamentos/criar/a-vista</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#22 (PAGAMENTO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#45 (PAGAMENTO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: pagamento_criar_a_vista</span>
             </div>
@@ -1333,14 +2330,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">codigoForma (String), valor (BigDecimal), valorRecebido (BigDecimal), descontoCustomizado (BigDecimal)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<PagamentoAVista></div>
                 <div class="response-box">{"sucesso": true, "dados": {"modo": 0, "valorNominal": 100.00, "descontoAVista": 5.00, "valorFinal": 95.00, "troco": 5.00, "liquidado": true}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PAGAMENTO_CRIAR_A_PRAZO">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/pagamentos/criar/a-prazo</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#23 (PAGAMENTO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#46 (PAGAMENTO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: pagamento_criar_a_prazo</span>
             </div>
@@ -1377,14 +2374,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">codigoForma (String), valor (BigDecimal), dataVencimento (LocalDate)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<PagamentoAPrazo></div>
                 <div class="response-box">{"sucesso": true, "dados": {"modo": 1, "valorNominal": 500.00, "dataVencimento": "2026-12-10", "liquidado": false}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PAGAMENTO_CRIAR_PARCELADO">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/pagamentos/criar/parcelado</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#24 (PAGAMENTO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#47 (PAGAMENTO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: pagamento_criar_parcelado</span>
             </div>
@@ -1421,14 +2418,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">codigoForma (String), valor (BigDecimal), quantidadeParcelas (Integer)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<PagamentoParcelado></div>
                 <div class="response-box">{"sucesso": true, "dados": {"modo": 2, "valorNominal": 300.00, "quantidadeParcelas": 3, "parcelas": [{"num": 1, "valor": 100.00}, {"num": 2, "valor": 100.00}, {"num": 3, "valor": 100.00}]}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-PAGAMENTO_QUITAR_TITULO_OU_PARCELA">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method PUT">PUT</span>
                     <span class="route-path-text">/pagamentos/quitar</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#25 (PAGAMENTO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#48 (PAGAMENTO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: pagamento_quitar_titulo_ou_parcela</span>
             </div>
@@ -1465,14 +2462,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">pagamento (NotaPagamento), numeroParcela (Integer opcional)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<NotaPagamento></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 40, "liquidado": true, "dataQuitacao": "2026-11-10T10:15:00"}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-ESTOQUE_SALDO_CONSOLIDADO">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/estoque/saldo-consolidado</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#26 (ESTOQUE)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#49 (ESTOQUE)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: estoque_saldo_consolidado</span>
             </div>
@@ -1509,14 +2506,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idProduto (Long)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<BigDecimal></div>
                 <div class="response-box">{"sucesso": true, "dados": 48.000000}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-ESTOQUE_FILA_LOTES_FIFO">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/estoque/lotes-fifo</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#27 (ESTOQUE)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#50 (ESTOQUE)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: estoque_fila_lotes_fifo</span>
             </div>
@@ -1553,14 +2550,128 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idProduto (Long)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Item>></div>
                 <div class="response-box">{"sucesso": true, "dados": [{"idLote": 88, "qtdDisponivel": 10.0, "custoUnitario": 850.00, "posicaoFila": 1}]}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-ESTOQUE_LOTES_VALIDOS_LISTAR">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method GET">GET</span>
+                    <span class="route-path-text">/estoque/lotes-validos/listar</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#51 (ESTOQUE)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: estoque_lotes_validos_listar</span>
             </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Lista todos os lotes de estoque válidos (saldo disponível > 0 e dentro do prazo de validade) para venda ou remanejamento.</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">vw_lotes_fifo_disponiveis, nota_itens</div>
+                        <div class="arch-sub">SELECT i FROM Item i WHERE i.saldoDisponivel > 0 AND i.validade >= CURDATE()</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">NotaDAO.buscarTodosLotesDisponiveisFIFO()</div>
+                        <div class="arch-sub">Consulta JPQL ordenada por data de validade ascendente.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Item, Produto</div>
+                        <div class="arch-sub">Entidade Item que representa lote físico/digital.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">EstoqueController.listarTodosLotesComEstoqueValido()</div>
+                        <div class="arch-sub">Visão de conferência física e fila de saída FIFO.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">EstoqueController.listarTodosLotesComEstoqueValido()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idProduto: Long (opcional, para filtrar lotes de um produto específico)</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Item>></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "ESTOQUE",
+  "caminhoRota": "/estoque/lotes-validos/listar",
+  "dados": [
+    {
+      "idLote": 101,
+      "idProduto": 86,
+      "nomeProduto": "Ovo Branco Tipo A",
+      "quantidadeDisponivel": 10.000000,
+      "valorUnitario": 12.5000,
+      "dataValidade": "2026-12-15"
+    }
+  ]
+}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-ESTOQUE_LOTE_VALIDO_BUSCAR_UNICO">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method GET">GET</span>
+                    <span class="route-path-text">/estoque/lotes-validos/buscar-unico</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#52 (ESTOQUE)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: estoque_lote_valido_buscar_unico</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Busca o primeiro lote único com estoque válido (FIFO) de um produto ou lote específico para despacho.</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">vw_lotes_fifo_disponiveis</div>
+                        <div class="arch-sub">SELECT i FROM Item i WHERE i.saldoDisponivel > 0 ORDER BY i.validade ASC, i.id ASC LIMIT 1</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">NotaDAO.buscarLotesDisponiveisFIFO(), NotaDAO.buscarItemPorId()</div>
+                        <div class="arch-sub">Resolução do primeiro lote prioritário.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Item, Produto</div>
+                        <div class="arch-sub">Lote com rastreabilidade da compra e custos unitários.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">EstoqueController.buscarPrimeiroLoteComEstoqueValido()</div>
+                        <div class="arch-sub">Garante despacho respeitando a política FIFO estrita.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">EstoqueController.buscarPrimeiroLoteComEstoqueValido()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idProduto: Long (ou idLote: Long)</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Item></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "ESTOQUE",
+  "caminhoRota": "/estoque/lotes-validos/buscar-unico",
+  "dados": {
+    "idLote": 101,
+    "idProduto": 86,
+    "nomeProduto": "Ovo Branco Tipo A",
+    "quantidadeDisponivel": 10.000000,
+    "valorUnitario": 12.5000,
+    "dataValidade": "2026-12-15"
+  }
+}</div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-ESTOQUE_BUSCAR_LOTE_ESPECIFICO">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/estoque/lote/buscar</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#28 (ESTOQUE)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#53 (ESTOQUE)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: estoque_buscar_lote_especifico</span>
             </div>
@@ -1597,14 +2708,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idLote (Long)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Item></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 88, "produto": {"nome": "Monitor 27"}, "quantidadeDisponivel": 10.0}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-ESTOQUE_LOTES_PROXIMOS_VALIDADE">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/estoque/lotes/validade</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#29 (ESTOQUE)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#54 (ESTOQUE)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: estoque_lotes_proximos_validade</span>
             </div>
@@ -1641,14 +2752,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">dataLimite (LocalDate opcional, padrão: hoje + 90 dias)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Item>></div>
                 <div class="response-box">{"sucesso": true, "dados": [{"id": 92, "nomeProduto": "Iogurte", "quantidadeDisponivel": 20.0, "dataValidade": "2026-11-20"}]}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-ESTOQUE_BAIXAR_PERDA_DIRETA">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/estoque/perda/baixar</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#30 (ESTOQUE)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#55 (ESTOQUE)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: estoque_baixar_perda_direta</span>
             </div>
@@ -1685,14 +2796,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idLote (Long), quantidade (BigDecimal), motivo (String)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<NotaPerda></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 520, "tipoNota": "PERDA", "tipoPerda": "AVARIA_ESTOQUE", "valorTotalCustoPerda": 170.00}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-NOTA_COMPRA_EMITIR">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/notas/compra/emitir</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#31 (NOTA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#56 (NOTA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: nota_compra_emitir</span>
             </div>
@@ -1729,14 +2840,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">notaCompra (NotaCompra), pagamentos (List<NotaPagamento>)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<NotaCompra></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 48, "tipoNota": "COMPRA", "fornecedor": "Distribuidora Tech", "valorTotal": 8500.00}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-NOTA_COMPRA_ABATER_PERDAS_FORNECEDOR">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/notas/compra/abater-perdas</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#32 (NOTA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#57 (NOTA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: nota_compra_abater_perdas_fornecedor</span>
             </div>
@@ -1773,14 +2884,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">novaCompra (NotaCompra), produto (Produto opcional)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<BigDecimal></div>
                 <div class="response-box">{"sucesso": true, "dados": 850.00}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-NOTA_COMPRA_SUGERIR_PRECO_VENDA">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/notas/compra/sugerir-preco</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#33 (NOTA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#58 (NOTA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: nota_compra_sugerir_preco_venda</span>
             </div>
@@ -1817,14 +2928,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">notaCompra (NotaCompra), margemDesejada (BigDecimal)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Map<Produto, BigDecimal>></div>
                 <div class="response-box">{"sucesso": true, "dados": {"Monitor 27 Pol": 1147.50, "Mouse Gamer": 157.50}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-NOTA_VENDA_EMITIR_FIFO">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/notas/venda/emitir-fifo</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#34 (NOTA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#59 (NOTA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: nota_venda_emitir_fifo</span>
             </div>
@@ -1861,14 +2972,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">cliente (Pessoa), descricao (String), itens (Map<Produto, BigDecimal>), pagamentos (List), cupom, descontoCupom</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<NotaVenda></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 512, "tipoNota": "VENDA", "cliente": "Roberto Almeida", "valorTotal": 7399.50, "itens": [{"nome": "Monitor 27", "cmv": 4250.00}]}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-NOTA_VENDA_EMITIR_BALCAO_CLIENTE_PADRAO">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/notas/venda/emitir-balcao-padrao</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#35 (NOTA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#60 (NOTA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: nota_venda_emitir_balcao_cliente_padrao</span>
             </div>
@@ -1905,14 +3016,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">itens (Map<Produto, BigDecimal>), pagamentos (List<NotaPagamento>)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<NotaVenda></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 513, "tipoNota": "VENDA", "cliente": "CONSUMIDOR FINAL (NÃO REGISTRADO)", "valorTotal": 199.90}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-NOTA_VENDA_EMITIR_LOTE_DESEJAVEL">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/notas/venda/emitir-lote-desejavel</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#36 (NOTA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#61 (NOTA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: nota_venda_emitir_lote_desejavel</span>
             </div>
@@ -1949,14 +3060,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">cliente (Pessoa), lotesEQuantidades (Map<Long, BigDecimal>), pagamentos (List)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<NotaVenda></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 514, "tipoNota": "VENDA", "itens": [{"idLoteOrigem": 88, "qtd": 2.0}]}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-NOTA_VENDA_PROCEDURE_MYSQL_FIFO">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/notas/venda/procedure-fifo</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#37 (NOTA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#62 (NOTA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: nota_venda_procedure_mysql_fifo</span>
             </div>
@@ -1993,14 +3104,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idNotaVenda (Long), idProduto (Long), quantidade (BigDecimal), precoVenda (BigDecimal)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Nota></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 512, "status": "Baixa FIFO via Procedure executada."}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-NOTA_VENDA_PROCEDURE_MYSQL_LOTE">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/notas/venda/procedure-lote</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#38 (NOTA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#63 (NOTA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: nota_venda_procedure_mysql_lote</span>
             </div>
@@ -2037,14 +3148,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idNotaVenda (Long), idLoteDesejado (Long), quantidade (BigDecimal), precoVenda (BigDecimal)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Nota></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 512, "status": "Baixa do lote específico via Procedure executada."}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-NOTA_DEVOLUCAO_REGISTRAR">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/notas/devolucao/registrar</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#39 (NOTA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#64 (NOTA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: nota_devolucao_registrar</span>
             </div>
@@ -2081,14 +3192,181 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">notaVenda (NotaVenda), itensDevolvidos (Map), motivo (String), geraPerdaFornecedor (Boolean)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<NotaDevolucao></div>
                 <div class="response-box">{"sucesso": true, "dados": {"id": 515, "tipoNota": "DEVOLUCAO", "notaPerdaGerada": {"id": 516, "valorCusto": 850.00, "elegivelAbatimento": true}}}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-NOTA_BUSCAR_UNICA">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method GET">GET</span>
+                    <span class="route-path-text">/notas/buscar-unica</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#65 (NOTA)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: nota_buscar_unica</span>
             </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Busca padrão de uma única nota operacional pelo ID com itens, lotes e pagamentos detalhados para leitura da IA.</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">nota, nota_itens, nota_pagamentos, pessoa</div>
+                        <div class="arch-sub">SELECT n FROM Nota n LEFT JOIN FETCH n.itens LEFT JOIN FETCH n.pagamentos WHERE n.id = :id</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">NotaDAO.buscarPorId()</div>
+                        <div class="arch-sub">Carregamento completo com FETCH eager em sessão curta.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Nota, NotaCompra, NotaVenda, NotaDevolucao, NotaPerda</div>
+                        <div class="arch-sub">Hierarquia polimórfica de notas fiscais operacionais.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">NotaController.buscarNotaPorId()</div>
+                        <div class="arch-sub">Exposição segura de documentos operacionais.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">NotaController.buscarNotaPorId()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idNota: Long (obrigatório)</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Nota></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "NOTA",
+  "caminhoRota": "/notas/buscar-unica",
+  "dados": {
+    "id": 42,
+    "tipoNota": "NotaVenda",
+    "dataGerada": "2026-11-12T10:15:00",
+    "valorTotal": 3149.70,
+    "pessoa": { "id": 10, "nome": "Roberto Almeida Silva" },
+    "itens": [
+      { "idProduto": 86, "nome": "Ovo Branco Tipo A", "quantidade": 2.0, "subtotal": 37.80 }
+    ],
+    "pagamentos": [
+      { "forma": "PIX", "valor": 3149.70, "tipo": "A Vista" }
+    ]
+  }
+}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-NOTA_LISTAR_PADRAO">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method GET">GET</span>
+                    <span class="route-path-text">/notas/listar</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#66 (NOTA)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: nota_listar_padrao</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Lista notas operacionais emitidas (todas ou filtradas por pessoa ou tipo específico: VENDA, COMPRA, DEVOLUÇÃO, PERDA).</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">nota, pessoa</div>
+                        <div class="arch-sub">SELECT n FROM Nota n ORDER BY n.dataGerada DESC</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">NotaDAO.listarTodas(), NotaDAO.listarNotasPorPessoa(), NotaDAO.listarNotasPorTipo()</div>
+                        <div class="arch-sub">Consultas polimórficas filtradas.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Nota</div>
+                        <div class="arch-sub">Entidade base de notas operacionais.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">NotaController.listarTodasNotas(), NotaController.listarNotasPorTipo()</div>
+                        <div class="arch-sub">Filtro dinâmico por subclasse JPA.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">NotaController.listarNotasPorTipo()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">tipoNota: String (opcional: 'COMPRA', 'VENDA', 'DEVOLUCAO', 'PERDA'), idPessoa: Long (opcional)</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Nota>></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "NOTA",
+  "caminhoRota": "/notas/listar",
+  "dados": [
+    { "id": 42, "tipoNota": "NotaVenda", "dataGerada": "2026-11-12", "valorTotal": 3149.70 },
+    { "id": 35, "tipoNota": "NotaCompra", "dataGerada": "2026-11-10", "valorTotal": 8500.00 }
+  ]
+}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-NOTA_DEFINIR_DATA">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method PUT">PUT</span>
+                    <span class="route-path-text">/notas/definir-data</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#67 (NOTA)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: nota_definir_data</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Define ou altera a data e hora de emissão (dataGerada) de uma nota operacional para auditoria ou ajustes temporais.</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">nota</div>
+                        <div class="arch-sub">UPDATE nota SET dt_gerada = ? WHERE id = ?</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">NotaDAO.atualizar(), NotaDAO.buscarPorId()</div>
+                        <div class="arch-sub">Atualização direta de timestamp fiscal.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Nota</div>
+                        <div class="arch-sub">Campo dataGerada LocalDateTime.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">NotaController.definirDataNota()</div>
+                        <div class="arch-sub">Valida coerência de datas operacionais.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">NotaController.definirDataNota()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idNota: Long (obrigatório), data: String / LocalDateTime (obrigatório, ex: '2026-11-12T10:00:00')</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Nota></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "NOTA",
+  "caminhoRota": "/notas/definir-data",
+  "dados": {
+    "id": 42,
+    "tipoNota": "NotaVenda",
+    "dataGerada": "2026-11-12T10:00:00",
+    "valorTotal": 3149.70
+  }
+}</div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-RELATORIO_LUCRO_CONTABIL_BACEN">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/relatorios/lucro-contabil-bacen</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#40 (RELATORIO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#68 (RELATORIO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: relatorio_lucro_contabil_bacen</span>
             </div>
@@ -2125,14 +3403,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idNotaVenda (Long opcional)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Object[]>></div>
                 <div class="response-box">{"sucesso": true, "dados": [{"idNota": 512, "cmv": 4250.00, "receitaLiquida": 7399.50, "lucroLiquido": 3149.50, "margemPct": 74.11}]}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-RELATORIO_PERDAS_POR_FORNECEDOR">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/relatorios/perdas-fornecedor</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#41 (RELATORIO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#69 (RELATORIO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: relatorio_perdas_por_fornecedor</span>
             </div>
@@ -2169,58 +3447,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">fornecedor (Pessoa), produto (Produto opcional), apenasPosVendaDentroValidade (Boolean)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Object[]>></div>
                 <div class="response-box">{"sucesso": true, "dados": [{"idPerda": 51, "fornecedor": "Fábrica Display", "valorPerda": 850.00, "elegivelAbatimento": 1}]}</div>
-            </div>
         </div>
-        <div class="endpoint-card" id="ep-RELATORIO_ANALISE_SAZONAL_VENDAS">
-            <div class="endpoint-top">
-                <div>
-                    <span class="route-method GET">GET</span>
-                    <span class="route-path-text">/relatorios/analise-sazonal</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#42 (RELATORIO)</span>
-                </div>
-                <span class="gemini-tool">Tool IA: relatorio_analise_sazonal_vendas</span>
-            </div>
-            <div class="endpoint-body">
-                <p class="endpoint-desc">Consolidação de vendas x clima 6h, nível dos rios, dia útil, 5º dia útil e eventos ativos via vw_analise_sazonal_vendas.</p>
-                <div class="arch-grid-5">
-                    <div class="arch-cell c-banco">
-                        <div class="arch-title">1. Banco de Dados</div>
-                        <div class="arch-content">vw_analise_sazonal_vendas</div>
-                        <div class="arch-sub">SELECT * FROM vw_analise_sazonal_vendas ORDER BY data_referencia DESC</div>
-                    </div>
-                    <div class="arch-cell c-dao">
-                        <div class="arch-title">2. Camada DAO</div>
-                        <div class="arch-content">NotaDAO.consultarViewAnaliseSazonalVendas()</div>
-                        <div class="arch-sub">Agregação de snapshots climáticos e vendas.</div>
-                    </div>
-                    <div class="arch-cell c-entity">
-                        <div class="arch-title">3. Entity (JPA)</div>
-                        <div class="arch-content">VinculoFatorExternoNota, NotaVenda</div>
-                        <div class="arch-sub">Correlação ambiental e financeira.</div>
-                    </div>
-                    <div class="arch-cell c-service">
-                        <div class="arch-title">4. Camada Service</div>
-                        <div class="arch-content">NotaController</div>
-                        <div class="arch-sub">Painel analítico sazonal.</div>
-                    </div>
-                    <div class="arch-cell c-controller">
-                        <div class="arch-title">5. Controller</div>
-                        <div class="arch-content">NotaController.consultarRelatorioAnaliseSazonalVendas()</div>
-                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
-                    </div>
-                </div>
-                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
-                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">Nenhum parâmetro.</div>
-                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Object[]>></div>
-                <div class="response-box">{"sucesso": true, "dados": [{"data": "2026-11-10", "bloco6h": 2, "tempMedia": 32.5, "faturamento": 30373.22}]}</div>
-            </div>
         </div>
         <div class="endpoint-card" id="ep-ESTATISTICA_DEMANDA_MENSAL_CLIENTE">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/estatisticas/demanda-mensal-cliente</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#43 (ESTATISTICA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#70 (ESTATISTICA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: estatistica_demanda_mensal_cliente</span>
             </div>
@@ -2257,14 +3491,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idCliente (Long opcional), idProduto (Long opcional), mes (Integer opcional)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Map>></div>
                 <div class="response-box">{"sucesso": true, "dados": [{"cliente": "Roberto Almeida", "demanda_prevista": 5.0, "demanda_pico": 5.0, "faturamento_estimado": 7499.50}]}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-ESTATISTICA_PERFIL_CLIENTE">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/estatisticas/perfil-cliente</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#44 (ESTATISTICA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#71 (ESTATISTICA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: estatistica_perfil_cliente</span>
             </div>
@@ -2301,14 +3535,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idCliente (Long opcional)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Map>></div>
                 <div class="response-box">{"sucesso": true, "dados": [{"cliente": "Roberto Almeida", "produto_principal": "Monitor 27", "classificacao": "PERFIL_MOVIDO_A_EVENTOS"}]}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-ESTATISTICA_IMPACTO_EXTERNO_PRODUTOS">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/estatisticas/impacto-externo</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#45 (ESTATISTICA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#72 (ESTATISTICA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: estatistica_impacto_externo_produtos</span>
             </div>
@@ -2345,14 +3579,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idProduto (Long opcional)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Map>></div>
                 <div class="response-box">{"sucesso": true, "dados": [{"produto": "Mouse Gamer", "custo_medio": 115.00, "sobrecusto_rios_pct": 0.0, "diagnostico": "PRODUTO_ESTAVEL"}]}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-ESTATISTICA_RANKING_FORNECEDORES">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/estatisticas/ranking-fornecedores</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#46 (ESTATISTICA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#73 (ESTATISTICA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: estatistica_ranking_fornecedores</span>
             </div>
@@ -2389,14 +3623,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idProduto (Long opcional), clima (String), regimeRio (String)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Map>></div>
                 <div class="response-box">{"sucesso": true, "dados": [{"posicao": 1, "fornecedor": "Distribuidora Tech", "score": 100.0, "condicao": "VANTAJOSO_EM_CALOR_E_ESTOQUE_LONGO"}]}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-ESTATISTICA_MOTIVOS_PERDA_PREMATURA">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/estatisticas/motivos-perda</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#47 (ESTATISTICA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#74 (ESTATISTICA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: estatistica_motivos_perda_prematura</span>
             </div>
@@ -2433,14 +3667,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idProduto (Long opcional), idFornecedor (Long opcional)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Map>></div>
                 <div class="response-box">{"sucesso": true, "dados": [{"id_perda": 51, "produto": "Monitor 27", "motivo": "FADIGA_LOGISTICA_NA_SECA_DOS_RIOS", "acao": "ANTECIPAR GIRO VIA PROMOCAO"}]}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-ESTATISTICA_DESTAQUES_SAZONAIS">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/estatisticas/destaques-sazonais</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#48 (ESTATISTICA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#75 (ESTATISTICA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: estatistica_destaques_sazonais</span>
             </div>
@@ -2477,14 +3711,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">limite (Integer opcional, padrão: 25)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Map>></div>
                 <div class="response-box">{"sucesso": true, "dados": [{"produto": "Monitor 27", "lucro_liquido": 3899.40, "cenario": "DESTAQUE_EVENTOS_CULTURAIS_E_SHOWS"}]}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-ESTATISTICA_PICOS_DIAS_EVENTOS">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/estatisticas/picos-dias</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#49 (ESTATISTICA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#76 (ESTATISTICA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: estatistica_picos_dias_eventos</span>
             </div>
@@ -2521,14 +3755,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">Nenhum parâmetro.</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Map>></div>
                 <div class="response-box">{"sucesso": true, "dados": [{"categoria": "3_PICO_EVENTOS_REGIONAIS", "faturamento_medio_dia": 30373.22, "ticket_medio": 1518.66}]}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-ESTATISTICA_PLANO_ESTRATEGICO_COMPRAS">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/estatisticas/plano-estrategico</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#50 (ESTATISTICA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#77 (ESTATISTICA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: estatistica_plano_estrategico_compras</span>
             </div>
@@ -2565,14 +3799,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">dataReferencia (LocalDate opcional), horizonteDias (Integer opcional)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Map>></div>
                 <div class="response-box">{"sucesso": true, "dados": [{"produto": "Mouse Gamer", "data_ideal_compra": "2026-12-03", "data_pico_venda": "2026-12-07", "fornecedor": "Distribuidora Tech", "insight": "COMPRAR EM 03/12/2026..."}]}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-ESTATISTICA_CAUSAS_EXTERNAS_NOTA">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/estatisticas/causas-externas-nota</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#51 (ESTATISTICA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#78 (ESTATISTICA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: estatistica_causas_externas_nota</span>
             </div>
@@ -2609,14 +3843,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idNota (Long), idProduto (Long opcional)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Map<String, List<Map>>></div>
                 <div class="response-box">{"sucesso": true, "dados": {"fatores_ativos": [{"tipo_fator": "CALOR", "lift_pct": 95.56, "z_welch": 4.19}], "eventos": [{"nome": "Festival de Verão"}]}}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-ESTATISTICA_RECALCULAR_FATORES">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/estatisticas/recalcular-fatores</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#52 (ESTATISTICA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#79 (ESTATISTICA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: estatistica_recalcular_fatores</span>
             </div>
@@ -2653,14 +3887,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">Nenhum parâmetro.</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Integer></div>
                 <div class="response-box">{"sucesso": true, "dados": 31, "mensagem": "Estatísticas de fatores externos recalculadas com sucesso."}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-ESTATISTICA_FATORES_PRODUTO">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/estatisticas/fatores-produto</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#53 (ESTATISTICA)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#80 (ESTATISTICA)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: estatistica_fatores_produto</span>
             </div>
@@ -2697,14 +3931,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idProduto (Long opcional)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Map>></div>
                 <div class="response-box">{"sucesso": true, "dados": [{"id_produto": 45, "tipo_fator": "CALOR", "lift_pct": 95.56, "z_welch": 4.1964, "significancia": "ALTA"}]}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-FATOR_EXTERNO_EVENTOS_LISTAR">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method GET">GET</span>
                     <span class="route-path-text">/fatores-externos/eventos</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#54 (FATOR_EXTERNO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#81 (FATOR_EXTERNO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: fator_externo_eventos_listar</span>
             </div>
@@ -2741,14 +3975,14 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">limite (Integer opcional, padrão: 100)</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Map>></div>
                 <div class="response-box">{"sucesso": true, "dados": [{"id": 1, "fonte": "SYMPLA", "nome": "Feira Gastronômica", "cidade": "Manaus", "snapshots_vinculados": 4}]}</div>
-            </div>
+        </div>
         </div>
         <div class="endpoint-card" id="ep-FATOR_EXTERNO_RESOLVER_PENDENCIAS">
             <div class="endpoint-top">
                 <div>
                     <span class="route-method POST">POST</span>
                     <span class="route-path-text">/fatores-externos/resolver-pendencias</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#55 (FATOR_EXTERNO)</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#82 (FATOR_EXTERNO)</span>
                 </div>
                 <span class="gemini-tool">Tool IA: fator_externo_resolver_pendencias</span>
             </div>
@@ -2785,14 +4019,131 @@
                 <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">Nenhum parâmetro.</div>
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Integer></div>
                 <div class="response-box">{"sucesso": true, "dados": 14, "mensagem": "Fila de fatores externos resolvida com sucesso (14 notas atualizadas)."}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-FATOR_EXTERNO_RELATORIO_INTEGRADO_NOTAS">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method GET">GET</span>
+                    <span class="route-path-text">/fatores-externos/relatorio-integrado-notas</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#83 (FATOR_EXTERNO)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: fator_externo_relatorio_integrado_notas</span>
             </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Gera relatório padronizado e integrado de fatores externos (Rios, Clima, Calendário e Eventos) citando cada Nota operacional.</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">fator_externo_snapshot, vinculo_fator_externo_nota, nota</div>
+                        <div class="arch-sub">Cruzamento analítico de snapshots climáticos/hidrológicos com vendas.</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">FatorExternoDAO.buscarSnapshotPorId(), NotaDAO.buscarPorId()</div>
+                        <div class="arch-sub">Consultas analíticas para agregação de contexto externo.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">FatorExternoSnapshot, VinculoFatorExternoNota, Nota</div>
+                        <div class="arch-sub">Modelagem da camada de inteligência contextual.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">FatorExternoController.gerarRelatorioIntegradoPadraoNotas()</div>
+                        <div class="arch-sub">Correlação de eventos Sympla, cota do Rio Negro e Clima com as notas fiscais.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">NotaController.gerarRelatorioIntegradoPadraoNotas()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">idNota: Long (opcional, para focar em uma nota específica)</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<Map<String, Object>></div>
+                <div class="response-box">{
+  "sucesso": true,
+  "modulo": "FATOR_EXTERNO",
+  "caminhoRota": "/fatores-externos/relatorio-integrado-notas",
+  "dados": {
+    "idNota": 42,
+    "dataReferencia": "2026-11-12",
+    "clima": { "temperaturaC": 33.5, "condicao": "CALOR_INTENSO", "impactoDemanda": "+18%" },
+    "rios": { "rioNegroNivelMetros": 28.40, "regime": "NORMAL", "custoFrete": "REGULAR" },
+    "calendario": { "quintoDiaUtil": false, "fimDeSemana": false },
+    "eventosAtivos": ["Festival Amazonas de Ópera"]
+  }
+}</div>
+        </div>
+        </div>
+        <div class="endpoint-card" id="ep-RELATORIO_ANALISE_SAZONAL_VENDAS">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method GET">GET</span>
+                    <span class="route-path-text">/relatorios/analise-sazonal</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#84 (RELATORIO)</span>
+                </div>
+                <span class="gemini-tool">Tool IA: relatorio_analise_sazonal_vendas</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Consolidação de vendas x clima 6h, nível dos rios, dia útil, 5º dia útil e eventos ativos via vw_analise_sazonal_vendas.</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">vw_analise_sazonal_vendas</div>
+                        <div class="arch-sub">SELECT * FROM vw_analise_sazonal_vendas ORDER BY data_referencia DESC</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">NotaDAO.consultarViewAnaliseSazonalVendas()</div>
+                        <div class="arch-sub">Agregação de snapshots climáticos e vendas.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">VinculoFatorExternoNota, NotaVenda</div>
+                        <div class="arch-sub">Correlação ambiental e financeira.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">NotaController</div>
+                        <div class="arch-sub">Painel analítico sazonal.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">NotaController.consultarRelatorioAnaliseSazonalVendas()</div>
+                        <div class="arch-sub">Despachado por RoteadorController.executarEndpoint()</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">Nenhum parâmetro.</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<List<Object[]>></div>
+                <div class="response-box">{"sucesso": true, "dados": [{"data": "2026-11-10", "bloco6h": 2, "tempMedia": 32.5, "faturamento": 30373.22}]}</div>
+        </div>
         </div>
     </main>
     <script>
         function filtrar() {
-            var q = document.getElementById("search").value.toLowerCase();
-            document.querySelectorAll(".endpoint-card").forEach(function(c) {
-                c.style.display = c.innerText.toLowerCase().indexOf(q) >= 0 ? "" : "none";
+            const termo = document.getElementById('search').value.toLowerCase();
+            const cards = document.querySelectorAll('.endpoint-card');
+            const navItems = document.querySelectorAll('.nav-item');
+            
+            cards.forEach(card => {
+                const texto = card.innerText.toLowerCase();
+                if (texto.includes(termo)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            navItems.forEach(item => {
+                const texto = item.innerText.toLowerCase();
+                if (texto.includes(termo)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
             });
         }
     </script>

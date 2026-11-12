@@ -15,6 +15,8 @@ public class ProvedorIAComFailover implements ProvedorIA {
 
     private final List<ProvedorIA> cadeiaProvedores;
     private volatile ProvedorIA ultimoProvedorSucesso;
+    private final java.util.Map<String, Long> cooldownsAteMs = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long COOLDOWN_PADRAO_MS = 60_000L;
 
     public ProvedorIAComFailover(List<ProvedorIA> provedores) {
         if (provedores == null || provedores.isEmpty()) {
@@ -67,9 +69,21 @@ public class ProvedorIAComFailover implements ProvedorIA {
     public RespostaIA conversar(PedidoIA pedido) throws Exception {
         PedidoIA pedidoEnriquecido = enriquecerSeContiverDsl(pedido);
         List<String> errosTentativas = new ArrayList<>();
+        long agora = System.currentTimeMillis();
+
+        // Se todos os provedores estiverem em cooldown, limpa os cooldowns para tentar novamente
+        boolean todosEmCooldown = cadeiaProvedores.stream()
+                .allMatch(p -> cooldownsAteMs.getOrDefault(p.getId(), 0L) > agora);
+        if (todosEmCooldown) {
+            cooldownsAteMs.clear();
+        }
 
         for (ProvedorIA provedor : cadeiaProvedores) {
             if (pedidoEnriquecido.anexo() != null && !provedor.suportaMidia()) {
+                continue;
+            }
+            if (cooldownsAteMs.getOrDefault(provedor.getId(), 0L) > agora) {
+                errosTentativas.add(provedor.getId() + ": em cooldown temporário após erro recente");
                 continue;
             }
             String bloqueio = provedor.verificarPronto();
@@ -80,8 +94,10 @@ public class ProvedorIAComFailover implements ProvedorIA {
             try {
                 RespostaIA resposta = provedor.conversar(pedidoEnriquecido);
                 this.ultimoProvedorSucesso = provedor;
+                cooldownsAteMs.remove(provedor.getId());
                 return resposta;
             } catch (Exception ex) {
+                cooldownsAteMs.put(provedor.getId(), System.currentTimeMillis() + COOLDOWN_PADRAO_MS);
                 errosTentativas.add(provedor.getId() + ": " + ex.getMessage());
             }
         }

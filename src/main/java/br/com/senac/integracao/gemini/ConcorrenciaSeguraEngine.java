@@ -1,21 +1,33 @@
 package br.com.senac.integracao.gemini;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Motor de Concorrência Segura baseado em Virtual Threads (Java 21+) com Barreira Anti-Colisão.
- * Permite que a IA execute dezenas de tarefas e leituras simultâneas sem sobrecarregar a JVM.
- * 
- * Regras de Consistência:
- * 1. Consultas e Tarefas de Leitura (READ): 100% paralelas e livres de bloqueio.
- * 2. Operações Mutativas em Recursos Diferentes: Paralelas sem colisão.
- * 3. Operações no Mesmo Recurso (Mesmo ID de produto, lote ou cliente): Fila serializada por chave granular.
+ * Motor de execução SÍNCRONA com trava granular por recurso.
+ *
+ * <p>Antes executava em Virtual Threads, o que fazia consultas competirem com a bandeja de contexto
+ * e quebrava a ordem das instruções. Agora toda tarefa roda na thread chamadora, na ordem em que
+ * foi submetida, e o {@link CompletableFuture} devolvido já vem concluído (mantém a API anterior).
+ *
+ * <p>Regras de consistência:
+ * <ol>
+ *   <li>Consultas (sem chave de recurso): executam direto, sem trava.</li>
+ *   <li>Operações de escrita com chave (ex.: {@code PROD_10}): serializadas pela trava daquele
+ *       recurso, sem bloquear os demais.</li>
+ * </ol>
  */
 public class ConcorrenciaSeguraEngine {
 
-    private final ExecutorService virtualExecutor;
+    private static final long TIMEOUT_LOCK_SEGUNDOS = 5;
+
     private final ConcurrentHashMap<String, ReentrantLock> locksPorRecurso = new ConcurrentHashMap<>();
 
     private static ConcorrenciaSeguraEngine instancia;
@@ -28,58 +40,52 @@ public class ConcorrenciaSeguraEngine {
     }
 
     public ConcorrenciaSeguraEngine() {
-        this.virtualExecutor = Executors.newVirtualThreadPerTaskExecutor();
     }
 
     /**
-     * Executa uma tarefa em uma Virtual Thread.
-     * Se uma chave de recurso for informada (ex: 'PROD_10'), bloqueia apenas aquele recurso específico
-     * durante a escrita, permitindo que todas as outras entidades continuem processando em paralelo.
+     * Executa a tarefa na thread atual e devolve o resultado em um future já concluído
+     * (normalmente ou com falha, no mesmo formato do contrato anterior).
      */
     public <T> CompletableFuture<T> submeterTarefa(Callable<T> tarefa, String chaveRecursoOpcional) {
-        return CompletableFuture.supplyAsync(() -> {
-            if (chaveRecursoOpcional == null || chaveRecursoOpcional.isBlank()) {
-                try {
-                    return tarefa.call();
-                } catch (Exception e) {
-                    throw new CompletionException(e);
-                }
-            }
-
-            ReentrantLock lock = locksPorRecurso.computeIfAbsent(chaveRecursoOpcional, k -> new ReentrantLock());
-            boolean adquiriu = false;
-            try {
-                adquiriu = lock.tryLock(5, TimeUnit.SECONDS);
-                if (!adquiriu) {
-                    throw new TimeoutException("Tempo limite excedido aguardando liberação do recurso concorrente: " + chaveRecursoOpcional);
-                }
-                return tarefa.call();
-            } catch (Exception e) {
-                throw new CompletionException(e);
-            } finally {
-                if (adquiriu) {
-                    lock.unlock();
-                }
-            }
-        }, virtualExecutor);
+        try {
+            return CompletableFuture.completedFuture(executar(tarefa, chaveRecursoOpcional));
+        } catch (Exception e) {
+            return CompletableFuture.failedFuture(e instanceof CompletionException ? e : new CompletionException(e));
+        }
     }
 
-    /**
-     * Executa um lote de tarefas concorrentes em paralelo e aguarda a conclusão de todas.
-     */
-    public <T> List<T> executarLoteParalelo(List<Callable<T>> tarefas) throws InterruptedException, ExecutionException {
-        List<CompletableFuture<T>> futures = tarefas.stream()
-                .map(t -> submeterTarefa(t, null))
-                .toList();
-
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-
-        return futures.stream()
-                .map(CompletableFuture::join)
-                .toList();
+    /** Executa a tarefa e devolve o resultado direto, propagando a exceção original. */
+    public <T> T executar(Callable<T> tarefa, String chaveRecursoOpcional) throws Exception {
+        if (chaveRecursoOpcional == null || chaveRecursoOpcional.isBlank()) {
+            return tarefa.call();
+        }
+        ReentrantLock lock = locksPorRecurso.computeIfAbsent(chaveRecursoOpcional, k -> new ReentrantLock());
+        boolean adquiriu = false;
+        try {
+            adquiriu = lock.tryLock(TIMEOUT_LOCK_SEGUNDOS, TimeUnit.SECONDS);
+            if (!adquiriu) {
+                throw new TimeoutException("Tempo limite excedido aguardando liberação do recurso concorrente: "
+                        + chaveRecursoOpcional);
+            }
+            return tarefa.call();
+        } finally {
+            if (adquiriu) {
+                lock.unlock();
+            }
+        }
     }
 
-    public ExecutorService getVirtualExecutor() {
-        return virtualExecutor;
+    /** Executa um lote de tarefas em sequência, preservando a ordem. */
+    public <T> List<T> executarLoteSequencial(List<Callable<T>> tarefas) throws Exception {
+        List<T> resultados = new ArrayList<>(tarefas.size());
+        for (Callable<T> t : tarefas) {
+            resultados.add(executar(t, null));
+        }
+        return resultados;
+    }
+
+    /** Mantido por compatibilidade: agora é sequencial. */
+    public <T> List<T> executarLoteParalelo(List<Callable<T>> tarefas) throws Exception {
+        return executarLoteSequencial(tarefas);
     }
 }

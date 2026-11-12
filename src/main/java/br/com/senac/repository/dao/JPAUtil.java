@@ -34,6 +34,7 @@ public class JPAUtil {
                 System.out.println("📦 [JPAUtil] Persistência MySQL não encontrada ou indisponível. Iniciando banco embarcado (" + PERSISTENCE_UNIT_EMBARCADO + ")...");
                 emf = Persistence.createEntityManagerFactory(PERSISTENCE_UNIT_EMBARCADO);
             }
+            MigracaoUnicidadeProduto.executar(emf);
             inicializarViewsEProceduresNoBanco(isMySql);
         }
         return emf;

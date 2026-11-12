@@ -14,6 +14,7 @@ public class ItemBandeja {
     public enum StatusItem {
         PENDENTE_DADOS,
         VALIDADO,
+        PULADO,
         EXECUTADO_SUCESSO,
         FALHA_EXECUCAO
     }
@@ -109,6 +110,25 @@ public class ItemBandeja {
 
     public boolean isConcluido() {
         return status == StatusItem.EXECUTADO_SUCESSO || status == StatusItem.FALHA_EXECUCAO;
+    }
+
+    public boolean isPulado() {
+        return status == StatusItem.PULADO;
+    }
+
+    /** Marca o item como pulado: ele fica na bandeja, mas não é executado até ser retomado. */
+    public void pular() {
+        if (status == StatusItem.VALIDADO) {
+            status = StatusItem.PULADO;
+        }
+    }
+
+    /** Volta um item pulado (ou que falhou) para a fila de execução, se não faltar nenhum dado. */
+    public void retomar() {
+        if ((status == StatusItem.PULADO || status == StatusItem.FALHA_EXECUCAO) && camposFaltantes.isEmpty()) {
+            status = StatusItem.VALIDADO;
+            mensagemErro = null;
+        }
     }
 
     public void mesclarParametros(Map<String, Object> novosParams, List<String> novosFaltantes) {

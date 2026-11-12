@@ -35,6 +35,7 @@ public class RoteadorController {
     private final EstoqueController estoqueController;
     private final NotaController notaController;
     private final EstatisticaController estatisticaController = new EstatisticaController();
+    private final br.com.senac.service.AnaliseImpactoExternoService analiseImpactoService = new br.com.senac.service.AnaliseImpactoExternoService();
     private final ImagemProdutoController imagemProdutoController = new ImagemProdutoController();
     private final Map<String, RotaSistema> mapaRotasPorCaminho = new LinkedHashMap<>();
     private final Map<String, RotaSistema> mapaRotasPorToolGemini = new LinkedHashMap<>();
@@ -415,6 +416,11 @@ public class RoteadorController {
                 case NOTA_COMPRA_EMITIR -> {
                     NotaCompra nc = resolverOuConstruirNotaCompra(p);
                     List<NotaPagamento> pags = extrairPagamentos(p);
+                    if (pags.isEmpty()) {
+                        LocalDate venc = nc.getDataGerada() != null ? nc.getDataGerada().toLocalDate().plusDays(30) : LocalDate.now().plusDays(30);
+                        BigDecimal totalNota = nc.getValorTotal() != null ? nc.getValorTotal() : BigDecimal.ZERO;
+                        pags = List.of(pagamentoController.criarPagamentoAPrazo("BOLETO", totalNota, venc));
+                    }
                     yield notaController.emitirNotaCompra(nc, pags);
                 }
                 case NOTA_COMPRA_ABATER_PERDAS_FORNECEDOR -> {
@@ -459,12 +465,31 @@ public class RoteadorController {
                     String cupom = str(p, "cupom", null);
                     BigDecimal desconto = p.containsKey("descontoCupom") ? bd(p, "descontoCupom", "0.00")
                             : (p.containsKey("descontoGlobal") ? bd(p, "descontoGlobal", "0.00") : BigDecimal.ZERO);
+                    if (pags.isEmpty()) {
+                        BigDecimal totalVenda = BigDecimal.ZERO;
+                        for (Map.Entry<Produto, BigDecimal> e : itens.entrySet()) {
+                            BigDecimal pv = e.getKey().getPrecoVenda() != null ? e.getKey().getPrecoVenda() : BigDecimal.ZERO;
+                            totalVenda = totalVenda.add(pv.multiply(e.getValue()));
+                        }
+                        if (desconto.compareTo(BigDecimal.ZERO) > 0) {
+                            totalVenda = totalVenda.subtract(desconto).max(BigDecimal.ZERO);
+                        }
+                        pags = List.of(pagamentoController.criarPagamentoAVista("DINHEIRO", totalVenda, totalVenda, BigDecimal.ZERO));
+                    }
                     NotaVenda nv = notaController.emitirVendaFIFO(cliente, descricao, itens, pags, cupom, desconto, resolverDataHoraNota(p));
                     yield nv;
                 }
                 case NOTA_VENDA_EMITIR_BALCAO_CLIENTE_PADRAO -> {
                     Map<Produto, BigDecimal> itens = resolverItensVenda(p);
                     List<NotaPagamento> pags = extrairPagamentos(p);
+                    if (pags.isEmpty()) {
+                        BigDecimal totalVenda = BigDecimal.ZERO;
+                        for (Map.Entry<Produto, BigDecimal> e : itens.entrySet()) {
+                            BigDecimal pv = e.getKey().getPrecoVenda() != null ? e.getKey().getPrecoVenda() : BigDecimal.ZERO;
+                            totalVenda = totalVenda.add(pv.multiply(e.getValue()));
+                        }
+                        pags = List.of(pagamentoController.criarPagamentoAVista("DINHEIRO", totalVenda, totalVenda, BigDecimal.ZERO));
+                    }
                     yield notaController.emitirVendaBalcaoClienteNaoRegistradoFIFO(itens, pags, resolverDataHoraNota(p));
                 }
                 case NOTA_VENDA_EMITIR_LOTE_DESEJAVEL -> {
@@ -1003,6 +1028,12 @@ public class RoteadorController {
         String nome = str(map, "nomeProduto", null);
         if (nome == null) nome = str(map, "nome", null);
         if (nome != null && !nome.isBlank()) {
+            try {
+                String limpo = nome.trim().replace("#", "");
+                Long parsed = Long.parseLong(limpo);
+                Produto p = produtoController.buscarPorId(parsed);
+                if (p != null) return p;
+            } catch (Exception ignored) {}
             Produto p = produtoController.buscarPorNome(nome);
             if (p != null) return p;
             List<Produto> porTermo = produtoController.buscarPorTermo(nome);
@@ -1103,6 +1134,10 @@ public class RoteadorController {
 
     public EstatisticaController estatisticas() {
         return estatisticaController;
+    }
+
+    public br.com.senac.service.AnaliseImpactoExternoService analiseImpacto() {
+        return analiseImpactoService;
     }
 
     public ImagemProdutoController imagens() {

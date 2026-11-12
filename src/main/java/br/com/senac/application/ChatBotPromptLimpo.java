@@ -27,13 +27,12 @@ public class ChatBotPromptLimpo {
         GeminiAgenteOperacional agente = new GeminiAgenteOperacional();
         String sessao = "prompt-limpo-" + System.currentTimeMillis();
 
-        // Aquece a conexão JPA em Virtual Thread em background sem exibir nada
-        Thread.ofVirtual().start(() -> {
-            try {
-                new br.com.senac.controller.RoteadorController().produtos().listarUnidadesMedida();
-            } catch (Exception ignored) {
-            }
-        });
+        // Aquece a conexão JPA antes do primeiro prompt, de forma síncrona e silenciosa,
+        // para a primeira consulta do usuário não competir com a inicialização.
+        try {
+            new br.com.senac.controller.RoteadorController().produtos().listarUnidadesMedida();
+        } catch (Exception ignored) {
+        }
 
         System.out.println(NEGRITO + CIANO + "✨ Assistente Sazonalisei pronto! (Digite sua pergunta, sigla como '>oba' ou comando '$$', ou ':sair')" + RESET);
 

@@ -19,7 +19,9 @@ import java.util.List;
                 @Index(name = "idx_produto_nome", columnList = "nome")
         },
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_produto_nome", columnNames = {"nome"})
+                // Chave natural: o mesmo nome pode existir em unidades diferentes (ex.: Ovo UN e Ovo CX)
+                // e como produto simples ou conjunto, mas nunca repetido nos três ao mesmo tempo.
+                @UniqueConstraint(name = "uk_produto_nome_um_conjunto", columnNames = {"nome", "um_id", "is_conjunto"})
         }
 )
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
@@ -32,7 +34,7 @@ public abstract class Produto implements Serializable, Mensuravel {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "nome", nullable = false, length = 120, unique = true)
+    @Column(name = "nome", nullable = false, length = 120)
     private String nome;
 
     @Column(name = "descricao", length = 1200, nullable = true)

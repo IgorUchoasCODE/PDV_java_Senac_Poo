@@ -236,6 +236,12 @@ public class PessoaDAO implements PadraoDAO<Pessoa, Long> {
             return List.of();
         }
         String t = termo.trim();
+        if (t.matches("^#?\\d+$")) {
+            try {
+                Pessoa porId = buscarPorId(Long.parseLong(t.replace("#", "")));
+                if (porId != null) return List.of(porId);
+            } catch (Exception ignored) {}
+        }
         String digitos = t.replaceAll("\\D", "");
 
         try (EntityManager em = JPAUtil.getEntityManager()) {
@@ -311,6 +317,12 @@ public class PessoaDAO implements PadraoDAO<Pessoa, Long> {
             return listarTodos();
         }
         String t = termoOuNome.trim();
+        if (t.matches("^#?\\d+$")) {
+            try {
+                Pessoa porId = buscarPorId(Long.parseLong(t.replace("#", "")));
+                if (porId != null) return porId;
+            } catch (Exception ignored) {}
+        }
         Pessoa porReg = buscarPorRegistroUnico(t);
         if (porReg != null) {
             return porReg;
