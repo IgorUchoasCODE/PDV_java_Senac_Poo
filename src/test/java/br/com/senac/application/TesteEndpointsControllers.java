@@ -44,6 +44,18 @@ public class TesteEndpointsControllers {
 
             // ==================== 1. MÓDULO SISTEMA ====================
             validarEndpoint(roteador, RotaSistema.SISTEMA_INICIALIZAR_DADOS_PADRAO, Map.of());
+            RespostaEndpoint<Object> respResetBloqueado = roteador.executarEndpoint(
+                    RotaSistema.SISTEMA_RESETAR_BANCO_RESTRITO,
+                    Map.of("confirmacao", "TOKEN_INVALIDO_TESTE")
+            );
+            if (!respResetBloqueado.sucesso()) {
+                rotasValidadasComSucesso.add(RotaSistema.SISTEMA_RESETAR_BANCO_RESTRITO);
+                System.out.printf("  [OK]    %-9s | Rota: %-38s | Restrição de segurança validada%n",
+                        RotaSistema.SISTEMA_RESETAR_BANCO_RESTRITO.getModulo(),
+                        RotaSistema.SISTEMA_RESETAR_BANCO_RESTRITO.getCaminhoRota());
+            } else {
+                falhas.put(RotaSistema.SISTEMA_RESETAR_BANCO_RESTRITO, "Reset restrito deveria bloquear token inválido.");
+            }
 
             // ==================== 2. MÓDULO PRODUTO (CRUD & RECURSOS) ====================
             validarEndpoint(roteador, RotaSistema.PRODUTO_UNIDADE_LISTAR, Map.of());
