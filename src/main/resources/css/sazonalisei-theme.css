@@ -1,0 +1,320 @@
+/* ============================================================================
+   Sazonalisei • Tema Sério Rio & Termo-Analítico (Clean & High Contrast)
+   ============================================================================ */
+
+.root {
+    -fx-base: #0F172A;
+    -fx-background-color: #0F172A;
+    -fx-font-family: "Segoe UI", "Inter", system-ui, sans-serif;
+    -fx-text-fill: #F8FAFC;
+}
+
+.label {
+    -fx-text-fill: #E2E8F0;
+}
+
+/* Cabeçalho Superior */
+.header-bar {
+    -fx-background-color: #111827;
+    -fx-border-color: #1E293B;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 12 20 12 20;
+}
+
+.app-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #38BDF8;
+}
+
+.app-subtitle {
+    -fx-font-size: 12px;
+    -fx-text-fill: #94A3B8;
+}
+
+/* Sidebar de Navegação */
+.sidebar-container {
+    -fx-background-color: #111827;
+    -fx-border-color: #1E293B;
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 14 10 14 10;
+}
+
+.sidebar-section-label {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #64748B;
+    -fx-padding: 10 8 4 8;
+}
+
+.sidebar-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #CBD5E1;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 9 12 9 12;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-border-color: transparent;
+    -fx-cursor: hand;
+    -fx-max-width: Infinity;
+}
+
+.sidebar-btn:hover {
+    -fx-background-color: #1E293B;
+    -fx-text-fill: #F8FAFC;
+}
+
+.sidebar-btn-active {
+    -fx-background-color: rgba(2, 132, 199, 0.18);
+    -fx-text-fill: #38BDF8;
+    -fx-border-color: #0284C7;
+    -fx-border-width: 0 0 0 3;
+}
+
+/* Cards & Containers */
+.card-container, .card-friendly {
+    -fx-background-color: #1E293B;
+    -fx-background-radius: 10;
+    -fx-border-color: #334155;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-padding: 16;
+}
+
+.card-kpi-emerald, .card-kpi-sage {
+    -fx-background-color: #1E293B;
+    -fx-background-radius: 10;
+    -fx-border-color: #0D9488;
+    -fx-border-width: 0 0 0 4;
+    -fx-padding: 14 18 14 18;
+    -fx-min-width: 215;
+}
+
+.card-kpi-cyan, .card-kpi-sky {
+    -fx-background-color: #1E293B;
+    -fx-background-radius: 10;
+    -fx-border-color: #0284C7;
+    -fx-border-width: 0 0 0 4;
+    -fx-padding: 14 18 14 18;
+    -fx-min-width: 215;
+}
+
+.card-kpi-amber {
+    -fx-background-color: #1E293B;
+    -fx-background-radius: 10;
+    -fx-border-color: #D97706;
+    -fx-border-width: 0 0 0 4;
+    -fx-padding: 14 18 14 18;
+    -fx-min-width: 215;
+}
+
+.card-kpi-crimson, .card-kpi-coral {
+    -fx-background-color: #1E293B;
+    -fx-background-radius: 10;
+    -fx-border-color: #DC2626;
+    -fx-border-width: 0 0 0 4;
+    -fx-padding: 14 18 14 18;
+    -fx-min-width: 215;
+}
+
+.kpi-title {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #94A3B8;
+}
+
+.kpi-value {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #F8FAFC;
+}
+
+.kpi-sub {
+    -fx-font-size: 11px;
+    -fx-text-fill: #94A3B8;
+}
+
+.section-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #38BDF8;
+}
+
+.insight-box {
+    -fx-background-color: #172536;
+    -fx-background-radius: 10;
+    -fx-border-color: #0D9488;
+    -fx-border-radius: 10;
+    -fx-padding: 14;
+}
+
+.insight-warning-box {
+    -fx-background-color: #271C24;
+    -fx-background-radius: 10;
+    -fx-border-color: #D97706;
+    -fx-border-radius: 10;
+    -fx-padding: 14;
+}
+
+/* Botões */
+.btn-primary {
+    -fx-background-color: #0284C7;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-weight: bold;
+    -fx-background-radius: 7;
+    -fx-padding: 8 15 8 15;
+    -fx-cursor: hand;
+}
+
+.btn-primary:hover {
+    -fx-background-color: #0369A1;
+}
+
+.btn-secondary {
+    -fx-background-color: #334155;
+    -fx-text-fill: #F8FAFC;
+    -fx-font-weight: bold;
+    -fx-background-radius: 7;
+    -fx-padding: 8 14 8 14;
+    -fx-cursor: hand;
+}
+
+.btn-secondary:hover {
+    -fx-background-color: #475569;
+}
+
+.btn-voice {
+    -fx-background-color: #0D9488;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-weight: bold;
+    -fx-background-radius: 18;
+    -fx-padding: 8 14 8 14;
+    -fx-cursor: hand;
+}
+
+.btn-voice-recording {
+    -fx-background-color: #DC2626;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-weight: bold;
+    -fx-background-radius: 18;
+    -fx-padding: 8 14 8 14;
+}
+
+/* Campos de Entrada */
+.text-field, .password-field, .text-area, .combo-box, .date-picker {
+    -fx-background-color: #0F172A;
+    -fx-text-fill: #F8FAFC;
+    -fx-prompt-text-fill: #64748B;
+    -fx-border-color: #334155;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+}
+
+.text-area .content {
+    -fx-background-color: #0F172A;
+}
+
+.combo-box .list-cell {
+    -fx-background-color: #0F172A;
+    -fx-text-fill: #F8FAFC;
+}
+
+/* Tabelas */
+.table-view {
+    -fx-background-color: #0F172A;
+    -fx-border-color: #334155;
+    -fx-border-radius: 8;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #1E293B;
+}
+
+.table-view .column-header .label {
+    -fx-text-fill: #38BDF8;
+    -fx-font-weight: bold;
+}
+
+.table-row-cell {
+    -fx-background-color: #0F172A;
+    -fx-text-fill: #F8FAFC;
+}
+
+.table-row-cell:odd {
+    -fx-background-color: #131D31;
+}
+
+.table-row-cell:selected {
+    -fx-background-color: #0369A1;
+}
+
+/* Gráficos JavaFX */
+.chart {
+    -fx-background-color: transparent;
+}
+
+.chart-plot-background {
+    -fx-background-color: #0F172A;
+}
+
+.chart-title {
+    -fx-text-fill: #F8FAFC;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.axis {
+    -fx-tick-label-fill: #94A3B8;
+}
+
+.axis-label {
+    -fx-text-fill: #94A3B8;
+}
+
+.chart-vertical-grid-lines, .chart-horizontal-grid-lines {
+    -fx-stroke: #1E293B;
+}
+
+.default-color0.chart-bar { -fx-bar-fill: #0284C7; }
+.default-color1.chart-bar { -fx-bar-fill: #0D9488; }
+.default-color2.chart-bar { -fx-bar-fill: #D97706; }
+
+/* Painel Chat Lateral */
+.chat-panel {
+    -fx-background-color: #111827;
+    -fx-border-color: #1E293B;
+    -fx-border-width: 0 0 0 1;
+}
+
+.chat-scroll, .scroll-pane {
+    -fx-background-color: #0F172A;
+    -fx-background: #0F172A;
+}
+
+.scroll-pane > .viewport {
+    -fx-background-color: #0F172A;
+}
+
+.bubble-user {
+    -fx-background-color: #0369A1;
+    -fx-background-radius: 12 12 2 12;
+    -fx-padding: 10 14 10 14;
+}
+
+.bubble-ai {
+    -fx-background-color: #1E293B;
+    -fx-border-color: #334155;
+    -fx-border-radius: 12 12 12 2;
+    -fx-background-radius: 12 12 12 2;
+    -fx-padding: 10 14 10 14;
+}
+
+.bubble-text-user {
+    -fx-text-fill: #FFFFFF;
+}
+
+.bubble-text-ai {
+    -fx-text-fill: #E2E8F0;
+}

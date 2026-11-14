@@ -17,6 +17,7 @@
         <mysql.version>8.4.0</mysql.version>
         <h2.version>2.2.224</h2.version>
         <jackson.version>2.21.4</jackson.version>
+        <javafx.version>21.0.6</javafx.version>
     </properties>
 
     <dependencies>
@@ -80,6 +81,41 @@
             <version>26.1.0</version>
             <scope>compile</scope>
         </dependency>
+
+        <!-- 6. Interface Gráfica JavaFX 21 -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-fxml</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-graphics</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-base</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>0.0.8</version>
+                <configuration>
+                    <mainClass>br.com.senac.application.SazonaliseiJavaFXLauncher</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>
