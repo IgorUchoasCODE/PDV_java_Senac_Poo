@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Documentação Completa - 84 Rotas da Arquitetura Sazonalisei</title>
+    <title>Documentação Completa - 85 Rotas da Arquitetura Sazonalisei</title>
     <style>
         :root {
             --bg-body: #0d1117; --bg-card: #161b22; --bg-card-alt: #1c2128; --border: #30363d;
@@ -59,7 +60,7 @@
 <body>
     <nav id="sidebar">
         <div class="sidebar-header">
-            <h1>Sazonalisei <span style="font-size:0.75rem; color:var(--primary); border:1px solid var(--primary); padding:1px 6px; border-radius:8px;">84 Rotas</span></h1>
+            <h1>Sazonalisei <span style="font-size:0.75rem; color:var(--primary); border:1px solid var(--primary); padding:1px 6px; border-radius:8px;">85 Rotas</span></h1>
             <p style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">Arquitetura & Mapeamento Integral</p>
         </div>
         <div class="search-box">
@@ -68,6 +69,7 @@
         <div class="nav-sections">
             <div class="nav-group-title">SISTEMA</div>
             <a href="#ep-SISTEMA_INICIALIZAR_DADOS_PADRAO" class="nav-item">/sistema/inicializar</a>
+            <a href="#ep-SISTEMA_RESETAR_BANCO_RESTRITO" class="nav-item">/sistema/reset-restrito</a>
             <a href="#ep-BUSCA_PADRAO_IA" class="nav-item">/ia/busca-padrao</a>
             <div class="nav-group-title">PRODUTO</div>
             <a href="#ep-PRODUTO_UNIDADE_LISTAR" class="nav-item">/produtos/unidades/listar</a>
@@ -163,11 +165,11 @@
     </nav>
     <main id="content">
         <header style="margin-bottom:24px; border-bottom:1px solid var(--border); padding-bottom:16px;">
-            <h1 style="font-size:2rem; color:var(--text-bright);">Documentação da Arquitetura: 84 Rotas</h1>
+            <h1 style="font-size:2rem; color:var(--text-bright);">Documentação da Arquitetura: 85 Rotas</h1>
             <p style="color:var(--text-muted); font-size:1rem;">Mapeamento detalhado das camadas: <strong>Banco de Dados (MySQL) &rarr; DAO &rarr; Entity (JPA) &rarr; Service (Regras/BACEN) &rarr; Controller &rarr; Retorno Estruturado</strong>.</p>
         </header>
         <div class="stats">
-            <div class="stat-card"><div class="num">84</div><div class="label">Rotas Mapeadas (100%)</div></div>
+            <div class="stat-card"><div class="num">85</div><div class="label">Rotas Mapeadas (100%)</div></div>
             <div class="stat-card"><div class="num">8</div><div class="label">Módulos Funcionais</div></div>
             <div class="stat-card"><div class="num">9</div><div class="label">Stored Procedures</div></div>
             <div class="stat-card"><div class="num">8</div><div class="label">Views Otimizadas</div></div>
@@ -217,6 +219,50 @@
                 <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint<String></div>
                 <div class="response-box">{"sucesso": true, "modulo": "SISTEMA", "caminhoRota": "/sistema/inicializar", "dados": "Dados padrão (Um, FormaPagamento e Cliente Padrão) inicializados com sucesso."}</div>
         </div>
+        </div>
+        <div class="endpoint-card" id="ep-SISTEMA_RESETAR_BANCO_RESTRITO">
+            <div class="endpoint-top">
+                <div>
+                    <span class="route-method DELETE">DELETE</span>
+                    <span class="route-path-text">/sistema/reset-restrito</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-left:8px;">#85 (SISTEMA - RESTRITO)</span>
+                </div>
+                <span class="gemini-tool">Acesso Restrito (Sem Tool IA)</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="endpoint-desc">Funcionalidade restrita: reseta o banco de dados mantendo apenas Cliente Padrão, Formas de Pagamento e Unidades de Medida (exige token de confirmação explícito).</p>
+                <div class="arch-grid-5">
+                    <div class="arch-cell c-banco">
+                        <div class="arch-title">1. Banco de Dados</div>
+                        <div class="arch-content">Todas as tabelas operacionais e catálogo</div>
+                        <div class="arch-sub">Limpeza transacional preservando registros-base essenciais.</div>
+                    </div>
+                    <div class="arch-cell c-dao">
+                        <div class="arch-title">2. Camada DAO</div>
+                        <div class="arch-content">InicializadorSistemaService / EntityManager</div>
+                        <div class="arch-sub">Executa limpeza em ordem segura de chaves estrangeiras.</div>
+                    </div>
+                    <div class="arch-cell c-entity">
+                        <div class="arch-title">3. Entity (JPA)</div>
+                        <div class="arch-content">Um, FormaPagamento, PessoaFisica</div>
+                        <div class="arch-sub">Mantém apenas Cliente Padrão, Formas de Pagamento e Unidades de Medida.</div>
+                    </div>
+                    <div class="arch-cell c-service">
+                        <div class="arch-title">4. Camada Service</div>
+                        <div class="arch-content">InicializadorSistemaService.resetarBancoRestrito()</div>
+                        <div class="arch-sub">Valida token de confirmação obrigatório antes de executar.</div>
+                    </div>
+                    <div class="arch-cell c-controller">
+                        <div class="arch-title">5. Controller</div>
+                        <div class="arch-content">RoteadorController.executarEndpoint()</div>
+                        <div class="arch-sub">Bloqueado para chamadas automáticas sem token válido.</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Parâmetros Esperados</div>
+                <div style="font-size:0.8rem; background:var(--code-bg); padding:6px 12px; border-radius:4px; margin:4px 0 10px; font-family:var(--font-mono); color:var(--primary);">tokenConfirmacao: String (obrigatório)</div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-top:10px;">Retorno: RespostaEndpoint&lt;String&gt;</div>
+                <div class="response-box">{"sucesso": true, "modulo": "SISTEMA", "caminhoRota": "/sistema/reset-restrito", "dados": "Banco resetado mantendo cadastros base."}</div>
+            </div>
         </div>
         <div class="endpoint-card" id="ep-BUSCA_PADRAO_IA">
             <div class="endpoint-top">
@@ -2483,18 +2529,18 @@
                     </div>
                     <div class="arch-cell c-dao">
                         <div class="arch-title">2. Camada DAO</div>
-                        <div class="arch-content">NotaDAO.consultarSaldoTotalProduto()</div>
-                        <div class="arch-sub">Consulta nativa agregada indexada por idx_item_fifo em O(1).</div>
+                        <div class="arch-content">NotaDAO.consultarSaldoTotalProduto() + ConjuntoProdutoDAO.listarPaisPorItem()</div>
+                        <div class="arch-sub">Consulta nativa agregada indexada por idx_item_fifo + conversão de embalagens superiores.</div>
                     </div>
                     <div class="arch-cell c-entity">
                         <div class="arch-title">3. Entity (JPA)</div>
-                        <div class="arch-content">Item, Produto</div>
-                        <div class="arch-sub">Consolidação de lotes ativos.</div>
+                        <div class="arch-content">Item, Produto, ConjuntoProduto</div>
+                        <div class="arch-sub">Consolidação de lotes ativos e equivalência multinível (ex.: Caixa &rarr; Cartela &rarr; Ovo).</div>
                     </div>
                     <div class="arch-cell c-service">
                         <div class="arch-title">4. Camada Service</div>
-                        <div class="arch-content">EstoqueManage.obterSaldoDisponivel()</div>
-                        <div class="arch-sub">Retorna soma exata de lotes válidos e com saldo > 0.</div>
+                        <div class="arch-content">EstoqueManage.calcularSaldoEquivalenteTotal()</div>
+                        <div class="arch-sub">Soma lotes diretos válidos com o saldo equivalente disponível em embalagens fechadas acima.</div>
                     </div>
                     <div class="arch-cell c-controller">
                         <div class="arch-title">5. Controller</div>
@@ -2960,7 +3006,7 @@
                     <div class="arch-cell c-service">
                         <div class="arch-title">4. Camada Service</div>
                         <div class="arch-content">ManageNotas.emitirNotaVendaFIFO() + EstoqueManage.consumirEstoqueFIFO()</div>
-                        <div class="arch-sub">Baixa FIFO em O(1), valida crédito, aplica cupom de desconto e comita.</div>
+                        <div class="arch-sub">Baixa FIFO multinível (3+ níveis), preserva custo de lote próprio, fraciona embalagens superiores (Caixa &rarr; Cartela &rarr; Ovo) e aplica rateio BACEN.</div>
                     </div>
                     <div class="arch-cell c-controller">
                         <div class="arch-title">5. Controller</div>

@@ -5,7 +5,7 @@
 > **Objetivo deste documento (Planejamento para a Próxima Rodada):**  
 > Consolidar em um único plano técnico e textual:
 > 1. **Bateria de Testes Complexos `$$`** para cada CRUD (`C=`, `R=`, `U=`, `D=`) cobrindo todas as classes de domínio.
-> 2. **Análise das 84 Rotas (`RotaSistema`) e das Buscas Indexadas/Siglas (`BuscaPalavrasParciaisUtil`)**, validando o comportamento esperado de cada fluxo.
+> 2. **Análise das 85 Rotas (`RotaSistema`) e das Buscas Indexadas/Siglas (`BuscaPalavrasParciaisUtil`)**, validando o comportamento esperado de cada fluxo.
 > 3. **Mapeamento e Padronização de Tratamento de Erros via `.properties` (`ia-contexto.properties` / `erros-sistema.properties`)**, garantindo que nenhuma mensagem de erro fique hardcoded no código.
 > 4. **Arquitetura e Mapeamento Completo da Interface Gráfica JavaFX Nível Empresarial**, incluindo configuração de ambiente, catálogo de janelas, integração dupla de prompt (**Chat Lateral** + **Janela Especial / Command Palette**) e suporte ao comando de navegação e pré-preenchimento `abrir>janela>Registrar>nota` (tanto digitado pelo operador quanto disparado automaticamente pela IA ao preparar um registro).
 
@@ -100,11 +100,11 @@ $$ C= #NotaDevolucao, id_venda> 1, resp> forn, mot> Embalagem avariada no transp
 
 ## 2. Análise Completa das Rotas (`RotaSistema`) e Motor de Buscas (`BuscaPalavrasParciaisUtil`)
 
-### 2.1. Matriz de Cobertura das 84 Rotas e Governança de Concorrência
+### 2.1. Matriz de Cobertura das 85 Rotas e Governança de Concorrência
 
 | Módulo | Total de Rotas | Classificação de Risco | Comportamento na Bandeja e Virtual Threads |
 | :--- | :---: | :--- | :--- |
-| **`SISTEMA`** | 2 | `READ_ONLY` / `WRITE_SEGURO` | `BUSCA_PADRAO_IA` roda livre em Virtual Thread; carga inicial protege duplicidade. |
+| **`SISTEMA`** | 3 | `READ_ONLY` (1) / `WRITE_SEGURO` (1) / `RESTRITO` (1) | `BUSCA_PADRAO_IA` roda livre em Virtual Thread; carga inicial protege duplicidade; `/sistema/reset-restrito` exige token de confirmação. |
 | **`PRODUTO`** | 22 | `READ_ONLY` (7) / `WRITE_SEGURO` (12) / `DESTRUTIVO` (3) | Consultas (`listar`, `buscar`, `estoque-valido`) livres em paralelo; cadastros/edições/exclusões retidos na `BandejaOperacoesContexto`. |
 | **`PESSOA`** | 16 | `READ_ONLY` (7) / `WRITE_SEGURO` (8) / `DESTRUTIVO` (1) | Buscas por nome, sigla (`>isu`, `i.s.u`), documento único e histórico 360º livres em Virtual Thread; mutações retidas na Bandeja. |
 | **`PAGAMENTO`** | 9 | `READ_ONLY` (1) / `WRITE_SEGURO` (7) / `DESTRUTIVO` (1) | Listagem de formas ativas em paralelo; criação de títulos e quitações retidas na Bandeja com validação BACEN (`HALF_EVEN`). |
@@ -379,7 +379,7 @@ ia.ui.janela.nao_mapeada=Comando de janela '%s' nao reconhecido. Exemplos: abrir
 
 ### 4.1. Configuração de Ambiente (JDK 21 + JavaFX 21 + Maven)
 
-Para rodar a interface gráfica empresarial sem conflitos de módulo com Hibernate 6.4 / HikariCP / Jackson e aproveitando **Virtual Threads do Java 21**:
+Para rodar a interface gráfica empresarial sem conflitos de módulo com Hibernate 6.4+ / 7.4+ / HikariCP / Jackson e aproveitando **Virtual Threads do Java 21**:
 
 1. **Dependências no [`pom.xml`](file:///C:/workspace/Java/Sistema%20de%20Vendas/pom.xml)**:
    - `org.openjfx:javafx-controls:21.0.2`
@@ -409,7 +409,7 @@ flowchart TB
         Compilador["CompiladorInstrucoesCurtaService ($$)"]
         GerenciadorUI["GerenciadorJanelasJavaFX (abrir>janela>...)"]
         Bandeja["BandejaOperacoesContexto (Staging OP-1, OP-2...)"]
-        Roteador["RoteadorController (84 Rotas)"]
+        Roteador["RoteadorController (85 Rotas)"]
     end
 
     ChatDock -->|Texto livre, sigla >oba ou $$| Agente
@@ -442,12 +442,12 @@ O sistema contará com um roteador de janelas determinístico (`CatalogoJanelasJ
 | **`JANELA_REGISTRAR_DEVOLUCAO`** | `abrir>janela>Registrar>devolucao` | `abrir>janela>Registrar>perda`, `abrir>janela>baixa>perda` | `DevolucaoPerdaController` (`devolucao_perda.fxml`) | `NOTA_DEVOLUCAO_REGISTRAR`, `ESTOQUE_BAIXAR_PERDA_DIRETA` | Abre o formulário de devolução pós-venda ou baixa de perda física com chave `Fornecedor Isento` vs `Ressarcimento`. |
 | **`JANELA_CADASTRAR_PRODUTO`** | `abrir>janela>Cadastrar>produto` | `abrir>janela>Registrar>produto`, `abrir>janela>Editar>produto` | `ProdutoFormController` (`produto_form.fxml`) | `PRODUTO_FISICO_CADASTRAR`, `PRODUTO_DIGITAL_CADASTRAR`, `PRODUTO_CATALOGO_ATUALIZAR`, `PRODUTO_CATALOGO_ATUALIZAR_PRECO`, `PRODUTO_FISICO_ATUALIZAR_DIMENSOES` | Abre o cadastro de Produto Físico/Digital/Kit com galeria de fotos e cálculo automático de cubagem (`cm³`/`m³`). Pré-preenche se houver produto na Bandeja. |
 | **`JANELA_CATALOGO_PRODUTOS`** | `abrir>janela>Consultar>produto` | `abrir>janela>Listar>produtos`, `abrir>janela>Catalogo>produto` | `ProdutoCatalogoController` (`produto_catalogo.fxml`) | `PRODUTO_CATALOGO_LISTAR`, `PRODUTO_CATALOGO_BUSCAR`, `PRODUTO_CATALOGO_EXCLUIR` | Abre a grade pesquisável de produtos com filtro instantâneo por siglas (`>oba`, `o.b.a`). |
-| **`JANELA_UNIDADES_E_KITS`** | `abrir>janela>Cadastrar>kit` | `abrir>janela>Cadastrar>um`, `abrir>janela>Unidades>medida` | `KitUnidadeController` (`kit_unidade.fxml`) | `PRODUTO_UNIDADE_CADASTRAR`, `PRODUTO_UNIDADE_ATUALIZAR`, `PRODUTO_KIT_ADICIONAR_COMPONENTE` | Gerencia Unidades de Medida (`Um`) e composição de Kits (`ConjuntoProduto`). |
+| **`JANELA_UNIDADES_E_KITS`** | `abrir>janela>Cadastrar>kit` | `abrir>janela>Cadastrar>um`, `abrir>janela>Unidades>medida` | `KitUnidadeController` (`kit_unidade.fxml`) | `PRODUTO_UNIDADE_CADASTRAR`, `PRODUTO_UNIDADE_ATUALIZAR`, `PRODUTO_KIT_ADICIONAR_COMPONENTE` | Gerencia Unidades de Medida (`Um`) e composição multinível (3+ níveis, ex.: `Caixa → 12 Cartelas → 30 Ovos`, `Cesta Básica`). Exibe custo composto calculado (`calcularCustoCompostoFIFO`: preserva custo de lote próprio se houver estoque, ou soma recursivamente os níveis abaixo) e alerta sobre troca via remoção + reinserção (`ConjuntoProduto`). |
 | **`JANELA_CADASTRAR_PESSOA`** | `abrir>janela>Cadastrar>pessoa` | `abrir>janela>Registrar>pessoa`, `abrir>janela>Cadastrar>cliente`, `abrir>janela>Cadastrar>fornecedor` | `PessoaFormController` (`pessoa_form.fxml`) | `PESSOA_SIMPLES_CADASTRAR`, `PESSOA_CLIENTE_PF_CADASTRAR`, `PESSOA_CLIENTE_PJ_CADASTRAR`, `PESSOA_FORNECEDOR_PJ_CADASTRAR`, `PESSOA_REGISTRO_ADICIONAR` | Abre o formulário de Cliente/Fornecedor (PF, PJ ou Simples) e grade de documentos auxiliares (`IE`, `RG`, `CNH`). |
 | **`JANELA_DOSSIE_PESSOA`** | `abrir>janela>Consultar>pessoa` | `abrir>janela>Historico>pessoa`, `abrir>janela>Dossie>cliente` | `PessoaDossie360Controller` (`pessoa_dossie360.fxml`) | `PESSOA_BUSCAR`, `PESSOA_HISTORICO_COMPLETO`, `PESSOA_CLIENTE_ATUALIZAR_LIMITE` | Exibe a visão 360º do cliente/fornecedor (cadastro, limite de crédito, todas as notas emitidas, produtos e pagamentos). |
-| **`JANELA_ESTOQUE_FIFO`** | `abrir>janela>Consultar>estoque` | `abrir>janela>Estoque>fifo`, `abrir>janela>Lotes>validade` | `EstoqueLotesFifoController` (`estoque_fifo.fxml`) | `ESTOQUE_SALDO_CONSOLIDADO`, `ESTOQUE_FILA_LOTES_FIFO`, `ESTOQUE_LOTES_VALIDOS_LISTAR`, `ESTOQUE_LOTES_PROXIMOS_VALIDADE` | Exibe a fila visual de lotes FIFO por produto, semáforo de vencimento e saldo consolidado. |
+| **`JANELA_ESTOQUE_FIFO`** | `abrir>janela>Consultar>estoque` | `abrir>janela>Estoque>fifo`, `abrir>janela>Lotes>validade` | `EstoqueLotesFifoController` (`estoque_fifo.fxml`) | `ESTOQUE_SALDO_CONSOLIDADO`, `ESTOQUE_FILA_LOTES_FIFO`, `ESTOQUE_LOTES_VALIDOS_LISTAR`, `ESTOQUE_LOTES_PROXIMOS_VALIDADE` | Exibe a fila visual de lotes FIFO por produto, semáforo de vencimento, saldo direto vs. saldo equivalente em embalagens superiores (`calcularSaldoEquivalenteTotal`: ex. `5 Caixas = 60 Cartelas = 1.800 Ovos`) e indicador de fracionamento automático (`fracionarEmbalagemSuperiorFIFO`). |
 | **`JANELA_FINANCEIRO_PAGAMENTOS`** | `abrir>janela>Financeiro>pagamento` | `abrir>janela>Registrar>pagamento`, `abrir>janela>Quitar>parcela` | `FinanceiroPagamentoController` (`financeiro_pagamento.fxml`) | `PAGAMENTO_FORMA_LISTAR_ATIVAS`, `PAGAMENTO_FORMA_CADASTRAR`, `PAGAMENTO_FORMA_CUSTOMIZAR_REGRAS`, `PAGAMENTO_QUITAR_TITULO_OU_PARCELA` | Gestão de taxas MDR, descontos à vista, títulos em aberto e baixa múltipla de parcelas (`NotaPagamento`). |
-| **`JANELA_INTELIGENCIA_SAZONAL`** | `abrir>janela>Analise>estatistica` | `abrir>janela>Fator>externo`, `abrir>janela>Plano>compras` | `InteligenciaSazonalController` (`inteligencia_sazonal.fxml`) | `ESTATISTICA_PLANO_ESTRATEGICO_COMPRAS`, `ESTATISTICA_IMPACTO_EXTERNO_PRODUTOS`, `ESTATISTICA_RANKING_FORNECEDORES`, `FATOR_EXTERNO_RELATORIO_INTEGRADO_NOTAS` | Painel de inteligência sazonal cruzando Clima, Nível dos Rios, Eventos Sympla/MinC e recomendação de compras. |
+| **`JANELA_INTELIGENCIA_SAZONAL`** | `abrir>janela>Analise>estatistica` | `abrir>janela>Fator>externo`, `abrir>janela>Plano>compras` | `InteligenciaSazonalController` (`inteligencia_sazonal.fxml`) | `ESTATISTICA_PLANO_ESTRATEGICO_COMPRAS`, `ESTATISTICA_IMPACTO_EXTERNO_PRODUTOS`, `ESTATISTICA_RANKING_FORNECEDORES`, `FATOR_EXTERNO_RELATORIO_INTEGRADO_NOTAS` | Painel de inteligência sazonal com métricas proporcionais (janela ativa via `PERIOD_DIFF`, amostra mínima `n >= 2` e picos por `AVG`), cruzando Clima, Nível dos Rios, Eventos Sympla/MinC e recomendação de compras. |
 | **`JANELA_BANDEJA_CONTEXTO`** | `abrir>janela>Bandeja>contexto` | `abrir>janela>Lista>espera`, `abrir>janela>bandeja` | `BandejaContextoModalController` (`bandeja_contexto.fxml`) | Todas as rotas `WRITE_SEGURO` e `DESTRUTIVO` em estágio (`OP-1..OP-N`) | Permite revisar visualmente cada instrução pendente, editar valores na tabela, remover um item (`close<OP-1>`) ou aprovar tudo (`SIM`). |
 
 ---
