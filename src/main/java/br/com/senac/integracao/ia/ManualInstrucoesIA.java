@@ -204,7 +204,10 @@ public final class ManualInstrucoesIA {
                 faltando.add("nome");
             }
         } else if (r == RotaSistema.PESSOA_BUSCAR || r == RotaSistema.PESSOA_BUSCAR_UNICA) {
-            boolean temIdentificador = (params != null && (params.get("idPessoa") != null || params.get("id") != null)) ||
+            boolean temPapel = r == RotaSistema.PESSOA_BUSCAR
+                    && params != null && params.get("papel") != null && !params.get("papel").toString().isBlank();
+            boolean temIdentificador = temPapel ||
+                    (params != null && (params.get("idPessoa") != null || params.get("id") != null)) ||
                     (params != null && params.get("termo") != null && !params.get("termo").toString().isBlank()) ||
                     (params != null && params.get("nome") != null && !params.get("nome").toString().isBlank()) ||
                     (params != null && params.get("documento") != null && !params.get("documento").toString().isBlank()) ||

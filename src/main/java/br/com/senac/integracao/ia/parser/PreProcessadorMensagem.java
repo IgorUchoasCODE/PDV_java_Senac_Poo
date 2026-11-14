@@ -41,19 +41,45 @@ public class PreProcessadorMensagem {
             String mensagemOriginal,
             String mensagemAnotada,
             List<EntidadeExtraida> entidades,
-            boolean ehComandoDsl
+            boolean ehComandoDsl,
+            List<String> rotasSugeridas
     ) {
+        public ResultadoPreProcessamento(
+                String mensagemOriginal,
+                String mensagemAnotada,
+                List<EntidadeExtraida> entidades,
+                boolean ehComandoDsl
+        ) {
+            this(mensagemOriginal, mensagemAnotada, entidades, ehDslOrFalse(ehComandoDsl), List.of());
+        }
+
+        private static boolean ehDslOrFalse(boolean v) {
+            return v;
+        }
+
+        public boolean temContexto() {
+            return (entidades != null && !entidades.isEmpty())
+                    || (rotasSugeridas != null && !rotasSugeridas.isEmpty());
+        }
+
         /**
          * Gera um bloco compacto de contexto semântico pré-extraído para guiar a LLM.
          */
         public String gerarContextoSemantico() {
-            if (entidades == null || entidades.isEmpty()) {
+            if (!temContexto()) {
                 return "";
             }
             StringBuilder sb = new StringBuilder("[Contexto Semântico Pré-processado pelo Sistema]:\n");
-            for (EntidadeExtraida e : entidades) {
-                sb.append(String.format(" - %s: \"%s\" (Normalizado: %s)%n",
-                        e.tipo(), e.textoOriginal(), e.valorNormalizado()));
+            if (entidades != null) {
+                for (EntidadeExtraida e : entidades) {
+                    sb.append(String.format(" - %s: \"%s\" (Normalizado: %s)%n",
+                            e.tipo(), e.textoOriginal(), e.valorNormalizado()));
+                }
+            }
+            if (rotasSugeridas != null && !rotasSugeridas.isEmpty()) {
+                sb.append(" - ROTAS_PRIORITARIAS (mesmo contexto semântico): ")
+                  .append(String.join(", ", rotasSugeridas))
+                  .append("\n");
             }
             return sb.toString().trim();
         }
@@ -67,8 +93,10 @@ public class PreProcessadorMensagem {
     private static final Pattern PADRAO_CPF = Pattern.compile("\\b(\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}|\\d{11})\\b");
     private static final Pattern PADRAO_CNPJ = Pattern.compile("\\b(\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}|\\d{14})\\b");
     private static final Pattern PADRAO_SIGLA = Pattern.compile(">([a-zA-Z0-9_]{2,8})\\b");
-    private static final Pattern PADRAO_PRODUTO_ASPAS = Pattern.compile("(?i)(?:produto|kit|conjunto|item)\\s*[\":]?\\s*([^\"\\n,;]+?)(?=\\s+(?:foi|em|de|com|que|tem|na|no|para|um>|vv>|vc>|q>|vl>|val>|dim>)\\b|[,\";\\n]|$)");
-    private static final Pattern PADRAO_PESSOA_ASPAS = Pattern.compile("(?i)(?:cliente|fornecedor|pessoa)\\s*[\":]?\\s*([^\"\\n,;]+?)(?=\\s+(?:foi|em|de|com|que|tem|na|no|para)\\b|[,\";\\n]|$)");
+    private static final Pattern PADRAO_PRODUTO_ASPAS = Pattern.compile(
+            "(?i)\\b(?:produto|kit|conjunto|item)\\b\\s*[\":]?\\s*([^\"\\n,;]+?)(?=\\s+(?:foi|em|de|com|que|tem|tenha|contenha|pode|na|no|para|como|onde|e\\s+(?:por|colocar|transformar|mudar|atualizar|adicionar|criar)|por\\s+ele|um>|vv>|vc>|q>|vl>|val>|dim>)\\b|[,\";\\n]|$)");
+    private static final Pattern PADRAO_PESSOA_ASPAS = Pattern.compile(
+            "(?i)\\b(?:cliente|fornecedor|pessoa)\\b\\s*[\":]?\\s*([^\"\\n,;]+?)(?=\\s+(?:foi|em|de|com|que|tem|na|no|para|como|onde)\\b|[,\";\\n]|$)");
 
     /**
      * Analisa o texto e extrai entidades semânticas, anotando o texto com tags XML estruturadas.
@@ -78,8 +106,11 @@ public class PreProcessadorMensagem {
             return new ResultadoPreProcessamento("", "", List.of(), false);
         }
 
-        String texto = mensagem.trim();
+        String texto = mensagem.trim().replaceAll("[ \\t]{2,}", " ");
         boolean ehDsl = texto.startsWith("$$") || texto.startsWith("abrir>janela");
+        if (!ehDsl) {
+            texto = expandirAbreviacoesSemanticas(texto);
+        }
 
         List<EntidadeExtraida> entidades = new ArrayList<>();
 
@@ -141,7 +172,7 @@ public class PreProcessadorMensagem {
         Matcher mProd = PADRAO_PRODUTO_ASPAS.matcher(texto);
         while (mProd.find()) {
             String termo = mProd.group(1).trim();
-            if (!termo.isEmpty() && !ehContido(entidades, mProd.start(), mProd.end())) {
+            if (termo.length() > 1 && !ehContido(entidades, mProd.start(), mProd.end())) {
                 entidades.add(new EntidadeExtraida(TipoEntidade.PRODUTO_NOMINADO, mProd.group(0), termo, mProd.start(), mProd.end()));
             }
         }
@@ -149,7 +180,7 @@ public class PreProcessadorMensagem {
         Matcher mPess = PADRAO_PESSOA_ASPAS.matcher(texto);
         while (mPess.find()) {
             String termo = mPess.group(1).trim();
-            if (!termo.isEmpty() && !ehContido(entidades, mPess.start(), mPess.end())) {
+            if (termo.length() > 1 && !ehContido(entidades, mPess.start(), mPess.end())) {
                 entidades.add(new EntidadeExtraida(TipoEntidade.PESSOA_NOMINADA, mPess.group(0), termo, mPess.start(), mPess.end()));
             }
         }
@@ -170,8 +201,118 @@ public class PreProcessadorMensagem {
 
         // Constrói a mensagem anotada com tags semânticas XML
         String anotada = gerarTextoAnotado(texto, entidades);
+        List<String> rotasSugeridas = inferirRotasPrioritarias(texto, entidades, ehDsl);
 
-        return new ResultadoPreProcessamento(texto, anotada, Collections.unmodifiableList(entidades), ehDsl);
+        return new ResultadoPreProcessamento(texto, anotada, Collections.unmodifiableList(entidades), ehDsl, rotasSugeridas);
+    }
+
+    /**
+     * Mapeia intenções e entidades detectadas para grupos de rotas do mesmo contexto semântico,
+     * permitindo que a IA priorize as ferramentas corretas sem varrer as 85 rotas do catálogo.
+     */
+    private static List<String> inferirRotasPrioritarias(String texto, List<EntidadeExtraida> entidades, boolean ehDsl) {
+        if (ehDsl || texto == null || texto.isBlank()) {
+            return List.of();
+        }
+        String lower = texto.toLowerCase(Locale.ROOT);
+        java.util.LinkedHashSet<String> rotas = new java.util.LinkedHashSet<>();
+
+        boolean temProdutoEnt = entidades.stream().anyMatch(e ->
+                e.tipo() == TipoEntidade.PRODUTO_NOMINADO || e.tipo() == TipoEntidade.SIGLA_PRODUTO);
+        boolean temPessoaEnt = entidades.stream().anyMatch(e ->
+                e.tipo() == TipoEntidade.PESSOA_NOMINADA || e.tipo() == TipoEntidade.CPF || e.tipo() == TipoEntidade.CNPJ);
+
+        if (lower.matches(".*\\b(conjunto|conjuntos|kit|kits|composto|componente|componentes|cartela|cartelas|cont[eê]m|contenha|composi[cç][aã]o)\\b.*")) {
+            rotas.addAll(List.of(
+                    "produto_catalogo_buscar",
+                    "produto_fisico_cadastrar",
+                    "produto_kit_adicionar_componente",
+                    "produto_catalogo_atualizar"
+            ));
+        }
+
+        if (lower.matches(".*\\b(unidade\\s+de\\s+medida|unidades\\s+de\\s+medida|um|sigla|fator|fracion\\w*)\\b.*")) {
+            rotas.addAll(List.of(
+                    "produto_unidade_listar",
+                    "produto_unidade_cadastrar",
+                    "produto_unidade_atualizar"
+            ));
+        }
+
+        if (temProdutoEnt || lower.matches(".*\\b(produto|produtos|item|itens|cat[aá]logo|pre[cç]o|dimens[aã]o|dimens[oõ]es|peso)\\b.*")) {
+            rotas.addAll(List.of(
+                    "produto_catalogo_buscar",
+                    "produto_catalogo_listar",
+                    "produto_fisico_cadastrar",
+                    "produto_catalogo_atualizar",
+                    "produto_catalogo_atualizar_preco"
+            ));
+        }
+
+        if (temPessoaEnt || lower.matches(".*\\b(cliente|clientes|fornecedor|fornecedores|pessoa|pessoas|cpf|cnpj|limite)\\b.*")) {
+            rotas.addAll(List.of(
+                    "pessoa_buscar",
+                    "pessoa_listar_clientes",
+                    "pessoa_listar_fornecedores",
+                    "pessoa_simples_cadastrar",
+                    "pessoa_cliente_pf_cadastrar",
+                    "pessoa_cliente_pj_cadastrar",
+                    "pessoa_fornecedor_pf_cadastrar",
+                    "pessoa_fornecedor_pj_cadastrar"
+            ));
+        }
+
+        if (lower.matches(".*\\b(nota|notas|compra|comprar|venda|vender|emiti\\w*|fatura|devolu[cç][aã]o)\\b.*")) {
+            rotas.addAll(List.of(
+                    "nota_listar_padrao",
+                    "nota_buscar_unica",
+                    "nota_compra_emitir",
+                    "nota_venda_emitir_fifo",
+                    "nota_venda_emitir_balcao_cliente_padrao",
+                    "nota_devolucao_registrar"
+            ));
+        }
+
+        if (lower.matches(".*\\b(estoque|lote|lotes|validade|vencid\\w*|perda|fifo|saldo)\\b.*")) {
+            rotas.addAll(List.of(
+                    "estoque_saldo_consolidado",
+                    "estoque_lotes_validos_listar",
+                    "estoque_fila_lotes_fifo",
+                    "estoque_lotes_proximos_validade",
+                    "estoque_baixar_perda_direta"
+            ));
+        }
+
+        if (lower.matches(".*\\b(pagamento|pagamentos|pagar|parcela|parcelas|quitar|forma\\s+de\\s+pagamento|pix|cart[aã]o|boleto|dinheiro)\\b.*")) {
+            rotas.addAll(List.of(
+                    "pagamento_forma_listar_ativas",
+                    "pagamento_criar_a_vista",
+                    "pagamento_criar_a_prazo",
+                    "pagamento_criar_parcelado",
+                    "pagamento_quitar_titulo_ou_parcela"
+            ));
+        }
+
+        if (lower.matches(".*\\b(lucro|bacen|relat[oó]rio|sazonal\\w*|demanda|ranking|previs[aã]o|clima|temperatura|graus?|rio|rios|evento|eventos|dist[aâ]ncia|impact\\w*|estrag\\w*|motivo\\w*|correla\\w*|chance\\w*|padr[aã]o|padr[oõ]es)\\b.*")) {
+            rotas.addAll(List.of(
+                    "busca_padrao_ia",
+                    "estatistica_motivos_perda_prematura",
+                    "estatistica_impacto_externo_produtos",
+                    "estatistica_destaques_sazonais",
+                    "estatistica_picos_dias_eventos",
+                    "fator_externo_relatorio_integrado_notas",
+                    "relatorio_analise_sazonal_vendas",
+                    "relatorio_lucro_contabil_bacen",
+                    "estatistica_plano_estrategico_compras",
+                    "estatistica_ranking_fornecedores"
+            ));
+        }
+
+        if (lower.matches(".*\\b(soma\\w*|total|quantos|quantas|m[eé]dia|maior|menor|entre|acima|abaixo|exceto|sem|vencid\\w*|devolv\\w*|resumo|filtr\\w*)\\b.*")) {
+            rotas.add("busca_padrao_ia");
+        }
+
+        return rotas.isEmpty() ? List.of() : Collections.unmodifiableList(new ArrayList<>(rotas));
     }
 
     private static boolean ehContido(List<EntidadeExtraida> lista, int inicio, int fim) {
@@ -222,6 +363,21 @@ public class PreProcessadorMensagem {
             return hoje.plusDays(dias).toString();
         }
         return s;
+    }
+
+    /**
+     * Expande abreviações comuns de PDV no texto livre para aumentar a clareza semântica
+     * sem alterar comandos DSL ou nomes próprios.
+     */
+    private static String expandirAbreviacoesSemanticas(String texto) {
+        String normalizado = texto
+                .replaceAll("(?i)^(?:voc[eê]|ei|ol[aá]|sistema)[,:\\s]+", "")
+                .replaceAll("(?i)\\besque\\b", "estoque")
+                .replaceAll("(?i)\\bp/\\s*", "para ")
+                .replaceAll("(?i)^vend\\b", "vender")
+                .replaceAll("(?i)(\\d+)\\s*cxs?\\b", "$1 caixa")
+                .replaceAll("(?i)(\\d+)\\s*und?s?\\b", "$1 unidade");
+        return normalizado.replaceAll("[ \\t]{2,}", " ").trim();
     }
 
     private static String gerarTextoAnotado(String texto, List<EntidadeExtraida> entidades) {

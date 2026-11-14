@@ -159,25 +159,78 @@ public final class ResolvedorProduto {
         // 3. Saldo em Estoque e Lotes FIFO
         if (roteador != null && p.getId() != null) {
             try {
-                BigDecimal saldo = roteador.estoque().consultarSaldoTotalProduto(p.getId());
-                sb.append(String.format("• Estoque disponível: %s %s\n",
-                        saldo != null ? saldo.stripTrailingZeros().toPlainString() : "0", umSigla));
+                BigDecimal saldoValido = consultarSaldoValidoSeguro(p.getId(), roteador);
+                BigDecimal saldoVencido = consultarSaldoVencidoSeguro(p.getId(), roteador);
+                BigDecimal saldoFisico = saldoValido.add(saldoVencido);
+                String qtdFisica = saldoFisico.compareTo(BigDecimal.ZERO) == 0
+                        ? "0"
+                        : saldoFisico.stripTrailingZeros().toPlainString();
+                sb.append(String.format("• Estoque físico: %s %s\n", qtdFisica, umSigla));
+                if (saldoVencido.compareTo(BigDecimal.ZERO) > 0) {
+                    sb.append("• ⚠️ Há lote com produto vencido neste produto\n");
+                }
 
-                List<Item<? extends Produto>> lotes = roteador.estoque().listarLotesDisponiveisFIFO(p.getId());
+                List<Item<? extends Produto>> lotes = roteador.estoque().listarLotesFisicosProduto(p.getId());
                 if (lotes != null && !lotes.isEmpty()) {
-                    sb.append(String.format("  Lotes FIFO em estoque (%d):\n", lotes.size()));
+                    java.time.LocalDate hoje = java.time.LocalDate.now();
+                    sb.append(String.format("  Lotes físicos em estoque (%d):\n", lotes.size()));
                     for (Item<?> l : lotes) {
-                        sb.append(String.format("    - Lote #%d — Saldo: %s %s, Custo Unit.: R$ %s, Validade: %s\n",
+                        boolean loteVencido = l.getDataValidade() != null && l.getDataValidade().isBefore(hoje);
+                        sb.append(String.format("    - Lote #%d — Saldo: %s %s, Custo Unit.: R$ %s, Validade: %s%s\n",
                                 l.getId(),
                                 l.getQuantidadeDisponivel() != null ? l.getQuantidadeDisponivel().stripTrailingZeros().toPlainString() : "0",
                                 umSigla,
                                 l.getValor() != null ? l.getValor().setScale(2, java.math.RoundingMode.HALF_EVEN) : "0.00",
-                                l.getDataValidade() != null ? l.getDataValidade() : "Indeterminada"));
+                                l.getDataValidade() != null ? l.getDataValidade() : "Indeterminada",
+                                loteVencido ? " ⚠️ VENCIDO" : ""));
                     }
                 }
             } catch (Exception ignored) {}
         }
 
         return sb.toString().trim();
+    }
+
+    /** Consulta com segurança o saldo válido (não vencido) de um produto. */
+    public static BigDecimal consultarSaldoValidoSeguro(Long idProduto, RoteadorController roteador) {
+        if (roteador == null || idProduto == null) return BigDecimal.ZERO;
+        try {
+            BigDecimal consultado = roteador.estoque().consultarSaldoTotalProduto(idProduto);
+            return consultado != null ? consultado : BigDecimal.ZERO;
+        } catch (Exception ignored) {
+            return BigDecimal.ZERO;
+        }
+    }
+
+    /** Consulta com segurança o saldo físico vencido de um produto. */
+    public static BigDecimal consultarSaldoVencidoSeguro(Long idProduto, RoteadorController roteador) {
+        if (roteador == null || idProduto == null) return BigDecimal.ZERO;
+        try {
+            BigDecimal consultado = roteador.estoque().consultarSaldoVencidoProduto(idProduto);
+            return consultado != null ? consultado : BigDecimal.ZERO;
+        } catch (Exception ignored) {
+            return BigDecimal.ZERO;
+        }
+    }
+
+    /**
+     * Consulta e formata a quantidade física em estoque de um produto com sua unidade de medida,
+     * exibindo alerta em vermelho quando houver lote com produto vencido.
+     */
+    public static String formatarSaldoEstoqueCurto(Produto p, RoteadorController roteador, String umSigla) {
+        String um = (umSigla != null && !umSigla.isBlank()) ? umSigla : "UN";
+        Long idProd = p != null ? p.getId() : null;
+        BigDecimal saldoValido = consultarSaldoValidoSeguro(idProd, roteador);
+        BigDecimal saldoVencido = consultarSaldoVencidoSeguro(idProd, roteador);
+        BigDecimal saldoFisico = saldoValido.add(saldoVencido);
+
+        if (saldoFisico.compareTo(BigDecimal.ZERO) <= 0) {
+            return String.format("Estoque: 0 %s (Sem estoque)", um);
+        }
+        String qtd = saldoFisico.stripTrailingZeros().toPlainString();
+        if (saldoVencido.compareTo(BigDecimal.ZERO) > 0) {
+            return String.format("Estoque: %s %s ⚠️ Há lote com produto vencido", qtd, um);
+        }
+        return String.format("Estoque: %s %s", qtd, um);
     }
 }

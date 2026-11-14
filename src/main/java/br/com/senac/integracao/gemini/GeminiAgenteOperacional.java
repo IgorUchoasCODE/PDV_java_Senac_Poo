@@ -6,6 +6,7 @@ import br.com.senac.controller.RoteadorController;
 import br.com.senac.integracao.ia.BandejaOperacoesContexto;
 import br.com.senac.integracao.ia.CompiladorInstrucoesCurtaService;
 import br.com.senac.integracao.ia.DecisaoConfirmacao;
+import br.com.senac.integracao.ia.FormatadorSaidaIA;
 import br.com.senac.integracao.ia.InterpretadorRespostaIA;
 import br.com.senac.integracao.ia.ItemBandeja;
 import br.com.senac.integracao.ia.ManualInstrucoesIA;
@@ -46,6 +47,28 @@ public class GeminiAgenteOperacional {
     private final br.com.senac.integracao.ia.bandeja.ExecutorBandeja executorBandeja;
     private final PreProcessadorMensagem preProcessador = new PreProcessadorMensagem();
     private volatile ProvedorIA provedor;
+    private final ThreadLocal<java.util.function.Consumer<String>> listenerProgresso = new ThreadLocal<>();
+
+    public void definirListenerProgresso(java.util.function.Consumer<String> listener) {
+        if (listener == null) {
+            listenerProgresso.remove();
+        } else {
+            listenerProgresso.set(listener);
+        }
+    }
+
+    public void limparListenerProgresso() {
+        listenerProgresso.remove();
+    }
+
+    private void notificarProgresso(String etapa) {
+        java.util.function.Consumer<String> listener = listenerProgresso.get();
+        if (listener != null && etapa != null && !etapa.isBlank()) {
+            try {
+                listener.accept(etapa);
+            } catch (Exception ignored) {}
+        }
+    }
 
     // Bandejas de Operações e Contexto ativas por sessão do usuário
     private final Map<String, BandejaOperacoesContexto> bandejasPorSessao = new ConcurrentHashMap<>();
@@ -53,6 +76,8 @@ public class GeminiAgenteOperacional {
     private final Map<String, Deque<String>> ticketsPendentesPorSessao = new ConcurrentHashMap<>();
     // Histórico de conversação estruturado multi-turn por sessão
     private final Map<String, List<Map<String, Object>>> historicoPorSessao = new ConcurrentHashMap<>();
+    // Rastreamento opcional do fluxo (pré-processamento -> IA -> pós-processamento -> retorno)
+    private final br.com.senac.integracao.ia.LogFluxoIAContexto logFluxo = new br.com.senac.integracao.ia.LogFluxoIAContexto();
 
     private List<Map<String, Object>> obterHistoricoSessao(String idSessao) {
         if (idSessao == null || idSessao.isBlank()) return Collections.emptyList();
@@ -120,6 +145,26 @@ public class GeminiAgenteOperacional {
         return compiladorInstrucoesCurta;
     }
 
+    public br.com.senac.integracao.ia.LogFluxoIAContexto getLogFluxo() {
+        return logFluxo;
+    }
+
+    public void ativarSalvamentoLogs(boolean ativo) {
+        logFluxo.setAtivo(ativo);
+    }
+
+    public boolean isSalvamentoLogsAtivo() {
+        return logFluxo.isAtivo();
+    }
+
+    public String consumirLogsFluxoSeBandejaFinalizada(String idSessao) {
+        return logFluxo.consumirRelatorioSeBandejaFinalizada(idSessao);
+    }
+
+    public String consumirLogsFluxoAoSair(String idSessao) {
+        return logFluxo.consumirRelatorioAoSair(idSessao);
+    }
+
     /**
      * Fecha e limpa a janela de contexto da sessão:
      * 1. Limpa e descarta a Bandeja de Contexto
@@ -128,6 +173,7 @@ public class GeminiAgenteOperacional {
      */
     public void fecharJanelaContexto(String idSessao) {
         if (idSessao == null || idSessao.isBlank()) return;
+        logFluxo.marcarBandejaFinalizada(idSessao);
         BandejaOperacoesContexto b = bandejasPorSessao.remove(idSessao);
         if (b != null) {
             b.fecharJanela();
@@ -143,6 +189,25 @@ public class GeminiAgenteOperacional {
 
     // ==================== ENTRADAS ====================
 
+    /**
+     * Processa a mensagem do usuário e retorna o pacote completo já formatado
+     * (texto puro com quebra de linha por contador de palavras, ANSI, HTML e segmentos para JavaFX).
+     */
+    public FormatadorSaidaIA.RespostaFormatadaIA processarMensagemFormatada(String idSessao, String mensagemUsuario) {
+        return FormatadorSaidaIA.formatar(processarMensagem(idSessao, mensagemUsuario));
+    }
+
+    public FormatadorSaidaIA.RespostaFormatadaIA processarMensagemFormatada(
+            String idSessao,
+            String mensagemUsuario,
+            FormatadorSaidaIA.ConfiguracaoFormatacaoSaida config) {
+        return FormatadorSaidaIA.formatar(processarMensagem(idSessao, mensagemUsuario), config);
+    }
+
+    private String finalizarRespostaFormatada(String resposta) {
+        return FormatadorSaidaIA.formatarTextoParaIA(resposta);
+    }
+
     /** Mensagem de texto do usuário, interpretada pelo provedor de IA configurado ou pelo compilador $$ local. */
     public String processarMensagem(String idSessao, String mensagemUsuario) {
         String msg = mensagemUsuario != null ? mensagemUsuario.trim() : "";
@@ -150,10 +215,15 @@ public class GeminiAgenteOperacional {
         // Se o prompt iniciar com $$, atribui imediatamente à classe de compilação de instruções curtas (0 chamadas à IA)
         if (CompiladorInstrucoesCurtaService.ehComandoEncurtado(msg)) {
             BandejaOperacoesContexto bandeja = obterBandeja(idSessao);
-            String respostaCompilada = compiladorInstrucoesCurta.compilarEProcessar(
-                    idSessao, msg, bandeja, () -> fecharJanelaContexto(idSessao));
+            String respostaCompilada = finalizarRespostaFormatada(compiladorInstrucoesCurta.compilarEProcessar(
+                    idSessao, msg, bandeja, () -> fecharJanelaContexto(idSessao)));
             registrarNoHistorico(idSessao, "user", msg);
             registrarNoHistorico(idSessao, "model", respostaCompilada);
+            registrarLogTurnoSeAtivo(idSessao, msg,
+                    "Comando curto DSL ($$) detectado pelo pré-roteador local",
+                    "(Não enviado à IA — compilado localmente via CompiladorInstrucoesCurtaService)",
+                    "Execução/enfileiramento na BandejaOperacoesContexto concluído",
+                    respostaCompilada);
             return respostaCompilada;
         }
 
@@ -163,9 +233,15 @@ public class GeminiAgenteOperacional {
         if (bandejaAtiva != null && bandejaAtiva.temItens()) {
             var comando = br.com.senac.integracao.ia.bandeja.ComandoBandeja.interpretar(msg);
             if (comando.isPresent()) {
-                String respostaBandeja = processarComandoBandeja(idSessao, bandejaAtiva, comando.get());
+                String brutoBandeja = processarComandoBandeja(idSessao, bandejaAtiva, comando.get());
+                String respostaBandeja = finalizarRespostaFormatada(brutoBandeja);
                 registrarNoHistorico(idSessao, "user", msg);
                 registrarNoHistorico(idSessao, "model", respostaBandeja);
+                registrarLogTurnoSeAtivo(idSessao, msg,
+                        "Comando de navegação da Bandeja detectado: " + comando.get().acao(),
+                        "(Não enviado à IA — resolvido localmente na Bandeja)",
+                        "Resultado bruto pós-processamento:\n" + brutoBandeja,
+                        respostaBandeja);
                 return respostaBandeja;
             }
         }
@@ -173,9 +249,15 @@ public class GeminiAgenteOperacional {
         if (temConfirmacaoPendente(idSessao)) {
             DecisaoConfirmacao d = DecisaoConfirmacao.interpretar(msg);
             if (d != DecisaoConfirmacao.INDEFINIDA) {
-                String resposta = processarRespostaConfirmacao(idSessao, msg);
+                String brutoConfirmacao = processarRespostaConfirmacao(idSessao, msg);
+                String resposta = finalizarRespostaFormatada(brutoConfirmacao);
                 registrarNoHistorico(idSessao, "user", msg);
                 registrarNoHistorico(idSessao, "model", resposta);
+                registrarLogTurnoSeAtivo(idSessao, msg,
+                        "Decisão de confirmação detectada: " + d,
+                        "(Não enviado à IA — confirmação na BandejaOperacoesContexto)",
+                        "Resultado bruto da confirmação:\n" + brutoConfirmacao,
+                        resposta);
                 return resposta;
             }
         }
@@ -184,29 +266,65 @@ public class GeminiAgenteOperacional {
         // Executada em sequência, sem fechar a bandeja de espera!
         String buscaRapidaSigla = tentarResolverBuscaSiglaForaDeDsl(idSessao, msg);
         if (buscaRapidaSigla != null) {
+            String buscaFormatada = finalizarRespostaFormatada(buscaRapidaSigla);
             registrarNoHistorico(idSessao, "user", msg);
-            registrarNoHistorico(idSessao, "model", buscaRapidaSigla);
-            return buscaRapidaSigla;
+            registrarNoHistorico(idSessao, "model", buscaFormatada);
+            registrarLogTurnoSeAtivo(idSessao, msg,
+                    "Atalho local detectado fora de $$ (sigla/ID/contexto)",
+                    "(Não enviado à IA — resolvido localmente)",
+                    "Resultado bruto da consulta:\n" + buscaRapidaSigla,
+                    buscaFormatada);
+            return buscaFormatada;
         }
 
         String bloqueio = validarProvedor(false);
-        if (bloqueio != null) return bloqueio;
+        if (bloqueio != null) return finalizarRespostaFormatada(bloqueio);
 
         try {
-            List<Map<String, Object>> historico = obterHistoricoSessao(idSessao);
-            var preProc = preProcessador.processar(msg);
-            String msgParaIA = msg;
-            if (!preProc.entidades().isEmpty()) {
-                msgParaIA = msg + "\n\n" + preProc.gerarContextoSemantico();
+            if (Thread.currentThread().isInterrupted()) {
+                return "Operação cancelada pelo usuário.";
             }
+            List<Map<String, Object>> historico = obterHistoricoSessao(idSessao);
+            notificarProgresso("Pré-processando...");
+            var preProc = preProcessador.processar(msg);
+            String msgParaIA = msg.trim().replaceAll("[ \\t]{2,}", " ");
+            if (preProc.temContexto()) {
+                msgParaIA = msgParaIA + "\n\n" + preProc.gerarContextoSemantico();
+            }
+            boolean substituirBandeja = false;
+            if (bandejaAtiva != null && bandejaAtiva.temItens()) {
+                msgParaIA = msgParaIA + "\n\n" + resumirBandejaParaEdicaoIA(bandejaAtiva);
+                substituirBandeja = ehIntencaoCorrecaoBandeja(msg);
+            }
+            if (Thread.currentThread().isInterrupted()) {
+                return "Operação cancelada pelo usuário.";
+            }
+            notificarProgresso("IA lendo...");
             RespostaIA respostaIA = provedor.conversar(new PedidoIA(msgParaIA, null, null, historico));
-            String resposta = processarRespostaIA(idSessao, respostaIA);
+            if (Thread.currentThread().isInterrupted()) {
+                return "Operação cancelada pelo usuário.";
+            }
+            // Registra o pedido do usuário antes do loop de follow-up para que consultas encadeadas enxerguem a intenção atual.
             registrarNoHistorico(idSessao, "user", msg);
+            String posBruto = processarRespostaIAComLoop(idSessao, respostaIA, 0, substituirBandeja);
+            String resposta = finalizarRespostaFormatada(posBruto);
             registrarNoHistorico(idSessao, "model", resposta);
+            if (logFluxo.isAtivo()) {
+                String resumoPre = !preProc.temContexto()
+                        ? "Nenhuma entidade extraída; texto normalizado: " + msg.trim().replaceAll("[ \\t]{2,}", " ")
+                        : "Contexto semântico extraído (" + preProc.entidades().size() + " entidade(s), "
+                          + preProc.rotasSugeridas().size() + " rota(s) prioritária(s)):\n" + preProc.gerarContextoSemantico();
+                String resumoEnvio = "Histórico: " + historico.size() + " turno(s)\n" + msgParaIA;
+                String resumoPos = resumirRespostaIAParaLog(respostaIA) + "\nSaída pós-processada (antes da formatação final):\n" + posBruto;
+                registrarLogTurnoSeAtivo(idSessao, msg, resumoPre, resumoEnvio, resumoPos, resposta);
+            }
             return resposta;
         } catch (Exception e) {
-            return br.com.senac.integracao.ia.ContextoIABuilder.propriedade("ia.msg.erro.generico",
-                    "Não consegui processar sua solicitação agora. Tente novamente em instantes.");
+            if (Thread.currentThread().isInterrupted() || e instanceof InterruptedException) {
+                return "Operação cancelada pelo usuário.";
+            }
+            return finalizarRespostaFormatada(br.com.senac.integracao.ia.ContextoIABuilder.propriedade("ia.msg.erro.generico",
+                    "Não consegui processar sua solicitação agora. Tente novamente em instantes."));
         }
     }
 
@@ -292,11 +410,14 @@ public class GeminiAgenteOperacional {
         }
 
         // Não intercepta intenções de escrita/exclusão/atualização
-        if (lower.matches(".*\\b(criar|cria|cadastrar|cadastra|atualizar|atualiza|mudar|muda|alterar|altera|apagar|apaga|excluir|exclui|deletar|deleta|remover|remove|comprar|vender)\\b.*")) {
+        if (lower.matches(".*\\b(criar|cria|cadastrar|cadastra|atualizar|atualiza|mudar|muda|alterar|altera|modificar|modifica|modifique|colocar|coloque|adicionar|adicione|transformar|transforme|selecione|selecionar|editar|edite|apagar|apaga|excluir|exclui|deletar|deleta|remover|remove|comprar|comprei|vender|vendi|registrar|registre|emitir|emita)\\b.*")) {
             return null;
         }
 
-        boolean mencionaBusca = lower.matches("^(procura|procurar|busca|buscar|acha|achar|localiza|localizar|consulta|consultar|mostra|mostrar|ver|qual|cad[eê])\\b.*");
+        boolean referenciaContextual = lower.matches(".*\\b(dess[ae]s?|del[ae]s?|ess[ae]s?|est[ae]s?|anteriores?|acima|ids?)\\b.*");
+        boolean ehPerguntaNatural = lower.startsWith("qual ") || lower.startsWith("quais ") || texto.endsWith("?");
+        boolean mencionaBusca = !referenciaContextual && !ehPerguntaNatural
+                && lower.matches("^(procura|procurar|busca|buscar|acha|achar|localiza|localizar|consulta|consultar|mostra|mostrar|ver|cad[eê])\\b.*");
         boolean mencionaProduto = lower.matches(".*\\b(produto|produtos|prodito|item|estoque)\\b.*");
         boolean mencionaPessoa = lower.matches(".*\\b(pessoa|pessoas|cliente|clientes|fornecedor|fornecedores)\\b.*");
 
@@ -305,8 +426,10 @@ public class GeminiAgenteOperacional {
                 .replaceAll("(?i)^(o|a|os|as|um|uma)?\\s*(produto|produtos|prodito|item|pessoa|pessoas|cliente|clientes|fornecedor|fornecedores)\\s+", "")
                 .trim();
 
-        boolean ehSiglaExplicita = br.com.senac.repository.dao.BuscaPalavrasParciaisUtil.isFormatoSiglaExplicita(termo)
-                || br.com.senac.repository.dao.BuscaPalavrasParciaisUtil.isFormatoSiglaExplicita(texto);
+        boolean ehFraseCurta = texto.split("\\s+").length <= 4;
+        boolean ehSiglaExplicita = ehFraseCurta
+                && (br.com.senac.repository.dao.BuscaPalavrasParciaisUtil.isFormatoSiglaExplicita(termo)
+                || br.com.senac.repository.dao.BuscaPalavrasParciaisUtil.isFormatoSiglaExplicita(texto));
 
         if (!ehSiglaExplicita && !(mencionaBusca && (mencionaProduto || mencionaPessoa) && !termo.isBlank())) {
             return null;
@@ -332,10 +455,24 @@ public class GeminiAgenteOperacional {
         }
     }
 
-    /** Áudio de voz capturado pelo microfone do celular. */
+    private String prepararPromptComPreProcessamento(String idSessao, String textoBase) {
+        String limpo = textoBase != null ? textoBase.trim().replaceAll("[ \\t]{2,}", " ") : "";
+        var preProc = preProcessador.processar(limpo);
+        String msgParaIA = limpo;
+        if (preProc.temContexto()) {
+            msgParaIA = msgParaIA + "\n\n" + preProc.gerarContextoSemantico();
+        }
+        BandejaOperacoesContexto bandejaAtiva = bandejasPorSessao.get(idSessao);
+        if (bandejaAtiva != null && bandejaAtiva.temItens()) {
+            msgParaIA = msgParaIA + "\n\n" + resumirBandejaParaEdicaoIA(bandejaAtiva);
+        }
+        return msgParaIA;
+    }
+
+    /** Áudio de voz capturado pelo microfone do celular ou desktop. */
     public String processarAudio(String idSessao, byte[] audioBytes, String mimeType) {
         String bloqueio = validarProvedor(true);
-        if (bloqueio != null) return bloqueio;
+        if (bloqueio != null) return finalizarRespostaFormatada(bloqueio);
 
         try {
             if (temConfirmacaoPendente(idSessao)) {
@@ -343,29 +480,49 @@ public class GeminiAgenteOperacional {
                         "O usuário está respondendo a uma pergunta de confirmação. Apenas transcreva, em poucas palavras, " +
                         "o que ele disse no áudio. NÃO execute nenhuma ferramenta.",
                         audioBytes, mimeType));
-                return processarRespostaConfirmacao(idSessao, r.texto() != null ? r.texto() : "");
+                String transcricao = r.texto() != null ? r.texto().trim() : "";
+                preProcessador.processar(transcricao);
+                return finalizarRespostaFormatada(processarRespostaConfirmacao(idSessao, transcricao));
             }
-            return processarRespostaIA(idSessao, provedor.conversar(new PedidoIA(
-                    "Ouça este comando de voz em português. Identifique a intenção e selecione a ferramenta apropriada " +
-                    "(consulta, cadastro, atualização ou exclusão).",
-                    audioBytes, mimeType)));
+            notificarProgresso("Pré-processando áudio...");
+            List<Map<String, Object>> historico = obterHistoricoSessao(idSessao);
+            String promptBase = "Ouça este comando de voz em português. Identifique a intenção e selecione a ferramenta apropriada "
+                    + "(consulta, cadastro, atualização ou exclusão).";
+            String msgParaIA = prepararPromptComPreProcessamento(idSessao, promptBase);
+            notificarProgresso("IA analisando voz...");
+            RespostaIA respostaIA = provedor.conversar(new PedidoIA(msgParaIA, audioBytes, mimeType, historico));
+            registrarNoHistorico(idSessao, "user", "[Comando de voz]");
+            String posBruto = processarRespostaIAComLoop(idSessao, respostaIA, 0, false);
+            String resposta = finalizarRespostaFormatada(posBruto);
+            registrarNoHistorico(idSessao, "model", resposta);
+            return resposta;
         } catch (Exception e) {
-            return "❌ Falha ao processar comando de voz: " + e.getMessage();
+            return finalizarRespostaFormatada("❌ Falha ao processar comando de voz: " + e.getMessage());
         }
     }
 
-    /** Foto/documento capturado pela câmera do celular. */
+    /** Foto/documento capturado pela câmera do celular ou interface. */
     public String processarImagem(String idSessao, byte[] imagemBytes, String mimeType, String prompt) {
         String bloqueio = validarProvedor(true);
-        if (bloqueio != null) return bloqueio;
+        if (bloqueio != null) return finalizarRespostaFormatada(bloqueio);
 
         try {
+            notificarProgresso("Pré-processando imagem...");
+            List<Map<String, Object>> historico = obterHistoricoSessao(idSessao);
             String p = prompt != null && !prompt.isBlank()
                     ? prompt
                     : "Analise esta foto ou documento e execute a operação correspondente no sistema de vendas.";
-            return processarRespostaIA(idSessao, provedor.conversar(new PedidoIA(p, imagemBytes, mimeType)));
+            String msgParaIA = prepararPromptComPreProcessamento(idSessao, p);
+            boolean substituirBandeja = ehIntencaoCorrecaoBandeja(p);
+            notificarProgresso("IA analisando imagem...");
+            RespostaIA respostaIA = provedor.conversar(new PedidoIA(msgParaIA, imagemBytes, mimeType, historico));
+            registrarNoHistorico(idSessao, "user", p);
+            String posBruto = processarRespostaIAComLoop(idSessao, respostaIA, 0, substituirBandeja);
+            String resposta = finalizarRespostaFormatada(posBruto);
+            registrarNoHistorico(idSessao, "model", resposta);
+            return resposta;
         } catch (Exception e) {
-            return "❌ Falha ao processar imagem: " + e.getMessage();
+            return finalizarRespostaFormatada("❌ Falha ao processar imagem: " + e.getMessage());
         }
     }
 
@@ -379,21 +536,21 @@ public class GeminiAgenteOperacional {
 
         if (CompiladorInstrucoesCurtaService.ehComandoEncurtado(texto)) {
             BandejaOperacoesContexto bandeja = obterBandeja(idSessao);
-            return compiladorInstrucoesCurta.compilarEProcessar(
-                    idSessao, texto, bandeja, () -> fecharJanelaContexto(idSessao));
+            return finalizarRespostaFormatada(compiladorInstrucoesCurta.compilarEProcessar(
+                    idSessao, texto, bandeja, () -> fecharJanelaContexto(idSessao)));
         }
 
         if (temConfirmacaoPendente(idSessao)) {
             if (texto.contains("{") || texto.contains("[")) {
-                return "⚠️ Ainda há uma confirmação pendente. Responda **SIM** ou **NÃO** antes de enviar novas ações.\n\n"
-                        + perguntaAtual(idSessao);
+                return finalizarRespostaFormatada("⚠️ Ainda há uma confirmação pendente. Responda **SIM** ou **NÃO** antes de enviar novas ações.\n\n"
+                        + perguntaAtual(idSessao));
             }
-            return processarRespostaConfirmacao(idSessao, texto);
+            return finalizarRespostaFormatada(processarRespostaConfirmacao(idSessao, texto));
         }
         try {
-            return processarRespostaIA(idSessao, InterpretadorRespostaIA.interpretar(texto));
+            return finalizarRespostaFormatada(processarRespostaIA(idSessao, InterpretadorRespostaIA.interpretar(texto)));
         } catch (IllegalArgumentException e) {
-            return "⚠️ " + e.getMessage();
+            return finalizarRespostaFormatada("⚠️ " + e.getMessage());
         }
     }
 
@@ -411,15 +568,23 @@ public class GeminiAgenteOperacional {
     }
 
     private String processarRespostaIA(String idSessao, RespostaIA resp) {
-        return processarRespostaIAComLoop(idSessao, resp, 0);
+        return processarRespostaIAComLoop(idSessao, resp, 0, false);
     }
 
-    private String processarRespostaIAComLoop(String idSessao, RespostaIA resp, int nivelLoop) {
+    private String processarRespostaIAComLoop(String idSessao, RespostaIA resp, int nivelLoop, boolean substituirBandejaSeHouverEscrita) {
         if (!resp.temChamadas()) {
-            BandejaOperacoesContexto bandeja = bandejasPorSessao.get(idSessao);
             String textoIA = resp.texto() != null && !resp.texto().isBlank()
                     ? resp.texto()
                     : "Comando interpretado, nenhuma operação necessária.";
+            String blocoDsl = extrairBlocoDsl(textoIA);
+            if (blocoDsl != null) {
+                if (substituirBandejaSeHouverEscrita) {
+                    limparApenasBandejaParaReconstrucao(idSessao);
+                }
+                return compiladorInstrucoesCurta.compilarEProcessar(
+                        idSessao, blocoDsl, obterBandeja(idSessao), () -> fecharJanelaContexto(idSessao));
+            }
+            BandejaOperacoesContexto bandeja = bandejasPorSessao.get(idSessao);
             if (bandeja != null && bandeja.temItens()) {
                 return textoIA + "\n\n" + bandeja.formatarVisualizacao();
             }
@@ -444,6 +609,10 @@ public class GeminiAgenteOperacional {
 
         StringBuilder resultadosLeitura = new StringBuilder();
         for (ChamadaFerramenta c : chamadasLeitura) {
+            if (Thread.currentThread().isInterrupted()) {
+                return "Operação cancelada pelo usuário.";
+            }
+            notificarProgresso("Buscando...");
             String res = despacharChamadaTool(idSessao, c);
             if (res != null && !res.isBlank()) {
                 if (resultadosLeitura.length() > 0) resultadosLeitura.append("\n\n");
@@ -451,40 +620,66 @@ public class GeminiAgenteOperacional {
             }
         }
 
-        // Se a IA chamou apenas ferramentas de leitura, mas o usuário tinha intenção de criar/emitir ou se houver loop
-        if (chamadasEscrita.isEmpty() && !chamadasLeitura.isEmpty() && nivelLoop < 2 && provedor != null) {
+        // Se a IA chamou apenas ferramentas de leitura, decide se precisa de follow-up (escrita pendente ou análise multi-rota)
+        if (chamadasEscrita.isEmpty() && !chamadasLeitura.isEmpty() && nivelLoop < 3 && provedor != null
+                && precisaFollowUpLeitura(idSessao, chamadasLeitura)) {
             try {
+                if (Thread.currentThread().isInterrupted()) {
+                    return "Operação cancelada pelo usuário.";
+                }
+                notificarProgresso("IA correlacionando dados...");
                 List<Map<String, Object>> historico = obterHistoricoSessao(idSessao);
                 String promptFollowUp = "Resultados das consultas realizadas no sistema:\n"
                         + resultadosLeitura.toString() + "\n\n"
-                        + "Com base nas entidades e IDs acima, conclua a operação solicitada pelo usuário "
-                        + "(ex: emitir nota fiscal de compra/venda, cadastrar produto/kit, etc.) chamando a ferramenta de escrita apropriada com os IDs numéricos encontrados.";
+                        + "Com base nos dados acima e na última solicitação do usuário no histórico:\n"
+                        + "1) Se for uma AÇÃO de escrita (cadastrar/atualizar/kit/nota), chame TODAS as ferramentas de escrita necessárias NA MESMA resposta.\n"
+                        + "   - Pessoa inexistente: enfileire cadastro (OP-1) E nota usando 'OP-1'.\n"
+                        + "   - Kits/conjuntos: cadastre itens faltantes (precoVenda='0.00' se não informado) E chame produto_kit_adicionar_componente usando ID existente ou 'OP-1', 'OP-2'...\n"
+                        + "2) Se for uma PERGUNTA ANALÍTICA / CORRELACIONAL (ex: vencidos vendidos x devoluções, temperatura x estrago, distância de eventos x vendas, padrões sazonais):\n"
+                        + "   - Se ainda precisar cruzar com outras rotas (ex: busca_padrao_ia, estatistica_*, fator_externo_*, relatorio_*), chame-as agora.\n"
+                        + "   - Se já tiver os dados suficientes, NÃO chame ferramentas — responda diretamente com uma análise objetiva, citando números, correlações e limites observados.";
                 RespostaIA followUpResp = provedor.conversar(new PedidoIA(promptFollowUp, null, null, historico));
                 if (followUpResp.temChamadas()) {
-                    return processarRespostaIAComLoop(idSessao, followUpResp, nivelLoop + 1);
+                    return processarRespostaIAComLoop(idSessao, followUpResp, nivelLoop + 1, substituirBandejaSeHouverEscrita);
+                }
+                if (followUpResp.texto() != null && !followUpResp.texto().isBlank()) {
+                    return followUpResp.texto().trim();
                 }
             } catch (Exception ignored) {}
         }
 
+        if (!chamadasEscrita.isEmpty() && substituirBandejaSeHouverEscrita) {
+            limparApenasBandejaParaReconstrucao(idSessao);
+        }
+
         StringBuilder retornoEscritas = new StringBuilder();
+        StringBuilder avisosEscritas = new StringBuilder();
         for (ChamadaFerramenta c : chamadasEscrita) {
             String r = despacharChamadaTool(idSessao, c);
             if (r != null && !r.isBlank()) {
                 if (retornoEscritas.length() > 0) retornoEscritas.append("\n\n");
                 retornoEscritas.append(r);
+                if (r.contains("⚠️")) {
+                    if (avisosEscritas.length() > 0) avisosEscritas.append("\n");
+                    avisosEscritas.append(r);
+                }
             }
         }
 
         BandejaOperacoesContexto bandeja = obterBandeja(idSessao);
         if (bandeja.temItens()) {
+            String prefixoAviso = avisosEscritas.length() > 0 ? avisosEscritas + "\n\n" : "";
             if (bandeja.totalItens() == 1) {
                 Deque<String> fila = ticketsPendentesPorSessao.get(idSessao);
                 if (fila != null && !fila.isEmpty()) {
                     ConfirmacaoAcaoGatekeeper.TicketConfirmacao t = gatekeeper.buscarTicket(fila.peekFirst());
-                    if (t != null) return montarPergunta(t);
+                    if (t != null) return prefixoAviso + montarPergunta(t);
                 }
             }
-            return bandeja.formatarVisualizacao();
+            String explicacao = (resp.texto() != null && !resp.texto().isBlank())
+                    ? resp.texto().trim()
+                    : gerarBreveExplicacaoBandeja(bandeja);
+            return prefixoAviso + explicacao + "\n\n" + bandeja.formatarVisualizacao();
         }
 
         StringBuilder finalOutput = new StringBuilder();
@@ -587,7 +782,8 @@ public class GeminiAgenteOperacional {
                 String id = params.get("idProduto") != null ? "#" + params.get("idProduto") : "";
                 String nomeAtual = params.get("nomeAtual") != null ? "'" + params.get("nomeAtual") + "'" : "";
                 String novo = params.get("novoNome") != null ? "'" + params.get("novoNome") + "'" : (params.get("nome") != null ? "'" + params.get("nome") + "'" : "");
-                yield "Atualizar dados do produto " + (id.isEmpty() ? nomeAtual : id) + (!novo.isEmpty() ? " para " + novo : "");
+                String desc = params.get("descricao") != null && !params.get("descricao").toString().isBlank() ? " e atualizar descrição" : "";
+                yield "Atualizar produto " + (id.isEmpty() ? nomeAtual : id) + (!novo.isEmpty() ? " para " + novo : "") + desc;
             }
             case PRODUTO_CATALOGO_ATUALIZAR_PRECO -> {
                 String alvo = params.get("idProduto") != null ? "#" + params.get("idProduto") : "'" + params.get("nomeProduto") + "'";
@@ -597,15 +793,36 @@ public class GeminiAgenteOperacional {
                 String alvo = params.get("idProduto") != null ? "#" + params.get("idProduto") : "'" + params.get("nomeProduto") + "'";
                 yield "Excluir permanentemente o produto " + alvo + " do catálogo";
             }
-            case PRODUTO_FISICO_CADASTRAR -> "Cadastrar novo produto físico '" + params.get("nome") + "' com suas dimensões e peso";
-            case PRODUTO_DIGITAL_CADASTRAR -> "Cadastrar novo produto digital '" + params.get("nome") + "'";
-            case PRODUTO_UNIDADE_CADASTRAR -> "Cadastrar nova unidade de medida '" + params.get("sigla") + "'";
-            case PRODUTO_UNIDADE_ATUALIZAR -> "Atualizar dados da unidade de medida '" + params.get("sigla") + "'";
+            case PRODUTO_FISICO_CADASTRAR -> {
+                String um = params.get("siglaUm") != null && !params.get("siglaUm").toString().isBlank() ? params.get("siglaUm").toString() : "UN";
+                Object preco = params.get("precoVenda");
+                String precoTxt = preco != null && !preco.toString().isBlank() ? ", R$ " + preco : "";
+                yield "Cadastrar produto físico '" + params.get("nome") + "' (" + um + precoTxt + ")";
+            }
+            case PRODUTO_FISICO_ATUALIZAR_DIMENSOES -> "Atualizar dimensões/peso do produto #" + params.get("idProduto")
+                    + " (" + params.get("alturaCm") + "x" + params.get("larguraCm") + "x" + params.get("comprimentoCm") + " cm)";
+            case PRODUTO_KIT_ADICIONAR_COMPONENTE -> {
+                String kitRef = formatarRefOp(params.get("idProdutoKit"));
+                String compRef = formatarRefOp(params.get("idProdutoComponente"));
+                Object qtd = params.get("quantidade");
+                yield "Vincular " + (qtd != null ? qtd : "1") + "x do item " + compRef + " dentro do kit/conjunto " + kitRef;
+            }
+            case PRODUTO_DIGITAL_CADASTRAR -> {
+                Object preco = params.get("precoVenda");
+                String precoTxt = preco != null && !preco.toString().isBlank() ? " (R$ " + preco + ")" : "";
+                yield "Cadastrar produto digital '" + params.get("nome") + "'" + precoTxt;
+            }
+            case PRODUTO_UNIDADE_CADASTRAR -> "Cadastrar unidade de medida '" + params.get("sigla") + "'"
+                    + (params.get("nome") != null ? " (" + params.get("nome") + ")" : "");
+            case PRODUTO_UNIDADE_ATUALIZAR -> "Atualizar unidade de medida '" + params.get("sigla") + "'";
             case PRODUTO_UNIDADE_EXCLUIR -> "Excluir unidade de medida '" + params.get("sigla") + "'";
+            case PRODUTO_IMAGEM_ADICIONAR -> "Adicionar imagem ao produto " + formatarRefOp(params.get("idProduto"));
+            case PRODUTO_IMAGEM_DEFINIR_PRINCIPAL -> "Definir imagem #" + params.get("idImagem") + " como principal do produto " + formatarRefOp(params.get("idProduto"));
+            case PRODUTO_IMAGEM_REMOVER -> "Remover imagem #" + params.get("idImagem") + " do produto";
             case PESSOA_SIMPLES_CADASTRAR -> {
                 String nomeP = params.get("nome") != null ? params.get("nome").toString() : (params.get("razaoSocial") != null ? params.get("razaoSocial").toString() : "");
                 String papelP = params.get("papel") != null ? params.get("papel").toString() : (Boolean.parseBoolean(String.valueOf(params.get("isCliente"))) ? "cliente" : "fornecedor");
-                yield "Cadastrar " + papelP.toLowerCase(java.util.Locale.ROOT) + " '" + nomeP + "' (sem exigir CNPJ/CPF)";
+                yield "Cadastrar " + papelP.toLowerCase(Locale.ROOT) + " '" + nomeP + "' (sem exigir CNPJ/CPF)";
             }
             case PESSOA_LISTAR_CLIENTES -> "Listar clientes cadastrados na base de dados";
             case PESSOA_LISTAR_FORNECEDORES -> "Listar fornecedores cadastrados na base de dados";
@@ -614,27 +831,112 @@ public class GeminiAgenteOperacional {
             case PESSOA_REGISTRO_BUSCAR_UNICO -> "Buscar uma única pessoa pelo documento/registro único";
             case PESSOA_HISTORICO_COMPLETO -> "Consultar histórico 360º completo (notas, produtos e pagamentos) da pessoa";
             case PESSOA_CLIENTE_EXCLUIR -> "Excluir cadastro do cliente/pessoa #" + params.get("idPessoa");
-            case PESSOA_CLIENTE_PF_CADASTRAR -> "Cadastrar cliente pessoa física '" + params.get("nome") + "'";
-            case PESSOA_CLIENTE_PJ_CADASTRAR -> "Cadastrar cliente pessoa jurídica '" + params.get("razaoSocial") + "'";
-            case PESSOA_FORNECEDOR_PJ_CADASTRAR -> "Cadastrar fornecedor pessoa jurídica '" + (params.get("razaoSocial") != null ? params.get("razaoSocial") : params.get("nome")) + "'";
-            case PESSOA_FORNECEDOR_PF_CADASTRAR -> "Cadastrar fornecedor pessoa física '" + params.get("nome") + "'";
-            case PESSOA_DADOS_ATUALIZAR -> "Atualizar dados cadastrais da pessoa #" + params.get("idPessoa");
-            case PAGAMENTO_FORMA_CADASTRAR -> "Cadastrar nova forma de pagamento '" + params.get("codigo") + "'";
+            case PESSOA_CLIENTE_PF_CADASTRAR -> "Cadastrar/atualizar cliente PF '" + params.get("nome") + "'"
+                    + (params.get("cpf") != null ? " (CPF " + params.get("cpf") + ")" : "");
+            case PESSOA_CLIENTE_PJ_CADASTRAR -> "Cadastrar/atualizar cliente PJ '" + params.get("razaoSocial") + "'"
+                    + (params.get("cnpj") != null ? " (CNPJ " + params.get("cnpj") + ")" : "");
+            case PESSOA_CLIENTE_ATUALIZAR_LIMITE -> "Atualizar limite de crédito do cliente " + formatarRefOp(params.get("idPessoa"))
+                    + (params.get("novoLimite") != null ? " para R$ " + params.get("novoLimite") : "");
+            case PESSOA_FORNECEDOR_PJ_CADASTRAR -> "Cadastrar fornecedor PJ '" + (params.get("razaoSocial") != null ? params.get("razaoSocial") : params.get("nome")) + "'"
+                    + (params.get("cnpj") != null ? " (CNPJ " + params.get("cnpj") + ")" : "");
+            case PESSOA_FORNECEDOR_PF_CADASTRAR -> "Cadastrar fornecedor PF '" + params.get("nome") + "'"
+                    + (params.get("cpf") != null ? " (CPF " + params.get("cpf") + ")" : "");
+            case PESSOA_DADOS_ATUALIZAR -> "Atualizar dados cadastrais da pessoa " + formatarRefOp(params.get("idPessoa"))
+                    + (params.get("nome") != null ? " para '" + params.get("nome") + "'" : "");
+            case PESSOA_REGISTRO_ADICIONAR -> "Adicionar documento (" + params.get("tipo") + ": " + params.get("numero") + ") à pessoa " + formatarRefOp(params.get("idPessoa"));
+            case PAGAMENTO_FORMA_CADASTRAR -> "Cadastrar forma de pagamento '" + params.get("codigo") + "'";
+            case PAGAMENTO_FORMA_CUSTOMIZAR_REGRAS -> "Customizar regras/taxas da forma de pagamento '" + params.get("codigo") + "'";
+            case PAGAMENTO_FORMA_ALTERAR_STATUS -> "Alterar status (ativar/desativar) da forma de pagamento '" + params.get("codigo") + "'";
             case PAGAMENTO_FORMA_EXCLUIR -> "Excluir forma de pagamento '" + params.get("codigo") + "'";
+            case PAGAMENTO_CRIAR_A_VISTA -> "Registrar pagamento à vista na nota #" + params.get("idNota")
+                    + (params.get("codigoForma") != null ? " via " + params.get("codigoForma") : "");
+            case PAGAMENTO_CRIAR_A_PRAZO -> "Registrar pagamento a prazo na nota #" + params.get("idNota")
+                    + (params.get("dataVencimento") != null ? " (venc. " + params.get("dataVencimento") + ")" : "");
+            case PAGAMENTO_CRIAR_PARCELADO -> "Registrar pagamento parcelado na nota #" + params.get("idNota")
+                    + (params.get("parcelas") != null ? " em " + params.get("parcelas") + "x" : "");
+            case PAGAMENTO_QUITAR_TITULO_OU_PARCELA -> "Quitar título/parcela #" + params.get("idPagamento")
+                    + (params.get("valor") != null ? " (R$ " + params.get("valor") + ")" : "");
             case ESTOQUE_SALDO_CONSOLIDADO -> "Consultar saldo consolidado do produto #" + params.get("idProduto");
             case ESTOQUE_FILA_LOTES_FIFO -> "Consultar lotes em fila FIFO para o produto #" + params.get("idProduto");
             case ESTOQUE_LOTES_VALIDOS_LISTAR -> "Listar todos os lotes de estoque válidos e não vencidos";
             case ESTOQUE_LOTE_VALIDO_BUSCAR_UNICO -> "Buscar o primeiro lote único com estoque válido (FIFO)";
-            case ESTOQUE_BAIXAR_PERDA_DIRETA -> "Baixar perda operacional direta no lote #" + params.get("idLote");
-            case NOTA_VENDA_EMITIR_FIFO -> "Emitir nota fiscal de venda com consumo FIFO de estoque";
-            case NOTA_COMPRA_EMITIR -> "Emitir nota fiscal de compra e dar entrada no estoque";
+            case ESTOQUE_BAIXAR_PERDA_DIRETA -> "Baixar perda física"
+                    + (params.get("quantidade") != null ? " (" + params.get("quantidade") + ")" : "")
+                    + " do lote #" + params.get("idLote");
+            case NOTA_VENDA_EMITIR_FIFO -> {
+                String cli = params.get("idCliente") != null ? " para cliente " + formatarRefOp(params.get("idCliente")) : "";
+                String qtdItens = params.get("itens") instanceof List<?> l ? " (" + l.size() + " item(ns))" : "";
+                yield "Emitir nota fiscal de venda FIFO" + cli + qtdItens;
+            }
+            case NOTA_VENDA_EMITIR_BALCAO_CLIENTE_PADRAO -> {
+                String qtdItens = params.get("itens") instanceof List<?> l ? " (" + l.size() + " item(ns))" : "";
+                yield "Emitir nota de venda balcão (Consumidor Padrão)" + qtdItens;
+            }
+            case NOTA_VENDA_EMITIR_LOTE_DESEJAVEL -> {
+                String cli = params.get("idCliente") != null ? " para cliente " + formatarRefOp(params.get("idCliente")) : "";
+                String qtdItens = params.get("itens") instanceof List<?> l ? " (" + l.size() + " item(ns))" : "";
+                yield "Emitir nota de venda com lote específico" + cli + qtdItens;
+            }
+            case NOTA_VENDA_PROCEDURE_MYSQL_FIFO, NOTA_VENDA_PROCEDURE_MYSQL_LOTE ->
+                    "Baixar estoque via procedure para cliente " + formatarRefOp(params.get("idCliente"))
+                            + " (produto " + formatarRefOp(params.get("idProduto")) + ", qtd " + params.get("quantidade") + ")";
+            case NOTA_COMPRA_EMITIR -> {
+                String forn = params.get("idFornecedor") != null ? " do fornecedor " + formatarRefOp(params.get("idFornecedor")) : "";
+                String qtdItens = params.get("itens") instanceof List<?> l ? " (" + l.size() + " item(ns))" : "";
+                yield "Emitir nota fiscal de compra" + forn + qtdItens + " com entrada no estoque";
+            }
+            case NOTA_COMPRA_ABATER_PERDAS_FORNECEDOR -> "Abater perdas do fornecedor " + formatarRefOp(params.get("idFornecedor"))
+                    + " na nota de compra #" + params.get("idNotaCompra");
+            case NOTA_DEVOLUCAO_REGISTRAR -> "Registrar nota de devolução referente à nota #" + params.get("idNota");
             case NOTA_BUSCAR_UNICA -> "Buscar nota operacional única #" + (params.get("idNota") != null ? params.get("idNota") : params.get("id"));
             case NOTA_LISTAR_PADRAO -> "Listar notas operacionais registradas no sistema";
-            case NOTA_DEFINIR_DATA -> "Definir/atualizar a data da nota operacional #" + params.get("idNota");
+            case NOTA_DEFINIR_DATA -> "Definir/atualizar a data da nota operacional #" + params.get("idNota")
+                    + (params.get("dataGerada") != null ? " para " + params.get("dataGerada") : "");
             case FATOR_EXTERNO_RELATORIO_INTEGRADO_NOTAS -> "Gerar relatório integrado de fatores externos (Rios, Clima, Calendário e Eventos) citando cada Nota";
             case BUSCA_PADRAO_IA -> "Executar busca padrão estruturada de leitura da IA na entidade " + params.get("entidade");
             default -> rota.getDescricaoOperacao();
         };
+    }
+
+    private String formatarRefOp(Object ref) {
+        if (ref == null) return "?";
+        String s = ref.toString().trim();
+        if (s.toUpperCase(Locale.ROOT).startsWith("OP-")) return s.toUpperCase(Locale.ROOT);
+        return s.startsWith("#") ? s : "#" + s;
+    }
+
+    private String gerarBreveExplicacaoBandeja(BandejaOperacoesContexto bandeja) {
+        int total = bandeja.totalItens();
+        Map<String, Integer> resumoPorTipo = new LinkedHashMap<>();
+        for (ItemBandeja item : bandeja.getItens()) {
+            String rotulo = switch (item.getRota()) {
+                case PRODUTO_FISICO_CADASTRAR, PRODUTO_DIGITAL_CADASTRAR -> "cadastro(s) de produto";
+                case PRODUTO_CATALOGO_ATUALIZAR, PRODUTO_CATALOGO_ATUALIZAR_PRECO, PRODUTO_FISICO_ATUALIZAR_DIMENSOES -> "atualização(ões) de produto";
+                case PRODUTO_KIT_ADICIONAR_COMPONENTE -> "vínculo(s) de kit/conjunto";
+                case PRODUTO_CATALOGO_EXCLUIR -> "exclusão(ões) de produto";
+                case PRODUTO_UNIDADE_CADASTRAR, PRODUTO_UNIDADE_ATUALIZAR, PRODUTO_UNIDADE_EXCLUIR -> "ajuste(s) de unidade de medida";
+                case PRODUTO_IMAGEM_ADICIONAR, PRODUTO_IMAGEM_DEFINIR_PRINCIPAL, PRODUTO_IMAGEM_REMOVER -> "ajuste(s) de imagem de produto";
+                case PESSOA_SIMPLES_CADASTRAR, PESSOA_CLIENTE_PF_CADASTRAR, PESSOA_CLIENTE_PJ_CADASTRAR,
+                     PESSOA_FORNECEDOR_PF_CADASTRAR, PESSOA_FORNECEDOR_PJ_CADASTRAR -> "cadastro(s) de pessoa";
+                case PESSOA_DADOS_ATUALIZAR, PESSOA_CLIENTE_ATUALIZAR_LIMITE, PESSOA_REGISTRO_ADICIONAR -> "atualização(ões) de pessoa";
+                case PESSOA_CLIENTE_EXCLUIR -> "exclusão(ões) de pessoa";
+                case PAGAMENTO_FORMA_CADASTRAR, PAGAMENTO_FORMA_CUSTOMIZAR_REGRAS, PAGAMENTO_FORMA_ALTERAR_STATUS, PAGAMENTO_FORMA_EXCLUIR -> "configuração(ões) de forma de pagamento";
+                case PAGAMENTO_CRIAR_A_VISTA, PAGAMENTO_CRIAR_A_PRAZO, PAGAMENTO_CRIAR_PARCELADO, PAGAMENTO_QUITAR_TITULO_OU_PARCELA -> "lançamento(s)/quitação(ões) de pagamento";
+                case ESTOQUE_BAIXAR_PERDA_DIRETA -> "baixa(s) de perda em estoque";
+                case NOTA_COMPRA_EMITIR, NOTA_COMPRA_ABATER_PERDAS_FORNECEDOR -> "emissão(ões)/ajuste(s) de nota de compra";
+                case NOTA_VENDA_EMITIR_FIFO, NOTA_VENDA_EMITIR_BALCAO_CLIENTE_PADRAO, NOTA_VENDA_EMITIR_LOTE_DESEJAVEL,
+                     NOTA_VENDA_PROCEDURE_MYSQL_FIFO, NOTA_VENDA_PROCEDURE_MYSQL_LOTE -> "emissão(ões) de nota de venda";
+                case NOTA_DEVOLUCAO_REGISTRAR, NOTA_DEFINIR_DATA -> "registro/ajuste de nota";
+                default -> "operação(ões)";
+            };
+            resumoPorTipo.merge(rotulo, 1, Integer::sum);
+        }
+        StringBuilder detalhes = new StringBuilder();
+        for (Map.Entry<String, Integer> e : resumoPorTipo.entrySet()) {
+            if (detalhes.length() > 0) detalhes.append(", ");
+            detalhes.append(e.getValue()).append(" ").append(e.getKey());
+        }
+        return "Preparei " + total + " operação(ões) em lote (" + detalhes + "). Confira abaixo o que será executado antes de confirmar:";
     }
 
     private String formatarParametrosResumidos(Map<String, Object> params) {
@@ -669,7 +971,7 @@ public class GeminiAgenteOperacional {
                 StringBuilder sb = new StringBuilder(passo.formatarTexto());
                 if (bandeja.itensEmAberto().isEmpty()) {
                     fecharJanelaContexto(idSessao);
-                    sb.append("\n\nA bandeja está vazia, tudo foi tratado.");
+                    sb.append("\n\nA bandeja está vazia, tudo foi tratado. Contexto da operação zerado.");
                 } else {
                     sb.append("\n\n").append(bandeja.formatarVisualizacao());
                 }
@@ -695,8 +997,79 @@ public class GeminiAgenteOperacional {
                 return item == null ? "Não encontrei essa instrução na bandeja.\n\n" + bandeja.formatarVisualizacao()
                         : descreverItemBandeja(item, bandeja);
             }
+            case REMOVER -> {
+                var removido = bandeja.removerItemPorIdOuIndice(cmd.alvo());
+                if (removido == null) {
+                    return "Não encontrei essa instrução na bandeja.\n\n" + bandeja.formatarVisualizacao();
+                }
+                if (!bandeja.temItens()) {
+                    fecharJanelaContexto(idSessao);
+                    return "Removi " + removido.getIdItem() + ". A bandeja ficou vazia e o contexto foi encerrado.";
+                }
+                return "Removi " + removido.getIdItem() + " (" + removido.getDescricaoAmigavel() + ") da bandeja.\n\n"
+                        + bandeja.formatarVisualizacao();
+            }
             default -> {
                 return bandeja.formatarVisualizacao();
+            }
+        }
+    }
+
+    private String resumirBandejaParaEdicaoIA(BandejaOperacoesContexto bandeja) {
+        StringBuilder sb = new StringBuilder("[Bandeja de Contexto Atual - Em Edição]:\n");
+        for (ItemBandeja item : bandeja.getItens()) {
+            sb.append(" - ").append(item.getIdItem())
+              .append(" [").append(item.getRota().name()).append("] ")
+              .append(item.getDescricaoAmigavel())
+              .append(" | params=").append(item.getParametros()).append("\n");
+        }
+        sb.append("Se o usuário estiver corrigindo, modificando ou substituindo este plano, reemita TODAS as ferramentas de escrita corrigidas para substituir a bandeja via pós-processamento.");
+        return sb.toString();
+    }
+
+    private boolean ehIntencaoCorrecaoBandeja(String msg) {
+        if (msg == null || msg.isBlank()) return false;
+        String lower = msg.toLowerCase(Locale.ROOT).trim();
+        return lower.matches("^(?:n[aã]o|na\\s+verdade|em\\s+vez|ao\\s+inv[eé]s|corrig\\w*|ajust\\w*|modifi\\w*|alter\\w*|troc\\w*|substitu\\w*|refa[cz]\\w*|quero\\s+que\\s+(?:modifi|alter|troc|corrij|mud)).*");
+    }
+
+    private String extrairBlocoDsl(String texto) {
+        if (texto == null) return null;
+        String limpo = texto.replaceAll("(?s)```[a-zA-Z]*\\s*", "").replace("```", "").trim();
+        int idx = limpo.indexOf("$$");
+        if (idx < 0) return null;
+        String candidato = limpo.substring(idx).trim();
+        return CompiladorInstrucoesCurtaService.ehComandoEncurtado(candidato) ? candidato : null;
+    }
+
+    private boolean precisaFollowUpLeitura(String idSessao, List<ChamadaFerramenta> chamadasLeitura) {
+        if (chamadasLeitura != null && chamadasLeitura.size() > 1) return true;
+        List<Map<String, Object>> hist = historicoPorSessao.get(idSessao);
+        if (hist == null || hist.isEmpty()) return true;
+        String ultimaMsgUsuario = "";
+        for (int i = hist.size() - 1; i >= 0; i--) {
+            if ("user".equals(hist.get(i).get("role"))) {
+                Object partsObj = hist.get(i).get("parts");
+                if (partsObj instanceof List<?> parts && !parts.isEmpty() && parts.get(0) instanceof Map<?, ?> m) {
+                    Object txt = m.get("text");
+                    if (txt != null) ultimaMsgUsuario = txt.toString().toLowerCase(Locale.ROOT);
+                }
+                break;
+            }
+        }
+        if (ultimaMsgUsuario.isBlank()) return true;
+        return ultimaMsgUsuario.matches(".*\\b(criar|cria|crie|cadastr\\w*|atualiz\\w*|mud\\w*|alter\\w*|modifi\\w*|coloc\\w*|adicion\\w*|transform\\w*|edit\\w*|apag\\w*|exclu\\w*|delet\\w*|remov\\w*|compr\\w*|vend\\w*|registr\\w*|emiti\\w*|reajust\\w*|chance\\w*|correla\\w*|vencid\\w*|devolv\\w*|grau\\w*|clima|temperatura|dist[aâ]ncia|impact\\w*|padr[aã]o|padr[oõ]es|sazonal\\w*|estrag\\w*|motivo\\w*|estat[ií]st\\w*|compara\\w*|tend[eê]ncia|previs\\w*|quantos|quantas|soma\\w*|total|m[eé]dia|por\\s+que)\\b.*");
+    }
+
+    private void limparApenasBandejaParaReconstrucao(String idSessao) {
+        BandejaOperacoesContexto antiga = bandejasPorSessao.remove(idSessao);
+        if (antiga != null) {
+            antiga.fecharJanela();
+        }
+        Deque<String> fila = ticketsPendentesPorSessao.remove(idSessao);
+        if (fila != null) {
+            for (String tId : fila) {
+                gatekeeper.cancelarTicket(tId);
             }
         }
     }
@@ -744,7 +1117,7 @@ public class GeminiAgenteOperacional {
                         }
                     }
                     fecharJanelaContexto(idSessao);
-                    return relatorioFormatado;
+                    return relatorioFormatado + "\n\n✔ Contexto da operação zerado (bandeja limpa para a próxima instrução).";
                 }
                 case NAO -> {
                     fecharJanelaContexto(idSessao);
@@ -784,6 +1157,7 @@ public class GeminiAgenteOperacional {
                 }
                 if (fila.isEmpty()) {
                     fecharJanelaContexto(idSessao);
+                    resultado += "\n\n✔ Contexto da operação zerado (bandeja limpa para a próxima instrução).";
                 }
                 return resultado + proximaPergunta(idSessao);
             }
@@ -986,6 +1360,15 @@ public class GeminiAgenteOperacional {
 
         if (dados instanceof List<?> lista) {
             if (lista.isEmpty()) {
+                if (rota == RotaSistema.PRODUTO_ESTOQUE_VALIDO_LISTAR
+                        || rota == RotaSistema.ESTOQUE_LOTES_VALIDOS_LISTAR
+                        || rota == RotaSistema.ESTOQUE_FILA_LOTES_FIFO) {
+                    String estoqueFisicoFallback = formatarEstoqueFisicoQuandoValidoVazio();
+                    if (estoqueFisicoFallback != null) {
+                        return estoqueFisicoFallback;
+                    }
+                    return "Nenhum produto ou lote com estoque físico encontrado.";
+                }
                 return "Nenhum registro encontrado para os critérios informados.";
             }
             if (lista.get(0) instanceof Produto) {
@@ -1007,11 +1390,14 @@ public class GeminiAgenteOperacional {
                 }
                 for (Produto p : prodsLimpos) {
                     String umSigla = p.getUm() != null ? p.getUm().getSigla() : "UN";
-                    sb.append(String.format("  #%d - %s — R$ %s (%s)\n",
+                    String estoqueTexto = br.com.senac.integracao.ia.ferramentas.ResolvedorProduto
+                            .formatarSaldoEstoqueCurto(p, roteadorController, umSigla);
+                    sb.append(String.format("  #%d - %s — R$ %s (%s) | %s\n",
                             p.getId(),
                             CompiladorInstrucoesCurtaService.limparNomeExibicao(p.getNome(), umSigla),
                             p.getPrecoVenda() != null ? p.getPrecoVenda().setScale(2, java.math.RoundingMode.HALF_EVEN) : "0.00",
-                            umSigla));
+                            umSigla,
+                            estoqueTexto));
                 }
                 return sb.toString().trim();
             }
@@ -1061,10 +1447,17 @@ public class GeminiAgenteOperacional {
                 for (Object item : lista) {
                     if (item instanceof Nota n) {
                         String nomePes = n.getPessoa() != null ? CompiladorInstrucoesCurtaService.limparNomeExibicao(n.getPessoa().getNome(), null) : "Consumidor Padrão";
-                        sb.append(String.format("  Nota #%d (%s) — Data: %s, Pessoa: %s, Total: R$ %s\n",
-                                n.getId(), n.getClass().getSimpleName(),
+                        String statusValidade = "";
+                        if (n instanceof NotaPerda np) {
+                            statusValidade = np.isPerdaDentroDaValidade() ? " [Dentro da validade]" : " [VENCIDO]";
+                        }
+                        String desc = (n.getDescricao() != null && !n.getDescricao().isBlank())
+                                ? " | Obs: " + n.getDescricao().trim()
+                                : "";
+                        sb.append(String.format("  Nota #%d (%s)%s — Data: %s, Pessoa: %s, Total: R$ %s%s\n",
+                                n.getId(), n.getClass().getSimpleName(), statusValidade,
                                 n.getDataGerada() != null ? n.getDataGerada().toLocalDate() : "N/A",
-                                nomePes, n.getValorTotal()));
+                                nomePes, n.getValorTotal(), desc));
                     }
                 }
                 return sb.toString().trim();
@@ -1076,8 +1469,17 @@ public class GeminiAgenteOperacional {
         }
 
         if (dados instanceof Map<?, ?> map && map.containsKey("entidadeConsultada") && map.containsKey("dados")) {
+            String modoRetorno = map.get("modoRetorno") != null ? String.valueOf(map.get("modoRetorno")) : "";
+            if (("RESUMO".equalsIgnoreCase(modoRetorno) || "CONTAGEM".equalsIgnoreCase(modoRetorno))
+                    && map.get("resumoTexto") != null) {
+                return String.valueOf(map.get("resumoTexto"));
+            }
             Object interno = map.get("dados");
-            return formatarResultadoAmigavel(rota, params, interno);
+            String formatado = formatarResultadoAmigavel(rota, params, interno);
+            if (Boolean.TRUE.equals(map.get("temMais")) && map.get("avisoPaginacao") != null) {
+                return formatado + "\n\n" + map.get("avisoPaginacao");
+            }
+            return formatado;
         }
 
         if (dados instanceof Map<?, ?> map && map.containsKey("pessoa") && map.containsKey("notas")) {
@@ -1152,6 +1554,9 @@ public class GeminiAgenteOperacional {
               .append(pessoaLabel).append(": ").append(nomePessoa)
               .append(", Data: ").append(nota.getDataGerada() != null ? nota.getDataGerada().toLocalDate() : java.time.LocalDate.now())
               .append(", Total: R$ ").append(nota.getValorTotal() != null ? nota.getValorTotal().toPlainString() : "0.00").append("\n");
+            if (nota.getDescricao() != null && !nota.getDescricao().isBlank()) {
+                sb.append("  Descrição: ").append(nota.getDescricao().trim()).append("\n");
+            }
             if (nota.getItens() != null && !nota.getItens().isEmpty()) {
                 sb.append("  Itens (").append(nota.getItens().size()).append("):\n");
                 for (Item<? extends Produto> it : nota.getItens()) {
@@ -1167,12 +1572,16 @@ public class GeminiAgenteOperacional {
             return br.com.senac.integracao.ia.ferramentas.ResolvedorPessoa.formatarDetalhesCompletosPessoa(pes, roteadorController);
         }
         if (dados instanceof BigDecimal bd) {
+            if (rota == RotaSistema.ESTOQUE_SALDO_CONSOLIDADO) {
+                Long idProd = params != null ? extrairIdLong(params, "idProduto") : null;
+                return formatarSaldoConsolidadoComProduto(idProd, bd);
+            }
             return "Saldo/Valor: R$ " + bd.toPlainString();
         }
         if (dados instanceof Boolean b) {
             return b ? "Operação concluída com sucesso." : "A operação não teve efeito.";
         }
-        return String.valueOf(dados);
+        return FormatadorSaidaIA.formatarDadoEstruturado(rota, dados);
     }
 
     private Long extrairIdLong(Map<String, Object> params, String chave) {
@@ -1185,6 +1594,72 @@ public class GeminiAgenteOperacional {
             }
         }
         return null;
+    }
+
+    /** Formata o saldo consolidado exibindo a quantidade física e alerta em vermelho quando houver lote vencido. */
+    private String formatarSaldoConsolidadoComProduto(Long idProd, BigDecimal bd) {
+        BigDecimal saldoValido = bd != null ? bd : BigDecimal.ZERO;
+        BigDecimal saldoVencido = br.com.senac.integracao.ia.ferramentas.ResolvedorProduto
+                .consultarSaldoVencidoSeguro(idProd, roteadorController);
+        BigDecimal saldoFisico = saldoValido.add(saldoVencido);
+
+        String qtd = saldoFisico.compareTo(BigDecimal.ZERO) == 0
+                ? "0"
+                : saldoFisico.stripTrailingZeros().toPlainString();
+        String sufixo = saldoFisico.compareTo(BigDecimal.ZERO) <= 0
+                ? " (Sem estoque)"
+                : (saldoVencido.compareTo(BigDecimal.ZERO) > 0 ? " ⚠️ Há lote com produto vencido" : "");
+
+        if (idProd != null && roteadorController != null) {
+            try {
+                Produto p = roteadorController.produtos().buscarPorId(idProd);
+                if (p != null) {
+                    String umSigla = p.getUm() != null ? p.getUm().getSigla() : "UN";
+                    String nomeLimpo = CompiladorInstrucoesCurtaService.limparNomeExibicao(p.getNome(), umSigla);
+                    return String.format("Saldo em estoque — #%d %s: %s %s%s",
+                            p.getId(), nomeLimpo, qtd, umSigla, sufixo);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return "Saldo em estoque" + (idProd != null ? " (Produto #" + idProd + ")" : "")
+                + ": " + qtd + sufixo;
+    }
+
+    /** Lista o estoque físico dos lotes com saldo &gt; 0 quando as rotas de estoque válido retornam vazio. */
+    private String formatarEstoqueFisicoQuandoValidoVazio() {
+        if (roteadorController == null) return null;
+        try {
+            List<Item<? extends Produto>> lotes = roteadorController.estoque().listarTodosLotesFisicosComSaldo();
+            if (lotes == null || lotes.isEmpty()) return null;
+
+            java.time.LocalDate hoje = java.time.LocalDate.now();
+            StringBuilder sb = new StringBuilder();
+            sb.append("Estoque físico em lotes (").append(lotes.size()).append("):\n");
+            for (Item<? extends Produto> l : lotes) {
+                Produto p = l.getProduto();
+                String um = p != null && p.getUm() != null ? p.getUm().getSigla() : "UN";
+                String nome = p != null
+                        ? CompiladorInstrucoesCurtaService.limparNomeExibicao(p.getNome(), um)
+                        : "Produto";
+                Long idProd = p != null ? p.getId() : null;
+                String qtd = l.getQuantidadeDisponivel() != null
+                        ? l.getQuantidadeDisponivel().stripTrailingZeros().toPlainString()
+                        : "0";
+                boolean vencido = l.getDataValidade() != null && l.getDataValidade().isBefore(hoje);
+                sb.append(String.format("  #%s - %s — Lote #%d: %s %s (Validade: %s)%s\n",
+                        idProd != null ? idProd : "?",
+                        nome,
+                        l.getId(),
+                        qtd,
+                        um,
+                        l.getDataValidade() != null ? l.getDataValidade() : "Indeterminada",
+                        vencido ? " ⚠️ Há lote com produto vencido" : ""));
+            }
+            return sb.toString().trim();
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private String extrairChaveRecurso(Map<String, Object> params) {
@@ -1222,5 +1697,39 @@ public class GeminiAgenteOperacional {
 
     public PreProcessadorMensagem getPreProcessador() {
         return preProcessador;
+    }
+
+    private void registrarLogTurnoSeAtivo(
+            String idSessao,
+            String entradaUsuario,
+            String preProcessamento,
+            String enviadoParaIA,
+            String posProcessamento,
+            String retornoUsuario) {
+        if (!logFluxo.isAtivo()) {
+            return;
+        }
+        logFluxo.registrarTurno(idSessao, entradaUsuario, preProcessamento, enviadoParaIA, posProcessamento, retornoUsuario);
+    }
+
+    private String resumirRespostaIAParaLog(RespostaIA respostaIA) {
+        if (respostaIA == null) {
+            return "RespostaIA nula";
+        }
+        StringBuilder sb = new StringBuilder();
+        if (respostaIA.temChamadas()) {
+            sb.append("Chamadas de ferramenta (").append(respostaIA.chamadas().size()).append("): ");
+            for (int i = 0; i < respostaIA.chamadas().size(); i++) {
+                if (i > 0) sb.append(" | ");
+                var c = respostaIA.chamadas().get(i);
+                sb.append(c.rota()).append("(").append(c.parametros()).append(")");
+            }
+        } else {
+            sb.append("Sem chamadas de ferramenta.");
+        }
+        if (respostaIA.texto() != null && !respostaIA.texto().isBlank()) {
+            sb.append("\nTexto bruto da IA: ").append(respostaIA.texto().trim());
+        }
+        return sb.toString();
     }
 }

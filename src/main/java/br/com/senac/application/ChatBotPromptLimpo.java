@@ -1,6 +1,7 @@
 package br.com.senac.application;
 
 import br.com.senac.integracao.gemini.GeminiAgenteOperacional;
+import br.com.senac.integracao.ia.FormatadorSaidaIA;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
@@ -62,7 +63,7 @@ public class ChatBotPromptLimpo {
                     String resposta = agente.processarMensagem(sessao, entrada);
                     String limpa = ChatBotTerminal.limparPoluicaoVisual(resposta);
                     if (!limpa.isEmpty()) {
-                        System.out.println("\n" + limpa);
+                        System.out.println("\n" + FormatadorSaidaIA.formatarParaTerminalAnsi(limpa));
                     }
                 } catch (Throwable ignored) {
                     System.out.println("\nNão foi possível concluir essa ação agora. Verifique os dados e tente novamente.");

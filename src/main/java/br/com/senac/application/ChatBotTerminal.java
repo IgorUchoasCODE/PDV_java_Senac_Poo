@@ -4,6 +4,7 @@ import br.com.senac.controller.RotaSistema;
 import br.com.senac.integracao.gemini.GeminiAgenteOperacional;
 import br.com.senac.integracao.gemini.GeminiConfig;
 import br.com.senac.integracao.ia.ConfigIA;
+import br.com.senac.integracao.ia.FormatadorSaidaIA;
 import br.com.senac.integracao.ia.ManualInstrucoesIA;
 
 import java.io.File;
@@ -51,6 +52,7 @@ public class ChatBotTerminal {
 
             // Comandos especiais do terminal
             if (entrada.equalsIgnoreCase(":sair") || entrada.equalsIgnoreCase(":exit") || entrada.equalsIgnoreCase(":q")) {
+                exibirLogsAoSair(agente, sessaoTerminal);
                 System.out.println(CIANO + "\nEncerrando ChatBot Terminal do Sazonalisei. Até logo!\n" + RESET);
                 break;
             }
@@ -62,6 +64,7 @@ public class ChatBotTerminal {
 
             if (entrada.equalsIgnoreCase(":limpar") || entrada.equalsIgnoreCase(":cls") || entrada.equalsIgnoreCase(":clear")) {
                 agente.fecharJanelaContexto(sessaoTerminal);
+                exibirLogsSeBandejaFinalizada(agente, sessaoTerminal);
                 limparTela();
                 exibirBanner(agente);
                 System.out.println(VERDE + "✔ Janela de contexto e bandeja foram reiniciadas limpas." + RESET);
@@ -76,6 +79,12 @@ public class ChatBotTerminal {
             if (entrada.equalsIgnoreCase(":fechar")) {
                 agente.fecharJanelaContexto(sessaoTerminal);
                 System.out.println(VERDE + "✔ Janela de contexto encerrada com sucesso. Sessão limpa e pronta!" + RESET);
+                exibirLogsSeBandejaFinalizada(agente, sessaoTerminal);
+                continue;
+            }
+
+            if (entrada.equalsIgnoreCase(":logs") || entrada.toLowerCase().startsWith(":logs ")) {
+                tratarComandoLogs(agente, sessaoTerminal, entrada);
                 continue;
             }
 
@@ -106,12 +115,85 @@ public class ChatBotTerminal {
                 continue;
             }
 
-            // Envia o comando para o Agente Operacional sem poluição visual
-            String resposta = agente.processarMensagem(sessaoTerminal, entrada);
+            // Envia o comando para o Agente Operacional com indicador de progresso e cancelamento seguro
+            String resposta = executarComIndicadorProgresso(agente, sessaoTerminal, entrada, scanner);
             exibirRespostaFormatada(resposta);
+            exibirLogsSeBandejaFinalizada(agente, sessaoTerminal);
         }
 
+        exibirLogsAoSair(agente, sessaoTerminal);
         scanner.close();
+    }
+
+    private static String executarComIndicadorProgresso(
+            GeminiAgenteOperacional agente,
+            String sessaoTerminal,
+            String entrada,
+            Scanner scanner) {
+        java.util.concurrent.atomic.AtomicReference<String> etapaAtual =
+                new java.util.concurrent.atomic.AtomicReference<>("Processando");
+        java.util.concurrent.atomic.AtomicReference<String> resultado =
+                new java.util.concurrent.atomic.AtomicReference<>();
+        java.util.concurrent.atomic.AtomicBoolean concluido =
+                new java.util.concurrent.atomic.AtomicBoolean(false);
+
+        Thread worker = Thread.startVirtualThread(() -> {
+            agente.definirListenerProgresso(etapa -> etapaAtual.set(etapa.replace("...", "").trim()));
+            try {
+                resultado.set(agente.processarMensagem(sessaoTerminal, entrada));
+            } catch (Exception e) {
+                resultado.set("⚠️ Não foi possível concluir a operação: " + e.getMessage());
+            } finally {
+                agente.limparListenerProgresso();
+                concluido.set(true);
+            }
+        });
+
+        String[] pontos = {".", "..", "...", "....", "....."};
+        int tick = 0;
+        boolean cancelado = false;
+        while (!concluido.get()) {
+            String linhaStatus = String.format("\r%s  ⏳ %s%s (X + Enter para cancelar)%s",
+                    CIANO, etapaAtual.get(), pontos[tick % pontos.length], RESET);
+            System.out.print(linhaStatus + "   ");
+            System.out.flush();
+            tick++;
+
+            try {
+                if (System.in.available() > 0 && scanner.hasNextLine()) {
+                    String cmd = scanner.nextLine().trim();
+                    if (cmd.equalsIgnoreCase("x") || cmd.equalsIgnoreCase("c")
+                            || cmd.equalsIgnoreCase("cancelar")) {
+                        worker.interrupt();
+                        cancelado = true;
+                        break;
+                    }
+                }
+            } catch (Exception ignored) {}
+
+            try {
+                Thread.sleep(180);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+
+        // Limpa a linha de status animada
+        System.out.print("\r" + " ".repeat(72) + "\r");
+        System.out.flush();
+
+        // Descarta eventuais teclas digitadas por engano durante o bloqueio de escrita
+        try {
+            while (System.in.available() > 0 && scanner.hasNextLine()) {
+                scanner.nextLine();
+            }
+        } catch (Exception ignored) {}
+
+        if (cancelado) {
+            return "⚠️ Operação cancelada pelo usuário. Nenhuma alteração pendente foi corrompida.";
+        }
+        return resultado.get() != null ? resultado.get() : "";
     }
 
     private static void processarComandoAudio(GeminiAgenteOperacional agente, String idSessao, String caminhoArquivo) {
@@ -168,7 +250,7 @@ public class ChatBotTerminal {
     private static void exibirRespostaFormatada(String resposta) {
         String limpa = limparPoluicaoVisual(resposta);
         if (!limpa.isEmpty()) {
-            System.out.println("\n" + limpa);
+            System.out.println("\n" + FormatadorSaidaIA.formatarParaTerminalAnsi(limpa));
         }
     }
 
@@ -185,7 +267,7 @@ public class ChatBotTerminal {
         System.out.println(" • Rotas Oficiais: " + CIANO + RotaSistema.values().length + " rotas do RoteadorController integradas" + RESET);
         System.out.println(CIANO + "--------------------------------------------------------------------------------" + RESET);
         System.out.println(" Digite em linguagem natural (ex: 'qual o preço do produto 86?', 'listar produtos')");
-        System.out.println(" Comandos: " + NEGRITO + ":ajuda" + RESET + " | " + NEGRITO + ":bandeja" + RESET + " | " + NEGRITO + ":fechar" + RESET + " | " + NEGRITO + ":rotas" + RESET + " | " + NEGRITO + ":persona <texto>" + RESET + " | " + NEGRITO + ":sair" + RESET);
+        System.out.println(" Comandos: " + NEGRITO + ":ajuda" + RESET + " | " + NEGRITO + ":bandeja" + RESET + " | " + NEGRITO + ":fechar" + RESET + " | " + NEGRITO + ":logs" + RESET + " | " + NEGRITO + ":rotas" + RESET + " | " + NEGRITO + ":persona <texto>" + RESET + " | " + NEGRITO + ":sair" + RESET);
         System.out.println(CIANO + "================================================================================" + RESET);
     }
 
@@ -194,6 +276,7 @@ public class ChatBotTerminal {
         System.out.println("  • " + VERDE + "<texto livre>" + RESET + "       : Envia comando em linguagem natural para a IA.");
         System.out.println("  • " + VERDE + ":bandeja" + RESET + "            : Exibe o status atual da Bandeja de Contexto (instruções validadas e pendentes).");
         System.out.println("  • " + VERDE + ":fechar" + RESET + "             : Encerra e limpa a janela de contexto atual (descarta pendências e limpa memória).");
+        System.out.println("  • " + VERDE + ":logs [on|off|ver]" + RESET + "  : Ativa/desativa o salvamento de logs do fluxo (pré, IA, pós e retorno) e exibe ao finalizar a bandeja ou sair.");
         System.out.println("  • " + VERDE + ":rotas" + RESET + "              : Exibe o catálogo completo de rotas oficiais mapeadas.");
         System.out.println("  • " + VERDE + ":audio <arquivo>" + RESET + "     : Envia um arquivo de áudio (.wav, .mp3, .webm) para transcrição e ação.");
         System.out.println("  • " + VERDE + ":imagem <arquivo>" + RESET + "    : Envia foto ou scan (.png, .jpg) para análise multimodal.");
@@ -227,6 +310,50 @@ public class ChatBotTerminal {
                 System.out.flush();
             }
         } catch (Exception ignored) {}
+    }
+
+    private static void tratarComandoLogs(GeminiAgenteOperacional agente, String sessaoTerminal, String entrada) {
+        String arg = entrada.length() > 5 ? entrada.substring(5).trim().toLowerCase(java.util.Locale.ROOT) : "";
+        if (arg.equals("ver") || arg.equals("mostrar")) {
+            String relatorio = agente.getLogFluxo().visualizarRelatorioAtual(sessaoTerminal);
+            if (relatorio == null) {
+                System.out.println(AMARELO + "ℹ️ Nenhum log registrado na sessão atual (status: "
+                        + (agente.isSalvamentoLogsAtivo() ? "ATIVO" : "DESATIVADO") + ")." + RESET);
+            } else {
+                System.out.println("\n" + CIANO + relatorio + RESET);
+            }
+            return;
+        }
+        boolean novoEstado;
+        if (arg.equals("on") || arg.equals("ativar") || arg.equals("1") || arg.equals("sim")) {
+            novoEstado = true;
+        } else if (arg.equals("off") || arg.equals("desativar") || arg.equals("0") || arg.equals("nao") || arg.equals("não")) {
+            novoEstado = false;
+        } else {
+            novoEstado = !agente.isSalvamentoLogsAtivo();
+        }
+        agente.ativarSalvamentoLogs(novoEstado);
+        if (novoEstado) {
+            System.out.println(VERDE + "✔ Salvamento de logs do fluxo IA ATIVADO." + RESET);
+            System.out.println(CIANO + "  • Arquivo: " + agente.getLogFluxo().getArquivoLogAtual() + RESET);
+            System.out.println(CIANO + "  • Exibição automática ao finalizar a Bandeja de Contexto ou ao sair (:sair)." + RESET);
+        } else {
+            System.out.println(AMARELO + "⏸️ Salvamento de logs do fluxo IA DESATIVADO." + RESET);
+        }
+    }
+
+    private static void exibirLogsSeBandejaFinalizada(GeminiAgenteOperacional agente, String sessaoTerminal) {
+        String relatorio = agente.consumirLogsFluxoSeBandejaFinalizada(sessaoTerminal);
+        if (relatorio != null) {
+            System.out.println("\n" + CIANO + relatorio + RESET);
+        }
+    }
+
+    private static void exibirLogsAoSair(GeminiAgenteOperacional agente, String sessaoTerminal) {
+        String relatorio = agente.consumirLogsFluxoAoSair(sessaoTerminal);
+        if (relatorio != null) {
+            System.out.println("\n" + CIANO + relatorio + RESET);
+        }
     }
 
     public static void silenciarLogsTecnicos() {

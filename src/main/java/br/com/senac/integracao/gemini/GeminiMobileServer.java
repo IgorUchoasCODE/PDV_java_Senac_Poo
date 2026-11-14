@@ -3,6 +3,7 @@ package br.com.senac.integracao.gemini;
 import br.com.senac.controller.RespostaEndpoint;
 import br.com.senac.controller.RotaSistema;
 import br.com.senac.controller.RoteadorController;
+import br.com.senac.integracao.ia.FormatadorSaidaIA;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
@@ -137,9 +138,14 @@ public class GeminiMobileServer {
             String mensagem = json.path("mensagem").asText("");
             String sessao = json.path("sessao").asText("mobile-user");
 
-            String resposta = agente.processarMensagem(sessao, mensagem);
+            FormatadorSaidaIA.RespostaFormatadaIA formatada = agente.processarMensagemFormatada(sessao, mensagem);
 
-            enviarJsonResposta(exchange, 200, Map.of("resposta", resposta));
+            enviarJsonResposta(exchange, 200, Map.of(
+                    "resposta", formatada.textoPuroFormatado(),
+                    "respostaHtml", formatada.htmlFormatado(),
+                    "totalPalavras", formatada.totalPalavras(),
+                    "totalLinhas", formatada.totalLinhas()
+            ));
         }
     }
 
@@ -296,7 +302,14 @@ public class GeminiMobileServer {
             String texto = json.path("texto").asText("");
             String sessao = json.path("sessao").asText("mobile-user");
 
-            enviarJsonResposta(exchange, 200, Map.of("resposta", agente.processarRespostaExterna(sessao, texto)));
+            String resposta = agente.processarRespostaExterna(sessao, texto);
+            FormatadorSaidaIA.RespostaFormatadaIA formatada = FormatadorSaidaIA.formatar(resposta);
+            enviarJsonResposta(exchange, 200, Map.of(
+                    "resposta", formatada.textoPuroFormatado(),
+                    "respostaHtml", formatada.htmlFormatado(),
+                    "totalPalavras", formatada.totalPalavras(),
+                    "totalLinhas", formatada.totalLinhas()
+            ));
         }
     }
 
@@ -573,7 +586,7 @@ public class GeminiMobileServer {
                 });
                 const data = await res.json();
                 loading.remove();
-                appendMsg(data.resposta || data.erro);
+                appendMsg(data.respostaHtml || data.resposta || data.erro, false, false, !!data.respostaHtml);
                 txtRespostaIA.value = '';
             } catch (err) {
                 loading.remove();
@@ -581,10 +594,14 @@ public class GeminiMobileServer {
             }
         };
 
-        function appendMsg(text, isUser = false, isLoading = false) {
+        function appendMsg(text, isUser = false, isLoading = false, isHtml = false) {
             const div = document.createElement('div');
             div.className = 'msg ' + (isUser ? 'msg-user' : 'msg-ia') + (isLoading ? ' msg-loading' : '');
-            div.innerText = text;
+            if (isHtml && !isUser) {
+                div.innerHTML = text;
+            } else {
+                div.innerText = text;
+            }
             chat.appendChild(div);
             chat.scrollTop = chat.scrollHeight;
             return div;
@@ -604,7 +621,7 @@ public class GeminiMobileServer {
                 });
                 const data = await res.json();
                 loading.remove();
-                appendMsg(data.resposta || data.erro);
+                appendMsg(data.respostaHtml || data.resposta || data.erro, false, false, !!data.respostaHtml);
             } catch (err) {
                 loading.remove();
                 appendMsg('Erro de conexão: ' + err.message);

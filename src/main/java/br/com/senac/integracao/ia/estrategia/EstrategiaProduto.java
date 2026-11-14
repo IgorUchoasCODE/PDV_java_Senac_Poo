@@ -350,15 +350,14 @@ public class EstrategiaProduto implements EstrategiaInstrucao {
             }
             StringBuilder sb = new StringBuilder("Produtos encontrados para '" + termo + "':\n");
             for (Produto p : filtrados.stream().limit(10).toList()) {
-                BigDecimal saldo = ctx.roteador().estoque().consultarSaldoTotalProduto(p.getId());
                 String umSigla = p.getUm() != null ? p.getUm().getSigla() : "UN";
                 String tipo = p.isDigital() ? "Digital" : "Físico";
                 String kit = p.isConjunto() ? "Kit/Conjunto" : "Simples";
-                sb.append(String.format("  • #%d - %s (%s): R$ %s [%s | %s] (Estoque: %s)\n",
+                String estoqueTexto = ResolvedorProduto.formatarSaldoEstoqueCurto(p, ctx.roteador(), umSigla);
+                sb.append(String.format("  • #%d - %s (%s): R$ %s [%s | %s] (%s)\n",
                         p.getId(), ResolvedorProduto.limparNomeExibicao(p.getNome(), umSigla),
                         umSigla, FormatadorMoeda.moeda(p.getPrecoVenda()),
-                        tipo, kit,
-                        saldo != null ? saldo.stripTrailingZeros().toPlainString() : "0"));
+                        tipo, kit, estoqueTexto));
             }
             return sb.toString().trim();
         }
@@ -367,9 +366,10 @@ public class EstrategiaProduto implements EstrategiaInstrucao {
         StringBuilder sb = new StringBuilder("Produtos no catálogo (" + unicos.size() + " itens):\n");
         for (Produto p : unicos.stream().limit(15).toList()) {
             String umSigla = p.getUm() != null ? p.getUm().getSigla() : "UN";
-            sb.append(String.format("  • #%d - %s (%s) — R$ %s\n",
+            String estoqueTexto = ResolvedorProduto.formatarSaldoEstoqueCurto(p, ctx.roteador(), umSigla);
+            sb.append(String.format("  • #%d - %s (%s) — R$ %s | %s\n",
                     p.getId(), ResolvedorProduto.limparNomeExibicao(p.getNome(), umSigla),
-                    umSigla, FormatadorMoeda.moeda(p.getPrecoVenda())));
+                    umSigla, FormatadorMoeda.moeda(p.getPrecoVenda()), estoqueTexto));
         }
         if (unicos.size() > 15) {
             sb.append(String.format("  ... e mais %d produto(s). Use 'nm> ...' para refinar.", unicos.size() - 15));

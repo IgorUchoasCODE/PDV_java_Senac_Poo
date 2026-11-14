@@ -249,62 +249,100 @@ public class BandejaOperacoesContexto {
     public synchronized RelatorioExecucaoBandeja executarTodasValidadas(RoteadorController roteador) {
         PadraoDAO.desbloquearTodosDaSessao(idSessao);
         List<ItemBandeja> validados = getItensValidados();
-        int sucessos = 0;
-        int falhas = 0;
         List<RelatorioExecucaoBandeja.ItemExecutado> detalhes = new ArrayList<>();
         Map<String, Long> idsCriadosPorItem = new LinkedHashMap<>();
+        java.util.Set<String> jaExecutados = new java.util.HashSet<>();
+        java.util.Set<String> emExecucao = new java.util.HashSet<>();
+        Map<String, ItemBandeja> mapaValidados = new LinkedHashMap<>();
+        for (ItemBandeja v : validados) {
+            mapaValidados.put(v.getIdItem().toUpperCase(Locale.ROOT), v);
+        }
 
         for (ItemBandeja item : validados) {
-            try {
-                // Resolve referências a itens anteriores executados no mesmo lote (ex.: idProdutoKit = "OP-1")
-                resolverReferenciasDinamicas(item, idsCriadosPorItem);
+            executarItemComDependencias(item, roteador, mapaValidados, idsCriadosPorItem, jaExecutados, emExecucao, detalhes);
+        }
 
-                RespostaEndpoint<Object> resp = roteador.executarEndpoint(item.getRota(), item.getParametros());
-                if (resp.sucesso()) {
-                    sucessos++;
-                    item.setResultadoExecucao(resp.dados());
-                    Long idGerado = extrairIdResultado(resp.dados());
-                    if (idGerado != null) {
-                        idsCriadosPorItem.put(item.getIdItem().toUpperCase(Locale.ROOT), idGerado);
+        int sucessos = (int) detalhes.stream().filter(RelatorioExecucaoBandeja.ItemExecutado::sucesso).count();
+        int falhas = detalhes.size() - sucessos;
+        return new RelatorioExecucaoBandeja(validados.size(), sucessos, falhas, detalhes);
+    }
+
+    private void executarItemComDependencias(
+            ItemBandeja item,
+            RoteadorController roteador,
+            Map<String, ItemBandeja> mapaValidados,
+            Map<String, Long> idsCriadosPorItem,
+            java.util.Set<String> jaExecutados,
+            java.util.Set<String> emExecucao,
+            List<RelatorioExecucaoBandeja.ItemExecutado> detalhes) {
+        String idUpper = item.getIdItem().toUpperCase(Locale.ROOT);
+        if (jaExecutados.contains(idUpper) || !emExecucao.add(idUpper)) {
+            return;
+        }
+        try {
+            // Executa antes eventuais sub-instruções referenciadas por "OP-N" (ex: idCliente="OP-2")
+            for (Object valor : item.getParametros().values()) {
+                if (valor instanceof String s) {
+                    String ref = s.trim().toUpperCase(Locale.ROOT);
+                    if (ref.startsWith("OP-") && !ref.equals(idUpper)) {
+                        ItemBandeja dep = mapaValidados.get(ref);
+                        if (dep != null && !jaExecutados.contains(ref)) {
+                            executarItemComDependencias(dep, roteador, mapaValidados, idsCriadosPorItem, jaExecutados, emExecucao, detalhes);
+                        }
                     }
-                    detalhes.add(new RelatorioExecucaoBandeja.ItemExecutado(
-                            item.getIdItem(),
-                            item.getRota().name(),
-                            item.getDescricaoAmigavel(),
-                            true,
-                            resp.mensagem() != null ? resp.mensagem() : "Executado com sucesso.",
-                            resp.dados(),
-                            item.getParametros()
-                    ));
-                } else {
-                    falhas++;
-                    item.setMensagemErro(resp.mensagem());
-                    detalhes.add(new RelatorioExecucaoBandeja.ItemExecutado(
-                            item.getIdItem(),
-                            item.getRota().name(),
-                            item.getDescricaoAmigavel(),
-                            false,
-                            resp.mensagem() != null ? resp.mensagem() : "Falha na execução.",
-                            null,
-                            item.getParametros()
-                    ));
                 }
-            } catch (Exception e) {
-                falhas++;
-                item.setMensagemErro(e.getMessage());
+            }
+
+            // Resolve referências a sub-instruções já executadas no mesmo lote (ex.: idProdutoKit = "OP-1", idCliente = "OP-2")
+            resolverReferenciasDinamicas(item, idsCriadosPorItem);
+
+            // Se uma venda/compra foi enfileirada no mesmo lote que um cadastro de pessoa sem idCliente/idFornecedor explícito,
+            // vincula automaticamente a pessoa recém-cadastrada no lote (evita cair em CONSUMIDOR FINAL por omissão da IA).
+            vincularPessoaDoMesmoLoteSeOmitida(item, mapaValidados, idsCriadosPorItem, jaExecutados, emExecucao, roteador, detalhes);
+
+            RespostaEndpoint<Object> resp = roteador.executarEndpoint(item.getRota(), item.getParametros());
+            if (resp.sucesso()) {
+                item.setResultadoExecucao(resp.dados());
+                Long idGerado = extrairIdResultado(resp.dados());
+                if (idGerado != null) {
+                    idsCriadosPorItem.put(idUpper, idGerado);
+                }
+                detalhes.add(new RelatorioExecucaoBandeja.ItemExecutado(
+                        item.getIdItem(),
+                        item.getRota().name(),
+                        item.getDescricaoAmigavel(),
+                        true,
+                        resp.mensagem() != null ? resp.mensagem() : "Executado com sucesso.",
+                        resp.dados(),
+                        item.getParametros()
+                ));
+            } else {
+                item.setMensagemErro(resp.mensagem());
                 detalhes.add(new RelatorioExecucaoBandeja.ItemExecutado(
                         item.getIdItem(),
                         item.getRota().name(),
                         item.getDescricaoAmigavel(),
                         false,
-                        "Erro inesperado: " + e.getMessage(),
+                        resp.mensagem() != null ? resp.mensagem() : "Falha na execução.",
                         null,
                         item.getParametros()
                 ));
             }
+        } catch (Exception e) {
+            item.setMensagemErro(e.getMessage());
+            detalhes.add(new RelatorioExecucaoBandeja.ItemExecutado(
+                    item.getIdItem(),
+                    item.getRota().name(),
+                    item.getDescricaoAmigavel(),
+                    false,
+                    "Erro inesperado: " + e.getMessage(),
+                    null,
+                    item.getParametros()
+            ));
+        } finally {
+            emExecucao.remove(idUpper);
+            jaExecutados.add(idUpper);
         }
-
-        return new RelatorioExecucaoBandeja(validados.size(), sucessos, falhas, detalhes);
     }
 
     /**
@@ -443,6 +481,50 @@ public class BandejaOperacoesContexto {
         }
 
         return sb.toString().trim();
+    }
+
+    private void vincularPessoaDoMesmoLoteSeOmitida(
+            ItemBandeja item,
+            Map<String, ItemBandeja> mapaValidados,
+            Map<String, Long> idsCriadosPorItem,
+            java.util.Set<String> jaExecutados,
+            java.util.Set<String> emExecucao,
+            RoteadorController roteador,
+            List<RelatorioExecucaoBandeja.ItemExecutado> detalhes) {
+        if (item.getRota() == null) return;
+        String rotaNome = item.getRota().name();
+        boolean ehVenda = rotaNome.startsWith("NOTA_VENDA_EMITIR_")
+                && !rotaNome.equals("NOTA_VENDA_EMITIR_BALCAO_CLIENTE_PADRAO");
+        boolean ehCompra = rotaNome.equals("NOTA_COMPRA_EMITIR");
+        if (!ehVenda && !ehCompra) return;
+
+        Map<String, Object> p = item.getParametrosModificaveis();
+        String campoChave = ehVenda ? "idCliente" : "idFornecedor";
+        String campoNome = ehVenda ? "nomeCliente" : "nomeFornecedor";
+        boolean temPessoa = (p.get(campoChave) != null && !p.get(campoChave).toString().isBlank())
+                || (p.get("idPessoa") != null && !p.get("idPessoa").toString().isBlank())
+                || (p.get(campoNome) != null && !p.get(campoNome).toString().isBlank());
+        if (temPessoa) return;
+
+        ItemBandeja pessoaCadastro = null;
+        for (ItemBandeja candidato : mapaValidados.values()) {
+            if (candidato.getRota() != null
+                    && candidato.getRota().name().startsWith("PESSOA_")
+                    && candidato.getRota().name().endsWith("_CADASTRAR")) {
+                pessoaCadastro = candidato;
+                break;
+            }
+        }
+        if (pessoaCadastro == null) return;
+
+        String depId = pessoaCadastro.getIdItem().toUpperCase(Locale.ROOT);
+        if (!jaExecutados.contains(depId)) {
+            executarItemComDependencias(pessoaCadastro, roteador, mapaValidados, idsCriadosPorItem, jaExecutados, emExecucao, detalhes);
+        }
+        Long idPessoaCriada = idsCriadosPorItem.get(depId);
+        if (idPessoaCriada != null) {
+            p.put(campoChave, idPessoaCriada);
+        }
     }
 
     private void resolverReferenciasDinamicas(ItemBandeja item, Map<String, Long> idsCriados) {

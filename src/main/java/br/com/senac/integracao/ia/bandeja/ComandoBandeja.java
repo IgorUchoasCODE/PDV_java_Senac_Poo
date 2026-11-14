@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
 public record ComandoBandeja(Acao acao, String alvo) {
 
     public enum Acao {
-        EXECUTAR_ITEM, EXECUTAR_PROXIMO, PULAR, RETOMAR, ANTERIOR, IR_PARA, VER
+        EXECUTAR_ITEM, EXECUTAR_PROXIMO, PULAR, RETOMAR, ANTERIOR, IR_PARA, VER, REMOVER
     }
 
     private static final String ALVO = "(?:item\\s+|instrucao\\s+|op\\s*-?\\s*)?(\\d+)";
@@ -33,6 +33,8 @@ public record ComandoBandeja(Acao acao, String alvo) {
             Pattern.compile("^(?:anterior|voltar|volta|item anterior|instrucao anterior)$");
     private static final Pattern IR_PARA =
             Pattern.compile("^(?:ir para|vai para|ver|mostrar|mostra|abrir)\\s+(?:a\\s+|o\\s+)?" + ALVO + "$");
+    private static final Pattern REMOVER =
+            Pattern.compile("^(?:remover|remove|remova|tirar|tira|tire|excluir|exclui|exclua|apagar|apaga|apague)\\s+(?:a\\s+|o\\s+)?" + ALVO + "$");
     private static final Pattern VER =
             Pattern.compile("^(?:ver bandeja|mostrar bandeja|mostra bandeja|bandeja|o que falta|o que tem na bandeja)$");
 
@@ -55,6 +57,8 @@ public record ComandoBandeja(Acao acao, String alvo) {
         if (ANTERIOR.matcher(t).matches()) return Optional.of(new ComandoBandeja(Acao.ANTERIOR, null));
         m = IR_PARA.matcher(t);
         if (m.matches()) return Optional.of(new ComandoBandeja(Acao.IR_PARA, idOp(m.group(1))));
+        m = REMOVER.matcher(t);
+        if (m.matches()) return Optional.of(new ComandoBandeja(Acao.REMOVER, idOp(m.group(1))));
         if (VER.matcher(t).matches()) return Optional.of(new ComandoBandeja(Acao.VER, null));
         return Optional.empty();
     }

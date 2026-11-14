@@ -27,6 +27,9 @@ public class GeminiToolRegistry {
         if (cacheDeclaracoesTools == null) {
             List<Map<String, Object>> tools = new ArrayList<>();
             for (RotaSistema rota : RotaSistema.values()) {
+                if (rota == RotaSistema.SISTEMA_RESETAR_BANCO_RESTRITO) {
+                    continue; // Operação administrativa restrita: nunca exposta ao agente de IA
+                }
                 Map<String, Object> func = new LinkedHashMap<>();
                 func.put("name", rota.getNomeFuncaoGemini());
                 func.put("description", construirDescricaoEnriquecida(rota));
@@ -96,11 +99,24 @@ public class GeminiToolRegistry {
             case SISTEMA_INICIALIZAR_DADOS_PADRAO -> {
             }
             case BUSCA_PADRAO_IA -> {
-                props.put("entidade", prop("STRING", "Entidade/DAO alvo da busca padrão: 'PRODUTO', 'PRODUTO_ESTOQUE_VALIDO', 'PRODUTOS_ESTOQUE_VALIDO', 'PESSOA', 'REGISTRO', 'LOTE_VALIDO', 'LOTES_VALIDOS', 'NOTA', 'UNIDADE_MEDIDA', 'FORMA_PAGAMENTO', 'FATOR_EXTERNO_NOTAS'"));
-                props.put("id", prop("INTEGER", "ID numérico único do registro (opcional se informar termo/nome/documento)"));
-                props.put("termo", prop("STRING", "Termo de busca: nome do produto, nome da pessoa, número de registro/CPF/CNPJ, sigla ou código (opcional)"));
-                props.put("unico", prop("BOOLEAN", "True para retornar informação única (1 registro com fallback), False para listagem (padrão: true quando houver id/termo)"));
-                props.put("apenasEstoqueValido", prop("BOOLEAN", "True para filtrar apenas produtos/lotes com estoque válido disponível e dentro da validade"));
+                props.put("entidade", prop("STRING", "Entidade alvo: 'PRODUTO', 'ESTOQUE', 'PRODUTO_ESTOQUE_VALIDO', 'PRODUTOS_ESTOQUE_VALIDO', 'PESSOA', 'CLIENTE', 'FORNECEDOR', 'REGISTRO', 'LOTE_VALIDO', 'LOTES_VALIDOS', 'NOTA', 'UNIDADE_MEDIDA', 'FORMA_PAGAMENTO', 'FATOR_EXTERNO_NOTAS'"));
+                props.put("id", prop("INTEGER", "ID numérico único do registro (opcional)"));
+                props.put("termo", prop("STRING", "Termo de inclusão: nome, descrição, CPF/CNPJ ou sigla (opcional)"));
+                props.put("excluiTermos", prop("STRING", "Termos separados por vírgula a EXCLUIR (ex: 'cartela,caixa' quando pedir apenas ovo avulso)"));
+                props.put("unidade", prop("STRING", "Filtro opcional por sigla da unidade de medida (ex: 'UN', 'CX')"));
+                props.put("tipoNota", prop("STRING", "Filtro opcional para NOTA: 'COMPRA', 'VENDA', 'DEVOLUCAO', 'PERDA'"));
+                props.put("idMin", prop("INTEGER", "Limite inferior opcional de ID (intervalo)"));
+                props.put("idMax", prop("INTEGER", "Limite superior opcional de ID (intervalo)"));
+                props.put("valorMin", prop("STRING", "Valor/preço mínimo opcional (intervalo)"));
+                props.put("valorMax", prop("STRING", "Valor/preço máximo opcional (intervalo)"));
+                props.put("dataInicio", prop("STRING", "Data inicial opcional ('YYYY-MM-DD', 'hoje', 'ontem')"));
+                props.put("dataFim", prop("STRING", "Data final opcional ('YYYY-MM-DD', 'hoje', 'ontem')"));
+                props.put("modo", prop("STRING", "Formato do retorno: 'UNICO', 'LISTA' (padrão paginado), 'RESUMO' (totais e amostra) ou 'CONTAGEM'"));
+                props.put("limite", prop("INTEGER", "Máximo de registros por página (padrão: 15)"));
+                props.put("offset", prop("INTEGER", "Deslocamento para paginação ('ver mais', padrão: 0)"));
+                props.put("unico", prop("BOOLEAN", "True para retornar 1 registro, False para listagem"));
+                props.put("apenasEstoqueValido", prop("BOOLEAN", "True para filtrar apenas itens com estoque válido disponível e dentro da validade"));
+                props.put("apenasComSaldo", prop("BOOLEAN", "True para filtrar apenas produtos/lotes com saldo físico > 0 (inclui vencidos)"));
                 required.add("entidade");
             }
             case PRODUTO_UNIDADE_CADASTRAR -> {
@@ -149,8 +165,8 @@ public class GeminiToolRegistry {
                 required.add("nome");
             }
             case PRODUTO_KIT_ADICIONAR_COMPONENTE -> {
-                props.put("idProdutoKit", prop("INTEGER", "ID numérico do produto kit/conjunto (ou 'OP-1' se o kit foi agendado para criação no mesmo lote)"));
-                props.put("idProdutoComponente", prop("INTEGER", "ID numérico do produto componente"));
+                props.put("idProdutoKit", prop("STRING", "ID numérico do produto kit/conjunto (ou 'OP-1', 'OP-2', etc. se o kit foi agendado para criação no mesmo lote)"));
+                props.put("idProdutoComponente", prop("STRING", "ID numérico do produto componente (ou 'OP-2', 'OP-3', etc. se o componente também foi agendado para criação no mesmo lote)"));
                 props.put("quantidade", prop("STRING", "Quantidade fracionada do componente"));
                 required.addAll(Arrays.asList("idProdutoKit", "idProdutoComponente", "quantidade"));
             }
@@ -265,8 +281,9 @@ public class GeminiToolRegistry {
                 required.addAll(Arrays.asList("idPessoa", "tipoDocumento", "numeroRegistro"));
             }
             case PESSOA_BUSCAR -> {
-                props.put("idPessoa", prop("INTEGER", "ID da pessoa (opcional se informar termo)"));
-                props.put("termo", prop("STRING", "Termo de busca: nome/razão social, CPF, CNPJ ou RG"));
+                props.put("idPessoa", prop("INTEGER", "ID da pessoa (opcional se informar termo ou nome)"));
+                props.put("termo", prop("STRING", "Nome/razão social, CPF, CNPJ ou RG para buscar a pessoa (sempre preencha ao buscar por nome!)"));
+                props.put("nome", prop("STRING", "Alias opcional para termo (nome da pessoa)"));
                 props.put("papel", prop("STRING", "Filtro opcional: 'CLIENTE', 'FORNECEDOR' ou 'TODOS'"));
                 props.put("unico", prop("BOOLEAN", "Se true, retorna apenas uma única pessoa (opcional)"));
             }
@@ -384,14 +401,14 @@ public class GeminiToolRegistry {
                 required.addAll(Arrays.asList("idFornecedor", "itens"));
             }
             case NOTA_VENDA_EMITIR_FIFO, NOTA_VENDA_PROCEDURE_MYSQL_FIFO -> {
-                props.put("idCliente", prop("INTEGER", "ID do cliente (ou omita para balcão padrão)"));
+                props.put("idCliente", prop("STRING", "ID numérico do cliente ou 'OP-1'/'OP-2' se o cliente foi agendado como sub-instrução de cadastro. Só omita se NENHUM cliente foi informado"));
                 props.put("descricao", prop("STRING", "Descrição da venda"));
                 props.put("descontoGlobal", prop("STRING", "Desconto global na nota em R$"));
                 props.put("itens", propArrayItens("Lista de itens vendidos contendo idProduto, quantidade e desconto", false, true));
                 required.add("itens");
             }
             case NOTA_VENDA_EMITIR_BALCAO_CLIENTE_PADRAO -> {
-                props.put("descricao", prop("STRING", "Descrição da venda"));
+                props.put("descricao", prop("STRING", "Descrição da venda (USE APENAS para venda anônima sem cliente citado; NUNCA use quando o usuário informou um nome de cliente!)"));
                 props.put("itens", propArrayItens("Lista de itens a vender no balcão contendo idProduto, quantidade e desconto", false, true));
                 required.add("itens");
             }
@@ -414,7 +431,11 @@ public class GeminiToolRegistry {
             }
             case NOTA_LISTAR_PADRAO -> {
                 props.put("idPessoa", prop("INTEGER", "ID do cliente ou fornecedor para filtrar notas (opcional)"));
+                props.put("termoPessoa", prop("STRING", "Nome/razão social ou CPF/CNPJ do cliente ou fornecedor para filtrar notas (opcional; use quando não souber o idPessoa)"));
                 props.put("tipoNota", prop("STRING", "Filtro opcional por tipo: 'COMPRA', 'VENDA', 'DEVOLUCAO', 'PERDA' ou 'TODAS'"));
+                props.put("data", prop("STRING", "Filtro opcional por data da nota: 'hoje', 'ontem' ou 'YYYY-MM-DD'"));
+                props.put("limite", prop("INTEGER", "Quantidade máxima de notas mais recentes a retornar (ex: 1 para a última venda/compra)"));
+                props.put("apenasVencidas", prop("BOOLEAN", "Se true, retorna apenas notas com produtos vencidos (validade expirada na data da nota ou aviso na descrição)"));
             }
             case NOTA_DEFINIR_DATA -> {
                 props.put("idNota", prop("INTEGER", "ID da nota operacional que terá a data definida/atualizada"));
