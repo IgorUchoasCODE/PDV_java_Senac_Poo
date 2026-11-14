@@ -115,12 +115,16 @@ public class SymplaService implements ProvedorFatorExterno {
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(urlCatalogo))
+                    .timeout(Duration.ofSeconds(8))
                     .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
                     .header("Accept", "text/html,application/xhtml+xml")
                     .GET()
                     .build();
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                throw new IllegalStateException("HTTP " + response.statusCode());
+            }
             String conteudo = response.body().replace("\\\"", "\"");
 
             Pattern padraoBlocoEvento = Pattern.compile(

@@ -26,6 +26,7 @@ import java.util.regex.Pattern;
 public class NivelRioService implements ProvedorFatorExterno {
 
     private static final Duration TTL_CACHE_RIO_ATUAL = Duration.ofHours(6);
+    private static final Duration HTTP_TIMEOUT = Duration.ofSeconds(10);
 
     private final HttpClient httpClient;
     // Cache de 6 horas para o nível do rio atual por coordenada ("LAT|LON") economizando requisições de API
@@ -33,10 +34,11 @@ public class NivelRioService implements ProvedorFatorExterno {
     private final Map<String, CacheEntry<NivelRioDiario>> cacheRioDiarioAtual6Horas = new ConcurrentHashMap<>();
     // Cache em memória por "ANO-MES|LAT|LON" para economizar chamadas na entrada de grandes lotes de registros passados
     private final Map<String, Map<LocalDate, NivelRioDiario>> cacheMensal = new ConcurrentHashMap<>();
+    private volatile NivelRioDiario ultimoNivelValido;
 
     public NivelRioService() {
         this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(15))
+                .connectTimeout(HTTP_TIMEOUT)
                 .build();
     }
 
@@ -55,19 +57,12 @@ public class NivelRioService implements ProvedorFatorExterno {
                 "https://flood-api.open-meteo.com/v1/flood?latitude=%.6f&longitude=%.6f&daily=river_discharge&forecast_days=7",
                 coordenada.latitude(), coordenada.longitude());
 
-        try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .GET()
-                    .build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            String corpo = response.body();
+        String corpo = executarGet(url);
+        if (corpo != null && corpo.contains("\"daily\"")) {
             cacheRioAtual6Horas.put(chaveRegiao, CacheEntry.criarComTtl(corpo, TTL_CACHE_RIO_ATUAL));
             return corpo;
-        } catch (Exception e) {
-            return "Erro ao consultar API de Nível dos Rios: " + e.getMessage();
         }
+        return "Erro ao consultar API de Nível dos Rios (Open-Meteo Flood indisponível)";
     }
 
     /**
@@ -81,12 +76,44 @@ public class NivelRioService implements ProvedorFatorExterno {
         }
 
         String json = consultarNivelRioPorCoordenada(coordenada);
-        double[] vazoes = extrairArrayDouble(json, "river_discharge");
-        double vazaoHoje = vazoes.length > 0 ? vazoes[0] : 0.0;
-
-        NivelRioDiario registro = new NivelRioDiario(LocalDate.now(), vazaoHoje, vazaoHoje, vazaoHoje, vazaoHoje);
+        NivelRioDiario registro;
+        if (json.contains("\"daily\"")) {
+            double[] vazoes = extrairArrayDouble(json, "river_discharge");
+            double vazaoHoje = vazoes.length > 0 ? vazoes[0] : 0.0;
+            registro = new NivelRioDiario(LocalDate.now(), vazaoHoje, vazaoHoje, vazaoHoje, vazaoHoje);
+        } else {
+            registro = criarNivelFallback(LocalDate.now());
+        }
+        ultimoNivelValido = registro;
         cacheRioDiarioAtual6Horas.put(chaveRegiao, CacheEntry.criarComTtl(registro, TTL_CACHE_RIO_ATUAL));
         return registro;
+    }
+
+    private String executarGet(String url) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .timeout(HTTP_TIMEOUT)
+                    .header("Accept", "application/json")
+                    .GET()
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                return response.body();
+            }
+            System.err.println("[NivelRioService] HTTP " + response.statusCode() + " ao consultar: " + url);
+        } catch (Exception e) {
+            System.err.println("[NivelRioService] Falha de rede (" + e.getMessage() + ") ao consultar: " + url);
+        }
+        return null;
+    }
+
+    private NivelRioDiario criarNivelFallback(LocalDate data) {
+        if (ultimoNivelValido != null) {
+            return new NivelRioDiario(data, ultimoNivelValido.vazaoM3s(), ultimoNivelValido.vazaoMediaM3s(),
+                    ultimoNivelValido.vazaoMaxM3s(), ultimoNivelValido.vazaoMinM3s());
+        }
+        return new NivelRioDiario(data, 0.0, 0.0, 0.0, 0.0);
     }
 
     /**
@@ -119,7 +146,15 @@ public class NivelRioService implements ProvedorFatorExterno {
         String chaveCache = String.format(Locale.US, "%s|%.3f|%.3f",
                 anoMes, coordenada.latitude(), coordenada.longitude());
 
-        return cacheMensal.computeIfAbsent(chaveCache, k -> requisitarNivelRioMensalNaApi(anoMes, coordenada));
+        Map<LocalDate, NivelRioDiario> existente = cacheMensal.get(chaveCache);
+        if (existente != null && !existente.isEmpty()) {
+            return existente;
+        }
+        Map<LocalDate, NivelRioDiario> obtido = requisitarNivelRioMensalNaApi(anoMes, coordenada);
+        if (!obtido.isEmpty()) {
+            cacheMensal.put(chaveCache, obtido);
+        }
+        return obtido;
     }
 
     private Map<LocalDate, NivelRioDiario> requisitarNivelRioMensalNaApi(YearMonth anoMes, Coordenada coordenada) {
@@ -136,44 +171,42 @@ public class NivelRioService implements ProvedorFatorExterno {
             return resultadoMes;
         }
 
-        String url = String.format(Locale.US,
+        String urlCompleta = String.format(Locale.US,
                 "https://flood-api.open-meteo.com/v1/flood?latitude=%.6f&longitude=%.6f&start_date=%s&end_date=%s&daily=river_discharge,river_discharge_mean,river_discharge_max,river_discharge_min",
-                coordenada.latitude(),
-                coordenada.longitude(),
-                inicioMes,
-                fimMes);
+                coordenada.latitude(), coordenada.longitude(), inicioMes, fimMes);
 
-        try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .GET()
-                    .build();
+        String json = executarGet(urlCompleta);
+        if (json == null || !json.contains("\"daily\":")) {
+            // Redundância: consulta simplificada apenas com river_discharge
+            String urlSimples = String.format(Locale.US,
+                    "https://flood-api.open-meteo.com/v1/flood?latitude=%.6f&longitude=%.6f&start_date=%s&end_date=%s&daily=river_discharge",
+                    coordenada.latitude(), coordenada.longitude(), inicioMes, fimMes);
+            json = executarGet(urlSimples);
+        }
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            String json = response.body();
-
+        if (json != null && json.contains("\"daily\":")) {
             int idxDaily = json.indexOf("\"daily\":");
-            if (idxDaily != -1) {
-                String blocoDaily = json.substring(idxDaily);
-                String[] datas = extrairArrayString(blocoDaily, "time");
-                double[] vazao = extrairArrayDouble(blocoDaily, "river_discharge");
-                double[] vazaoMedia = extrairArrayDouble(blocoDaily, "river_discharge_mean");
-                double[] vazaoMax = extrairArrayDouble(blocoDaily, "river_discharge_max");
-                double[] vazaoMin = extrairArrayDouble(blocoDaily, "river_discharge_min");
+            String blocoDaily = json.substring(idxDaily);
+            String[] datas = extrairArrayString(blocoDaily, "time");
+            double[] vazao = extrairArrayDouble(blocoDaily, "river_discharge");
+            double[] vazaoMedia = extrairArrayDouble(blocoDaily, "river_discharge_mean");
+            double[] vazaoMax = extrairArrayDouble(blocoDaily, "river_discharge_max");
+            double[] vazaoMin = extrairArrayDouble(blocoDaily, "river_discharge_min");
 
-                for (int i = 0; i < datas.length; i++) {
-                    LocalDate data = LocalDate.parse(datas[i]);
-                    resultadoMes.put(data, new NivelRioDiario(
-                            data,
-                            obterValorSeguro(vazao, i),
-                            obterValorSeguro(vazaoMedia, i),
-                            obterValorSeguro(vazaoMax, i),
-                            obterValorSeguro(vazaoMin, i)
-                    ));
+            for (int i = 0; i < datas.length; i++) {
+                try {
+                    LocalDate data = LocalDate.parse(datas[i].trim());
+                    double v = obterValorSeguro(vazao, i);
+                    double vMed = vazaoMedia.length > 0 ? obterValorSeguro(vazaoMedia, i) : v;
+                    double vMax = vazaoMax.length > 0 ? obterValorSeguro(vazaoMax, i) : v;
+                    double vMin = vazaoMin.length > 0 ? obterValorSeguro(vazaoMin, i) : v;
+                    resultadoMes.put(data, new NivelRioDiario(data, v, vMed, vMax, vMin));
+                } catch (Exception ignored) {
                 }
             }
-        } catch (Exception e) {
-            System.err.println("[NivelRioService] Erro ao buscar lote mensal (" + anoMes + "): " + e.getMessage());
+        }
+        if (!resultadoMes.isEmpty()) {
+            resultadoMes.values().stream().findFirst().ifPresent(n -> ultimoNivelValido = n);
         }
         return resultadoMes;
     }
@@ -210,7 +243,8 @@ public class NivelRioService implements ProvedorFatorExterno {
     @Override
     public void enriquecerVinculo(LocalDate data, Coordenada coordenada, VinculoFatorExternoNota vinculo) {
         if (data.isBefore(LocalDate.now())) {
-            consultarNivelRioPorData(data, coordenada).ifPresent(vinculo::setNivelRioRegistrado);
+            NivelRioDiario nivel = consultarNivelRioPorData(data, coordenada).orElseGet(() -> criarNivelFallback(data));
+            vinculo.setNivelRioRegistrado(nivel);
         } else {
             vinculo.setNivelRioRegistrado(obterNivelRioAtualComCache6h(coordenada));
         }

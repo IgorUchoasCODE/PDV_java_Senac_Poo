@@ -92,7 +92,11 @@ perdas_forn AS (
     GROUP BY vpf.id_produto, vpf.id_fornecedor
 ),
 min_custo_prod AS (
-    SELECT id_produto, MIN(custo_unitario_medio_ponderado) AS melhor_custo_mercado
+    SELECT
+        id_produto,
+        MIN(custo_unitario_medio_ponderado) AS melhor_custo_mercado,
+        AVG(qtd_total_comprada) AS media_qtd_fornecedor_prod,
+        GREATEST(3.0, AVG(total_notas_compra)) AS media_notas_fornecedor_prod
     FROM compras_forn
     GROUP BY id_produto
 )
@@ -137,15 +141,25 @@ SELECT
         GREATEST(0.10, (1.0 - (GREATEST(0, COALESCE(pf.qtd_perdida_dentro_validade, 0) - COALESCE(pf.qtd_perda_reposta_abatida, 0)) / NULLIF(cf.qtd_total_comprada, 0)))),
         4
     ) AS custo_efetivo_ajustado_qualidade,
-    -- Coeficiente Global Preço-Produto-Qualidade-Reposição (0 a 100 pontos)
+    -- Coeficiente Global Preço-Produto-Qualidade-Reposição (0 a 100 pontos) com encolhimento bayesiano proporcional à amostra
     ROUND(
-        (40.0 * COALESCE(mcp.melhor_custo_mercado / NULLIF(cf.custo_unitario_medio_ponderado, 0), 1.0)) +
-        (30.0 * GREATEST(0.0, 1.0 - (COALESCE(pf.qtd_perdida_dentro_validade, 0) / NULLIF(cf.qtd_total_comprada, 0)))) +
-        (15.0 * LEAST(1.0, cf.durabilidade_media_dias / 90.0)) +
-        (15.0 * CASE
-            WHEN COALESCE(pf.qtd_perdida_dentro_validade, 0) = 0 THEN 1.0
-            ELSE LEAST(1.0, COALESCE(pf.qtd_perda_reposta_abatida, 0) / pf.qtd_perdida_dentro_validade)
-        END),
+        (
+            LEAST(1.0, (0.60 * LEAST(1.0, cf.qtd_total_comprada / GREATEST(1.0, mcp.media_qtd_fornecedor_prod)))
+                     + (0.40 * LEAST(1.0, cf.total_notas_compra / GREATEST(3.0, mcp.media_notas_fornecedor_prod))))
+            * (
+                (40.0 * COALESCE(mcp.melhor_custo_mercado / NULLIF(cf.custo_unitario_medio_ponderado, 0), 1.0)) +
+                (30.0 * GREATEST(0.0, 1.0 - (COALESCE(pf.qtd_perdida_dentro_validade, 0) / NULLIF(cf.qtd_total_comprada, 0)))) +
+                (15.0 * LEAST(1.0, cf.durabilidade_media_dias / 90.0)) +
+                (15.0 * CASE
+                    WHEN COALESCE(pf.qtd_perdida_dentro_validade, 0) = 0 THEN 1.0
+                    ELSE LEAST(1.0, COALESCE(pf.qtd_perda_reposta_abatida, 0) / pf.qtd_perdida_dentro_validade)
+                END)
+            )
+        ) + (
+            (1.0 - LEAST(1.0, (0.60 * LEAST(1.0, cf.qtd_total_comprada / GREATEST(1.0, mcp.media_qtd_fornecedor_prod)))
+                            + (0.40 * LEAST(1.0, cf.total_notas_compra / GREATEST(3.0, mcp.media_notas_fornecedor_prod)))))
+            * 50.0
+        ),
         2
     ) AS coeficiente_score_fornecedor
 FROM compras_forn cf
@@ -273,8 +287,15 @@ BEGIN
             nome_produto,
             unidade,
             COUNT(*) AS meses_com_consumo,
+            GREATEST(
+                COUNT(*),
+                COALESCE(PERIOD_DIFF(YEAR(CURDATE()) * 100 + MONTH(CURDATE()), MIN(ano_compra * 100 + mes_compra)) + 1, 1)
+            ) AS meses_janela_ativa,
             ROUND(SUM(qtd_no_mes), 6) AS qtd_total_historica,
-            ROUND(AVG(qtd_no_mes), 6) AS media_mensal_historica,
+            ROUND(SUM(qtd_no_mes) / GREATEST(
+                COUNT(*),
+                COALESCE(PERIOD_DIFF(YEAR(CURDATE()) * 100 + MONTH(CURDATE()), MIN(ano_compra * 100 + mes_compra)) + 1, 1)
+            ), 6) AS media_mensal_historica,
             ROUND(COALESCE(STDDEV_POP(qtd_no_mes), 0), 6) AS desvio_padrao_mensal,
             ROUND(AVG(CASE WHEN mes_compra = v_mes THEN qtd_no_mes END), 6) AS media_mes_alvo_historico,
             ROUND(AVG(CASE WHEN (ano_compra * 12 + mes_compra) >= (YEAR(CURDATE()) * 12 + MONTH(CURDATE()) - 2) THEN qtd_no_mes END), 6) AS media_recente_ultimos_meses,
@@ -450,9 +471,12 @@ BEGIN
             COALESCE(SUM(iv.quantidade), 0) AS qtd_total_vendida,
             ROUND(AVG(iv.quantidade), 4) AS giro_medio_por_venda,
             ROUND(AVG(CASE WHEN vf.temp_media >= 30.0 THEN iv.quantidade END), 4) AS giro_medio_calor,
+            COUNT(CASE WHEN vf.temp_media >= 30.0 THEN 1 END) AS n_calor,
             ROUND(AVG(CASE WHEN vf.precipitacao_mm > 10.0 THEN iv.quantidade END), 4) AS giro_medio_chuva,
+            COUNT(CASE WHEN vf.precipitacao_mm > 10.0 THEN 1 END) AS n_chuva,
             ROUND(AVG(CASE WHEN COALESCE(vf.total_eventos_ativos, 0) > 0 THEN iv.quantidade END), 4) AS giro_medio_eventos,
             ROUND(AVG(CASE WHEN vf.quinto_dia_util = b'1' THEN iv.quantidade END), 4) AS giro_medio_quinto_dia_util,
+            COUNT(CASE WHEN vf.quinto_dia_util = b'1' THEN 1 END) AS n_quinto_dia_util,
             ROUND(AVG(CASE WHEN (vf.vazao_media_m3s > 0 AND vf.vazao_m3s / vf.vazao_media_m3s < 0.85) THEN iv.quantidade END), 4) AS giro_medio_seca_rio
         FROM nota nv
         INNER JOIN item iv ON iv.id_nota = nv.id
@@ -502,11 +526,11 @@ BEGIN
                 THEN 'ALTA_SENSIBILIDADE_SECA_RIOS (FRETE FLUVIAL ENCARECE CUSTO)'
             WHEN COALESCE(pc.qtd_perdida_clima_adverso, 0) > 0 AND COALESCE(pc.qtd_perdida_clima_adverso, 0) >= COALESCE(pc.qtd_total_perdida, 0) * 0.50
                 THEN 'PERECIVEL_VULNERAVEL_CALOR_E_UMIDADE (RISCO DE PERDA PREMATURA)'
-            WHEN COALESCE(vc.giro_medio_calor, 0) > COALESCE(vc.giro_medio_por_venda, 0) * 1.20
+            WHEN COALESCE(vc.n_calor, 0) >= 2 AND COALESCE(vc.giro_medio_calor, 0) > COALESCE(vc.giro_medio_por_venda, 0) * 1.20
                 THEN 'PRODUTO_IMPULSIONADO_POR_CALOR_E_EVENTOS'
-            WHEN COALESCE(vc.giro_medio_chuva, 0) > COALESCE(vc.giro_medio_por_venda, 0) * 1.20
+            WHEN COALESCE(vc.n_chuva, 0) >= 2 AND COALESCE(vc.giro_medio_chuva, 0) > COALESCE(vc.giro_medio_por_venda, 0) * 1.20
                 THEN 'PRODUTO_ALTA_PROCURA_EM_DIAS_CHUVOSOS'
-            WHEN COALESCE(vc.giro_medio_quinto_dia_util, 0) > COALESCE(vc.giro_medio_por_venda, 0) * 1.20
+            WHEN COALESCE(vc.n_quinto_dia_util, 0) >= 2 AND COALESCE(vc.giro_medio_quinto_dia_util, 0) > COALESCE(vc.giro_medio_por_venda, 0) * 1.20
                 THEN 'PRODUTO_DE_ABASTECIMENTO_PICO_5_DIA_UTIL'
             ELSE 'PRODUTO_ESTAVEL_BAIXA_VOLATILIDADE_EXTERNA'
         END AS diagnostico_impacto_externo
@@ -690,7 +714,13 @@ BEGIN
             ROUND(SUM(CASE WHEN vf.precipitacao_mm > 10.0 THEN (iv.quantidade * iv.valor) - iv.desconto ELSE 0 END), 2) AS receita_clima_chuva,
             ROUND(SUM(CASE WHEN (vf.vazao_media_m3s > 0 AND vf.vazao_m3s / vf.vazao_media_m3s < 0.85) THEN (iv.quantidade * iv.valor) - iv.desconto ELSE 0 END), 2) AS receita_seca_rios,
             ROUND(SUM(CASE WHEN (vf.vazao_media_m3s > 0 AND vf.vazao_m3s / vf.vazao_media_m3s > 1.15) THEN (iv.quantidade * iv.valor) - iv.desconto ELSE 0 END), 2) AS receita_cheia_rios,
-            ROUND(SUM(CASE WHEN vf.dia_util = b'0' THEN (iv.quantidade * iv.valor) - iv.desconto ELSE 0 END), 2) AS receita_fim_de_semana
+            ROUND(SUM(CASE WHEN vf.dia_util = b'0' THEN (iv.quantidade * iv.valor) - iv.desconto ELSE 0 END), 2) AS receita_fim_de_semana,
+            -- Médias proporcionais por venda (evita viés de cenários mais frequentes no calendário)
+            COALESCE(AVG(CASE WHEN vf.quinto_dia_util = b'1' THEN (iv.quantidade * iv.valor) - iv.desconto END), 0) AS media_5_dia_util,
+            COALESCE(AVG(CASE WHEN COALESCE(vf.total_eventos_ativos, 0) > 0 THEN (iv.quantidade * iv.valor) - iv.desconto END), 0) AS media_em_eventos,
+            COALESCE(AVG(CASE WHEN vf.temp_media >= 30.0 THEN (iv.quantidade * iv.valor) - iv.desconto END), 0) AS media_clima_calor,
+            COALESCE(AVG(CASE WHEN vf.precipitacao_mm > 10.0 THEN (iv.quantidade * iv.valor) - iv.desconto END), 0) AS media_clima_chuva,
+            COALESCE(AVG(CASE WHEN vf.dia_util = b'0' THEN (iv.quantidade * iv.valor) - iv.desconto END), 0) AS media_fim_de_semana
         FROM nota nv
         INNER JOIN item iv ON iv.id_nota = nv.id
         INNER JOIN produtos p ON p.id = iv.id_produto
@@ -712,20 +742,20 @@ BEGIN
         receita_seca_rios,
         receita_cheia_rios,
         receita_fim_de_semana,
-        -- Identifica em qual condição externa/dia o produto mais se destaca
+        -- Identifica em qual condição externa/dia o produto mais se destaca proporcionalmente (média por ocorrência)
         CASE
-            WHEN receita_5_dia_util >= GREATEST(receita_em_eventos, receita_clima_calor, receita_clima_chuva, receita_fim_de_semana)
-                 AND receita_5_dia_util > 0
+            WHEN media_5_dia_util >= GREATEST(media_em_eventos, media_clima_calor, media_clima_chuva, media_fim_de_semana)
+                 AND media_5_dia_util > 0
                 THEN 'DESTAQUE_PICO_5_DIA_UTIL'
-            WHEN receita_em_eventos >= GREATEST(receita_5_dia_util, receita_clima_calor, receita_clima_chuva, receita_fim_de_semana)
-                 AND receita_em_eventos > 0
+            WHEN media_em_eventos >= GREATEST(media_5_dia_util, media_clima_calor, media_clima_chuva, media_fim_de_semana)
+                 AND media_em_eventos > 0
                 THEN 'DESTAQUE_EVENTOS_CULTURAIS_E_SHOWS'
-            WHEN receita_clima_calor >= GREATEST(receita_clima_chuva, receita_fim_de_semana)
-                 AND receita_clima_calor > 0
+            WHEN media_clima_calor >= GREATEST(media_clima_chuva, media_fim_de_semana)
+                 AND media_clima_calor > 0
                 THEN 'DESTAQUE_DIAS_DE_CALOR_ACIMA_30C'
-            WHEN receita_clima_chuva >= receita_fim_de_semana AND receita_clima_chuva > 0
+            WHEN media_clima_chuva >= media_fim_de_semana AND media_clima_chuva > 0
                 THEN 'DESTAQUE_DIAS_CHUVOSOS'
-            WHEN receita_fim_de_semana > 0
+            WHEN media_fim_de_semana > 0
                 THEN 'DESTAQUE_FIM_DE_SEMANA_E_FERIADOS'
             ELSE 'DESTAQUE_CONSUMO_DIARIO_CONTINUO'
         END AS cenario_maior_destaque

@@ -62,11 +62,16 @@ public class MinisterioCulturaService implements ProvedorFatorExterno {
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
+                    .timeout(Duration.ofSeconds(8))
                     .header("Accept", "application/json")
                     .GET()
                     .build();
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                System.err.println("[MinisterioCulturaService] SALIC retornou HTTP " + response.statusCode());
+                return projetos;
+            }
             String json = response.body();
 
             // Divide cada objeto de projeto retornado em _embedded.projetos

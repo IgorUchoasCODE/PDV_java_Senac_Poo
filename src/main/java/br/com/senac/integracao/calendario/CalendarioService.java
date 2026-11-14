@@ -51,33 +51,88 @@ public class CalendarioService implements ProvedorFatorExterno {
 
         // 1. Consulta a BrasilAPI para obter os feriados nacionais e datas móveis (Carnaval, Páscoa, Corpus Christi)
         LocalDate tercaCarnaval = null;
+        boolean carregouApiExterna = false;
         try {
             String url = "https://brasilapi.com.br/api/feriados/v1/" + ano;
-            HttpRequest req = HttpRequest.newBuilder().uri(URI.create(url)).GET().build();
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .timeout(Duration.ofSeconds(8))
+                    .GET()
+                    .build();
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
 
-            Pattern padraoItem = Pattern.compile("\\{\"date\":\"(\\d{4}-\\d{2}-\\d{2})\",\"name\":\"([^\"]+)\"");
-            Matcher matcher = padraoItem.matcher(resp.body());
+            if (resp.statusCode() >= 200 && resp.statusCode() < 300) {
+                Pattern padraoItem = Pattern.compile("\\{\"date\":\"(\\d{4}-\\d{2}-\\d{2})\",\"name\":\"([^\"]+)\"");
+                Matcher matcher = padraoItem.matcher(resp.body());
 
-            while (matcher.find()) {
-                LocalDate data = LocalDate.parse(matcher.group(1));
-                String nome = matcher.group(2);
+                while (matcher.find()) {
+                    carregouApiExterna = true;
+                    LocalDate data = LocalDate.parse(matcher.group(1));
+                    String nome = matcher.group(2);
 
-                // Pela Portaria do MGI, Carnaval e Corpus Christi são Pontos Facultativos Nacionais
-                if (nome.toLowerCase(Locale.ROOT).contains("carnaval")) {
-                    mapaDatas.put(data, new DiaNaoUtil(data, nome, "PONTO FACULTATIVO", "Nacional"));
-                    if (data.getDayOfWeek() == DayOfWeek.TUESDAY) {
-                        tercaCarnaval = data;
+                    // Pela Portaria do MGI, Carnaval e Corpus Christi são Pontos Facultativos Nacionais
+                    if (nome.toLowerCase(Locale.ROOT).contains("carnaval")) {
+                        mapaDatas.put(data, new DiaNaoUtil(data, nome, "PONTO FACULTATIVO", "Nacional"));
+                        if (data.getDayOfWeek() == DayOfWeek.TUESDAY) {
+                            tercaCarnaval = data;
+                        }
+                    } else if (nome.toLowerCase(Locale.ROOT).contains("corpus christi")) {
+                        mapaDatas.put(data, new DiaNaoUtil(data, nome, "PONTO FACULTATIVO", "Nacional / Municipal"));
+                    } else {
+                        mapaDatas.put(data, new DiaNaoUtil(data, nome, "FERIADO NACIONAL", "Nacional"));
                     }
-                } else if (nome.toLowerCase(Locale.ROOT).contains("corpus christi")) {
-                    mapaDatas.put(data, new DiaNaoUtil(data, nome, "PONTO FACULTATIVO", "Nacional / Municipal"));
-                } else {
-                    mapaDatas.put(data, new DiaNaoUtil(data, nome, "FERIADO NACIONAL", "Nacional"));
                 }
+            } else {
+                System.err.println("[CalendarioService] BrasilAPI retornou HTTP " + resp.statusCode() + ". Acionando fallback...");
             }
         } catch (Exception e) {
-            System.err.println("Aviso ao consultar BrasilAPI: " + e.getMessage());
+            System.err.println("[CalendarioService] Aviso ao consultar BrasilAPI: " + e.getMessage() + ". Acionando fallback...");
         }
+
+        // Redundância 1: Nager.Date API
+        if (!carregouApiExterna) {
+            try {
+                String urlNager = "https://date.nager.at/api/v3/PublicHolidays/" + ano + "/BR";
+                HttpRequest req = HttpRequest.newBuilder()
+                        .uri(URI.create(urlNager))
+                        .timeout(Duration.ofSeconds(8))
+                        .GET()
+                        .build();
+                HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+                if (resp.statusCode() >= 200 && resp.statusCode() < 300) {
+                    Pattern pNager = Pattern.compile("\"date\":\"(\\d{4}-\\d{2}-\\d{2})\",\"localName\":\"([^\"]+)\"");
+                    Matcher mNager = pNager.matcher(resp.body());
+                    while (mNager.find()) {
+                        carregouApiExterna = true;
+                        LocalDate data = LocalDate.parse(mNager.group(1));
+                        String nome = mNager.group(2);
+                        mapaDatas.putIfAbsent(data, new DiaNaoUtil(data, nome, "FERIADO NACIONAL", "Nacional"));
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("[CalendarioService] Fallback Nager.Date indisponível: " + e.getMessage());
+            }
+        }
+
+        // Redundância 2 (100% offline): Feriados nacionais fixos e datas móveis (Páscoa, Carnaval, Sexta-Feira Santa, Corpus Christi)
+        LocalDate pascoa = calcularPascoa(ano);
+        if (tercaCarnaval == null) {
+            tercaCarnaval = pascoa.minusDays(47);
+        }
+        adicionarSeAusente(mapaDatas, LocalDate.of(ano, 1, 1), "Confraternização Universal", "FERIADO NACIONAL", "Nacional");
+        adicionarSeAusente(mapaDatas, tercaCarnaval.minusDays(1), "Carnaval (Segunda-feira)", "PONTO FACULTATIVO", "Nacional");
+        adicionarSeAusente(mapaDatas, tercaCarnaval, "Carnaval", "PONTO FACULTATIVO", "Nacional");
+        adicionarSeAusente(mapaDatas, pascoa.minusDays(2), "Sexta-Feira Santa", "FERIADO NACIONAL", "Nacional");
+        adicionarSeAusente(mapaDatas, pascoa, "Páscoa", "FERIADO NACIONAL", "Nacional");
+        adicionarSeAusente(mapaDatas, LocalDate.of(ano, 4, 21), "Tiradentes", "FERIADO NACIONAL", "Nacional");
+        adicionarSeAusente(mapaDatas, LocalDate.of(ano, 5, 1), "Dia do Trabalho", "FERIADO NACIONAL", "Nacional");
+        adicionarSeAusente(mapaDatas, pascoa.plusDays(60), "Corpus Christi", "PONTO FACULTATIVO", "Nacional / Municipal");
+        adicionarSeAusente(mapaDatas, LocalDate.of(ano, 9, 7), "Independência do Brasil", "FERIADO NACIONAL", "Nacional");
+        adicionarSeAusente(mapaDatas, LocalDate.of(ano, 10, 12), "Nossa Senhora Aparecida", "FERIADO NACIONAL", "Nacional");
+        adicionarSeAusente(mapaDatas, LocalDate.of(ano, 11, 2), "Finados", "FERIADO NACIONAL", "Nacional");
+        adicionarSeAusente(mapaDatas, LocalDate.of(ano, 11, 15), "Proclamação da República", "FERIADO NACIONAL", "Nacional");
+        adicionarSeAusente(mapaDatas, LocalDate.of(ano, 11, 20), "Dia Nacional de Zumbi e da Consciência Negra", "FERIADO NACIONAL", "Nacional");
+        adicionarSeAusente(mapaDatas, LocalDate.of(ano, 12, 25), "Natal", "FERIADO NACIONAL", "Nacional");
 
         // 2. Pontos Facultativos Nacionais complementares (Quarta-feira de Cinzas, Dia do Servidor, Vésperas)
         if (tercaCarnaval != null) {
@@ -271,6 +326,25 @@ public class CalendarioService implements ProvedorFatorExterno {
 
     private void adicionarSeAusente(Map<LocalDate, DiaNaoUtil> mapa, LocalDate data, String nome, String categoria, String abrangencia) {
         mapa.putIfAbsent(data, new DiaNaoUtil(data, nome, categoria, abrangencia));
+    }
+
+    /** Calcula o domingo de Páscoa no calendário gregoriano (algoritmo de Meeus/Jones/Butcher). */
+    private LocalDate calcularPascoa(int ano) {
+        int a = ano % 19;
+        int b = ano / 100;
+        int c = ano % 100;
+        int d = b / 4;
+        int e = b % 4;
+        int f = (b + 8) / 25;
+        int g = (b - f + 1) / 3;
+        int h = (19 * a + b - d - g + 15) % 30;
+        int i = c / 4;
+        int k = c % 4;
+        int l = (32 + 2 * e + 2 * i - h - k) % 7;
+        int m = (a + 11 * h + 22 * l) / 451;
+        int mes = (h + l - 7 * m + 114) / 31;
+        int dia = ((h + l - 7 * m + 114) % 31) + 1;
+        return LocalDate.of(ano, mes, dia);
     }
 
     @Override
