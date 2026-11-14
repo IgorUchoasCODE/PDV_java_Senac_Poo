@@ -54,9 +54,8 @@ public class NotaVenda extends Nota implements OperacaoComDesconto {
         if (itemEstoqueOrigem == null) {
             throw new IllegalArgumentException("O lote de estoque de origem deve ser informado.");
         }
-        if (!itemEstoqueOrigem.isDentroDaValidade( java.time.LocalDate.now())) {
-            throw new IllegalStateException("O lote escolhido (ID " + itemEstoqueOrigem.getId() + ") está fora da validade.");
-        }
+        java.time.LocalDate dataRef = getDataGerada() != null ? getDataGerada().toLocalDate() : java.time.LocalDate.now();
+        boolean produtoVencido = !itemEstoqueOrigem.isDentroDaValidade(dataRef);
         if (itemEstoqueOrigem.getQuantidadeDisponivel().compareTo(quantidade) < 0) {
             throw new IllegalStateException("Saldo insuficiente no lote escolhido (ID " + itemEstoqueOrigem.getId()
                     + "). Disponível: " + itemEstoqueOrigem.getQuantidadeDisponivel() + ", Solicitado: " + quantidade);
@@ -71,7 +70,24 @@ public class NotaVenda extends Nota implements OperacaoComDesconto {
         itemVenda.setQuantidadeDisponivel(BigDecimal.ZERO);
         itemVenda.setItemOrigem(itemEstoqueOrigem);
         addItem(itemVenda);
+        if (produtoVencido) {
+            registrarAvisoProdutoVencidoNaDescricao(prod, itemEstoqueOrigem);
+        }
         return itemVenda;
+    }
+
+    private void registrarAvisoProdutoVencidoNaDescricao(Produto prod, Item<? extends Produto> lote) {
+        String nomeProd = prod != null && prod.getNome() != null ? prod.getNome() : "Produto";
+        String aviso = String.format("Venda realizada com produto vencido (%s, Lote #%s, Validade: %s).",
+                nomeProd,
+                lote.getId() != null ? lote.getId() : "N/A",
+                lote.getDataValidade() != null ? lote.getDataValidade() : "N/A");
+        String atual = getDescricao();
+        if (atual == null || atual.isBlank()) {
+            setDescricao(aviso);
+        } else if (!atual.contains(aviso)) {
+            setDescricao(atual + " | " + aviso);
+        }
     }
 
     /**

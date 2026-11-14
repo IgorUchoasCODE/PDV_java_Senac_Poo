@@ -149,6 +149,16 @@ public class NotaDAO implements PadraoDAO<Nota, Long> {
      */
     @SuppressWarnings("unchecked")
     public List<Item<? extends Produto>> buscarLotesDisponiveisFIFO(Long idProduto) {
+        return buscarLotesDisponiveisFIFO(idProduto, LocalDate.now());
+    }
+
+    /**
+     * Busca os lotes de entrada (NotaCompra) com saldo disponível > 0 e dentro da validade
+     * em relação à data de referência informada na ordem FIFO.
+     */
+    @SuppressWarnings("unchecked")
+    public List<Item<? extends Produto>> buscarLotesDisponiveisFIFO(Long idProduto, LocalDate dataReferencia) {
+        LocalDate ref = dataReferencia != null ? dataReferencia : LocalDate.now();
         try (EntityManager em = JPAUtil.getEntityManager()) {
             return (List<Item<? extends Produto>>) (List<?>) em.createQuery(
                             "SELECT i FROM Item i JOIN FETCH i.produto p JOIN FETCH i.nota n LEFT JOIN FETCH n.pessoa " +
@@ -158,7 +168,25 @@ public class NotaDAO implements PadraoDAO<Nota, Long> {
                             "ORDER BY i.data ASC, i.dataValidade ASC, i.id ASC",
                             Item.class)
                     .setParameter("idProduto", idProduto)
-                    .setParameter("hoje", LocalDate.now())
+                    .setParameter("hoje", ref)
+                    .getResultList();
+        }
+    }
+
+    /**
+     * Busca todos os lotes de entrada (NotaCompra) com saldo disponível > 0 (incluindo vencidos),
+     * seguindo estritamente a ordem FIFO (data de entrada mais antiga, validade mais próxima, ID).
+     */
+    @SuppressWarnings("unchecked")
+    public List<Item<? extends Produto>> buscarTodosLotesComSaldoFIFO(Long idProduto) {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            return (List<Item<? extends Produto>>) (List<?>) em.createQuery(
+                            "SELECT i FROM Item i JOIN FETCH i.produto p JOIN FETCH i.nota n LEFT JOIN FETCH n.pessoa " +
+                            "WHERE p.id = :idProduto AND TYPE(n) = br.com.senac.repository.modal.nota.NotaCompra " +
+                            "AND i.quantidadeDisponivel > 0 " +
+                            "ORDER BY i.data ASC, i.dataValidade ASC, i.id ASC",
+                            Item.class)
+                    .setParameter("idProduto", idProduto)
                     .getResultList();
         }
     }
@@ -260,11 +288,13 @@ public class NotaDAO implements PadraoDAO<Nota, Long> {
     @SuppressWarnings("unchecked")
     private void consumirEstoqueFifoEmulado(EntityManager em, Long idNotaVenda, Long idProduto, BigDecimal qtdTotal, BigDecimal precoVenda) {
         List<Item> lotes = em.createQuery(
-                "SELECT i FROM Item i WHERE i.produto.id = :idProduto AND i.quantidadeDisponivel > 0 AND (i.dataValidade IS NULL OR i.dataValidade >= CURRENT_DATE) ORDER BY i.data ASC, i.id ASC", Item.class)
+                "SELECT i FROM Item i WHERE i.produto.id = :idProduto AND i.quantidadeDisponivel > 0 " +
+                "ORDER BY i.data ASC, i.dataValidade ASC, i.id ASC", Item.class)
                 .setParameter("idProduto", idProduto)
                 .getResultList();
         BigDecimal restante = qtdTotal;
         Nota nota = em.find(Nota.class, idNotaVenda);
+        LocalDate hoje = LocalDate.now();
         for (Item lote : lotes) {
             if (restante.compareTo(BigDecimal.ZERO) <= 0) break;
             BigDecimal disponivel = lote.getQuantidadeDisponivel();
@@ -277,6 +307,11 @@ public class NotaDAO implements PadraoDAO<Nota, Long> {
             itemConsumo.setItemOrigem(lote);
             itemConsumo.setQuantidadeDisponivel(BigDecimal.ZERO);
             em.persist(itemConsumo);
+
+            if (nota != null && lote.getDataValidade() != null && lote.getDataValidade().isBefore(hoje)) {
+                registrarAvisoVencidoEmNota(nota, lote);
+                em.merge(nota);
+            }
 
             restante = restante.subtract(consumir);
         }
@@ -296,6 +331,27 @@ public class NotaDAO implements PadraoDAO<Nota, Long> {
         itemConsumo.setItemOrigem(lote);
         itemConsumo.setQuantidadeDisponivel(BigDecimal.ZERO);
         em.persist(itemConsumo);
+
+        if (nota != null && lote.getDataValidade() != null && lote.getDataValidade().isBefore(LocalDate.now())) {
+            registrarAvisoVencidoEmNota(nota, lote);
+            em.merge(nota);
+        }
+    }
+
+    private void registrarAvisoVencidoEmNota(Nota nota, Item lote) {
+        String nomeProd = lote.getProduto() != null && lote.getProduto().getNome() != null
+                ? lote.getProduto().getNome()
+                : "Produto";
+        String aviso = String.format("Venda realizada com produto vencido (%s, Lote #%s, Validade: %s).",
+                nomeProd,
+                lote.getId() != null ? lote.getId() : "N/A",
+                lote.getDataValidade() != null ? lote.getDataValidade() : "N/A");
+        String atual = nota.getDescricao();
+        if (atual == null || atual.isBlank()) {
+            nota.setDescricao(aviso);
+        } else if (!atual.contains(aviso)) {
+            nota.setDescricao(atual + " | " + aviso);
+        }
     }
 
     /**
@@ -315,6 +371,57 @@ public class NotaDAO implements PadraoDAO<Nota, Long> {
             return BigDecimal.ZERO;
         } catch (Exception e) {
             return BigDecimal.ZERO;
+        }
+    }
+
+    /**
+     * Consulta o saldo físico remanescente em lotes de compra já vencidos (data_validade &lt; data atual).
+     */
+    public BigDecimal consultarSaldoVencidoProduto(Long idProduto) {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            BigDecimal resultado = em.createQuery(
+                            "SELECT COALESCE(SUM(i.quantidadeDisponivel), 0) FROM Item i JOIN i.nota n " +
+                            "WHERE i.produto.id = :idProduto AND TYPE(n) = br.com.senac.repository.modal.nota.NotaCompra " +
+                            "AND i.quantidadeDisponivel > 0 AND i.dataValidade IS NOT NULL AND i.dataValidade < CURRENT_DATE",
+                            BigDecimal.class)
+                    .setParameter("idProduto", idProduto)
+                    .getSingleResult();
+            return resultado != null ? resultado : BigDecimal.ZERO;
+        } catch (Exception e) {
+            return BigDecimal.ZERO;
+        }
+    }
+
+    /**
+     * Lista todos os lotes de compra com saldo físico disponível (&gt; 0) de um produto,
+     * independentemente da data de validade, ordenados em FIFO.
+     */
+    @SuppressWarnings("unchecked")
+    public List<Item<? extends Produto>> listarLotesFisicosProduto(Long idProduto) {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            return (List<Item<? extends Produto>>) (List<?>) em.createQuery(
+                            "SELECT i FROM Item i JOIN FETCH i.produto p LEFT JOIN FETCH p.um JOIN i.nota n " +
+                            "WHERE p.id = :idProduto AND TYPE(n) = br.com.senac.repository.modal.nota.NotaCompra " +
+                            "AND i.quantidadeDisponivel > 0 ORDER BY i.data ASC, i.id ASC",
+                            Item.class)
+                    .setParameter("idProduto", idProduto)
+                    .getResultList();
+        }
+    }
+
+    /**
+     * Lista todos os lotes de compra com saldo físico disponível (&gt; 0) de todos os produtos,
+     * independentemente da data de validade.
+     */
+    @SuppressWarnings("unchecked")
+    public List<Item<? extends Produto>> listarTodosLotesFisicosComSaldo() {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            return (List<Item<? extends Produto>>) (List<?>) em.createQuery(
+                            "SELECT i FROM Item i JOIN FETCH i.produto p LEFT JOIN FETCH p.um JOIN i.nota n " +
+                            "WHERE TYPE(n) = br.com.senac.repository.modal.nota.NotaCompra " +
+                            "AND i.quantidadeDisponivel > 0 ORDER BY p.id ASC, i.data ASC, i.id ASC",
+                            Item.class)
+                    .getResultList();
         }
     }
 
@@ -487,6 +594,53 @@ public class NotaDAO implements PadraoDAO<Nota, Long> {
         } catch (Exception e) {
             return List.of();
         }
+    }
+
+    /**
+     * Lista notas (de venda, perda ou qualquer tipo) que possuam itens com validade expirada na data da nota
+     * ou aviso de produto vencido registrado na descrição.
+     */
+    @SuppressWarnings("unchecked")
+    public <T extends Nota> List<T> buscarNotasComProdutoVencido(Class<T> classeTipoNota) {
+        Class<? extends Nota> alvo = classeTipoNota != null ? classeTipoNota : Nota.class;
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            List<T> todas = em.createQuery(
+                            "SELECT DISTINCT n FROM " + alvo.getSimpleName() + " n " +
+                            "LEFT JOIN FETCH n.itens LEFT JOIN FETCH n.pessoa ORDER BY n.dataGerada DESC",
+                            (Class<T>) alvo)
+                    .getResultList();
+            List<T> filtradas = new java.util.ArrayList<>();
+            for (T nota : todas) {
+                if (notaPossuiProdutoVencido(nota)) {
+                    inicializarGrafoNotaParaEndpoint(nota);
+                    filtradas.add(nota);
+                }
+            }
+            return filtradas;
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    private boolean notaPossuiProdutoVencido(Nota nota) {
+        if (nota == null) return false;
+        String desc = nota.getDescricao();
+        if (desc != null && desc.toLowerCase(java.util.Locale.ROOT).contains("vencido")) {
+            return true;
+        }
+        if (nota instanceof NotaPerda np && !np.isPerdaDentroDaValidade()) {
+            return true;
+        }
+        if (nota.getDataGerada() == null || nota.getItens() == null) {
+            return false;
+        }
+        LocalDate dataNota = nota.getDataGerada().toLocalDate();
+        for (Item<? extends Produto> item : nota.getItens()) {
+            if (item.getDataValidade() != null && dataNota.isAfter(item.getDataValidade())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

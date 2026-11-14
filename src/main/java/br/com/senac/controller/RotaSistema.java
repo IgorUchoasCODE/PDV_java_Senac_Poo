@@ -7,6 +7,7 @@ public enum RotaSistema {
 
     // 1. Inicialização do Sistema e Busca Padrão da IA
     SISTEMA_INICIALIZAR_DADOS_PADRAO("SISTEMA", "/sistema/inicializar", "Executa script de carga inicial (Unidades de Medida, Formas de Pagamento e Cliente Padrão)"),
+    SISTEMA_RESETAR_BANCO_RESTRITO("SISTEMA", "/sistema/reset-restrito", "Funcionalidade restrita: reseta o banco de dados mantendo apenas Cliente Padrão, Formas de Pagamento e Unidades de Medida (exige token de confirmação)"),
     BUSCA_PADRAO_IA("SISTEMA", "/ia/busca-padrao", "Executa busca padrão estruturada para leitura da IA em qualquer DAO (produto, pessoa, registro, estoque_valido, lote_valido, nota, unidade_medida, forma_pagamento, fator_externo)"),
 
     // 2. Rotas de Produtos, Unidades de Medida, Dimensões e Kits

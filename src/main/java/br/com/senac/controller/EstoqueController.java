@@ -32,7 +32,28 @@ public class EstoqueController {
      * Rota que consulta o saldo total disponível de um produto usando a View otimizada vw_saldo_consolidado_estoque.
      */
     public BigDecimal consultarSaldoTotalProduto(Long idProduto) {
-        return notaDAO.consultarSaldoTotalProduto(idProduto);
+        return estoqueManage.calcularSaldoEquivalenteTotal(idProduto);
+    }
+
+    /**
+     * Consulta o saldo físico remanescente em lotes já vencidos (data_validade &lt; data atual).
+     */
+    public BigDecimal consultarSaldoVencidoProduto(Long idProduto) {
+        return notaDAO.consultarSaldoVencidoProduto(idProduto);
+    }
+
+    /**
+     * Lista todos os lotes físicos com saldo &gt; 0 de um produto (válidos ou vencidos), em ordem FIFO.
+     */
+    public List<Item<? extends Produto>> listarLotesFisicosProduto(Long idProduto) {
+        return notaDAO.listarLotesFisicosProduto(idProduto);
+    }
+
+    /**
+     * Lista todos os lotes físicos com saldo &gt; 0 de todos os produtos (válidos ou vencidos).
+     */
+    public List<Item<? extends Produto>> listarTodosLotesFisicosComSaldo() {
+        return notaDAO.listarTodosLotesFisicosComSaldo();
     }
 
     /**
@@ -87,11 +108,26 @@ public class EstoqueController {
      * Rota que registra e persiste uma baixa de perda física diretamente sobre um lote de estoque específico.
      */
     public NotaPerda baixarPerdaEmLoteEstoque(Long idLoteOrigem, BigDecimal quantidadePerdida, String motivo) {
+        return baixarPerdaEmLoteEstoque(idLoteOrigem, quantidadePerdida, motivo, null);
+    }
+
+    /**
+     * Rota que registra e persiste uma baixa de perda física diretamente sobre um lote de estoque
+     * específico, permitindo informar data histórica opcional (usa data atual quando omitida).
+     */
+    public NotaPerda baixarPerdaEmLoteEstoque(
+            Long idLoteOrigem,
+            BigDecimal quantidadePerdida,
+            String motivo,
+            java.time.LocalDateTime dataGeradaOpcional) {
         Item<? extends Produto> lote = notaDAO.buscarLotePorId(idLoteOrigem);
         if (lote == null) {
             throw new IllegalArgumentException("Lote de estoque não encontrado (ID " + idLoteOrigem + ").");
         }
         NotaPerda perda = estoqueManage.registrarPerdaEstoque(lote, quantidadePerdida, motivo);
+        if (dataGeradaOpcional != null) {
+            perda.setDataGerada(dataGeradaOpcional);
+        }
         return manageNotas.emitirNotaPerda(perda);
     }
 }

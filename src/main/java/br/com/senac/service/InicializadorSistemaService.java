@@ -20,6 +20,8 @@ import java.math.BigDecimal;
  */
 public class InicializadorSistemaService {
 
+    public static final String TOKEN_CONFIRMACAO_RESET = "CONFIRMAR_RESET_TOTAL_PDV";
+
     public void executarScriptInicializacao() {
         try (EntityManager em = JPAUtil.getEntityManager()) {
             executarScriptInicializacao(em);
@@ -178,7 +180,7 @@ public class InicializadorSistemaService {
                         "COALESCE(SUM(CASE WHEN vpf.dentro_periodo_validade = 1 AND vpf.id_nota_compra_abatimento IS NOT NULL THEN vpf.quantidade_perdida ELSE 0 END), 0) AS qtd_perda_reposta_abatida, " +
                         "COALESCE(SUM(CASE WHEN vpf.elegivel_abatimento_pos_venda = 1 THEN vpf.valor_total_custo_perda ELSE 0 END), 0) AS credito_pendente_abatimento " +
                         "FROM vw_perdas_por_fornecedor vpf WHERE vpf.id_fornecedor IS NOT NULL GROUP BY vpf.id_produto, vpf.id_fornecedor ), " +
-                        "min_custo_prod AS ( SELECT id_produto, MIN(custo_unitario_medio_ponderado) AS melhor_custo_mercado FROM compras_forn GROUP BY id_produto ) " +
+                        "min_custo_prod AS ( SELECT id_produto, MIN(custo_unitario_medio_ponderado) AS melhor_custo_mercado, AVG(qtd_total_comprada) AS media_qtd_fornecedor_prod, GREATEST(3.0, AVG(total_notas_compra)) AS media_notas_fornecedor_prod FROM compras_forn GROUP BY id_produto ) " +
                         "SELECT cf.id_produto, cf.nome_produto, cf.id_fornecedor, cf.nome_fornecedor, cf.total_notas_compra, cf.total_lotes_comprados, " +
                         "cf.qtd_total_comprada, cf.custo_unitario_medio_ponderado, cf.menor_custo_unitario, cf.maior_custo_unitario, cf.desvio_padrao_custo, " +
                         "cf.durabilidade_media_dias, cf.custo_medio_seca_rio, cf.custo_medio_rio_normal, cf.custo_medio_cheia_rio, cf.custo_medio_calor, cf.custo_medio_chuva, " +
@@ -187,10 +189,12 @@ public class InicializadorSistemaService {
                         "ROUND(LEAST(100.0, (COALESCE(pf.qtd_perdida_dentro_validade, 0) / NULLIF(cf.qtd_total_comprada, 0)) * 100.0), 2) AS taxa_perda_prematura_pct, " +
                         "ROUND(CASE WHEN COALESCE(pf.qtd_perdida_dentro_validade, 0) = 0 THEN 100.00 ELSE LEAST(100.0, (COALESCE(pf.qtd_perda_reposta_abatida, 0) / pf.qtd_perdida_dentro_validade) * 100.0) END, 2) AS taxa_reposicao_fornecedor_pct, " +
                         "ROUND(cf.custo_unitario_medio_ponderado / GREATEST(0.10, (1.0 - (GREATEST(0, COALESCE(pf.qtd_perdida_dentro_validade, 0) - COALESCE(pf.qtd_perda_reposta_abatida, 0)) / NULLIF(cf.qtd_total_comprada, 0)))), 4) AS custo_efetivo_ajustado_qualidade, " +
-                        "ROUND((40.0 * COALESCE(mcp.melhor_custo_mercado / NULLIF(cf.custo_unitario_medio_ponderado, 0), 1.0)) + " +
+                        "ROUND((LEAST(1.0, (0.60 * LEAST(1.0, cf.qtd_total_comprada / GREATEST(1.0, mcp.media_qtd_fornecedor_prod))) + (0.40 * LEAST(1.0, cf.total_notas_compra / GREATEST(3.0, mcp.media_notas_fornecedor_prod)))) * " +
+                        "((40.0 * COALESCE(mcp.melhor_custo_mercado / NULLIF(cf.custo_unitario_medio_ponderado, 0), 1.0)) + " +
                         "(30.0 * GREATEST(0.0, 1.0 - (COALESCE(pf.qtd_perdida_dentro_validade, 0) / NULLIF(cf.qtd_total_comprada, 0)))) + " +
                         "(15.0 * LEAST(1.0, cf.durabilidade_media_dias / 90.0)) + " +
-                        "(15.0 * CASE WHEN COALESCE(pf.qtd_perdida_dentro_validade, 0) = 0 THEN 1.0 ELSE LEAST(1.0, COALESCE(pf.qtd_perda_reposta_abatida, 0) / pf.qtd_perdida_dentro_validade) END), 2) AS coeficiente_score_fornecedor " +
+                        "(15.0 * CASE WHEN COALESCE(pf.qtd_perdida_dentro_validade, 0) = 0 THEN 1.0 ELSE LEAST(1.0, COALESCE(pf.qtd_perda_reposta_abatida, 0) / pf.qtd_perdida_dentro_validade) END))) + " +
+                        "((1.0 - LEAST(1.0, (0.60 * LEAST(1.0, cf.qtd_total_comprada / GREATEST(1.0, mcp.media_qtd_fornecedor_prod))) + (0.40 * LEAST(1.0, cf.total_notas_compra / GREATEST(3.0, mcp.media_notas_fornecedor_prod))))) * 50.0), 2) AS coeficiente_score_fornecedor " +
                         "FROM compras_forn cf LEFT JOIN perdas_forn pf ON pf.id_produto = cf.id_produto AND pf.id_fornecedor = cf.id_fornecedor " +
                         "LEFT JOIN min_custo_prod mcp ON mcp.id_produto = cf.id_produto"
                 );
@@ -487,5 +491,104 @@ public class InicializadorSistemaService {
                 );
             }
         });
+    }
+
+    /**
+     * Funcionalidade restrita: reseta o banco de dados removendo todas as movimentações,
+     * notas, itens, produtos, pessoas e fatores externos, preservando/recriando apenas
+     * os dados fundamentais (Unidades de Medida, Formas de Pagamento e Cliente Padrão).
+     *
+     * @param tokenConfirmacao Deve ser exatamente {@link #TOKEN_CONFIRMACAO_RESET}.
+     */
+    public void resetarBancoParaDadosFundamentais(String tokenConfirmacao) {
+        validarTokenReset(tokenConfirmacao);
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            resetarBancoParaDadosFundamentais(em, tokenConfirmacao);
+        }
+    }
+
+    /**
+     * Versão com {@link EntityManager} explícito (útil para testes isolados ou transações externas).
+     */
+    public void resetarBancoParaDadosFundamentais(EntityManager em, String tokenConfirmacao) {
+        validarTokenReset(tokenConfirmacao);
+        boolean transacaoPropria = !em.getTransaction().isActive();
+        EntityTransaction tx = em.getTransaction();
+        if (transacaoPropria) {
+            tx.begin();
+        }
+        try {
+            // 1. Tabelas auxiliares de fatores externos / eventos (opcionais)
+            limparTabelaOpcional(em, "vinculo_evento");
+            limparTabelaOpcional(em, "fila_fator_externo_pendente");
+            limparTabelaOpcional(em, "fator_externo_estatistica");
+            limparTabelaOpcional(em, "evento_externo");
+
+            // 2. Pagamentos e parcelas
+            em.createNativeQuery("DELETE FROM parcela_pagamento").executeUpdate();
+            em.createNativeQuery("DELETE FROM nota_pagamento").executeUpdate();
+
+            // 3. Itens e Notas (desfazendo auto-referências antes de apagar)
+            em.createNativeQuery("UPDATE item SET id_item_origem = NULL WHERE id_item_origem IS NOT NULL").executeUpdate();
+            em.createNativeQuery("DELETE FROM item").executeUpdate();
+
+            em.createNativeQuery(
+                    "UPDATE nota SET id_nota_venda = NULL, id_nota_devolucao = NULL, id_nota_compra_origem = NULL, id_nota_compra_abatimento = NULL"
+            ).executeUpdate();
+            em.createNativeQuery("DELETE FROM nota").executeUpdate();
+            em.createNativeQuery("DELETE FROM vinculo_fator_externo_nota").executeUpdate();
+
+            // 4. Produtos e dependências
+            em.createNativeQuery("DELETE FROM produto_imagem").executeUpdate();
+            em.createNativeQuery("DELETE FROM link_produto_digital").executeUpdate();
+            em.createNativeQuery("DELETE FROM conjunto_produto").executeUpdate();
+            em.createNativeQuery("DELETE FROM produtos").executeUpdate();
+
+            // 5. Pessoas e registros
+            em.createNativeQuery("DELETE FROM registro").executeUpdate();
+            em.createNativeQuery("DELETE FROM pessoa").executeUpdate();
+
+            // 6. Tabelas fundamentais (limpa eventuais customizações e recria exatamente os padrões)
+            em.createNativeQuery("DELETE FROM forma_pagamento").executeUpdate();
+            em.createNativeQuery("DELETE FROM unidade_medida").executeUpdate();
+
+            em.flush();
+            em.clear();
+
+            // Recria Unidades de Medida, Formas de Pagamento e Cliente Padrão
+            executarScriptInicializacao(em);
+
+            if (transacaoPropria) {
+                tx.commit();
+            }
+        } catch (Exception e) {
+            if (transacaoPropria && tx.isActive()) {
+                tx.rollback();
+            }
+            throw e;
+        }
+    }
+
+    private void validarTokenReset(String tokenConfirmacao) {
+        if (!TOKEN_CONFIRMACAO_RESET.equals(tokenConfirmacao)) {
+            throw new SecurityException(
+                    "Operação restrita bloqueada: token de confirmação inválido. " +
+                    "Informe exatamente '" + TOKEN_CONFIRMACAO_RESET + "' para resetar o banco."
+            );
+        }
+    }
+
+    private void limparTabelaOpcional(EntityManager em, String nomeTabela) {
+        try {
+            Object countObj = em.createNativeQuery(
+                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE LOWER(TABLE_NAME) = :tabela"
+            ).setParameter("tabela", nomeTabela.toLowerCase(java.util.Locale.ROOT)).getSingleResult();
+            long count = countObj instanceof Number n ? n.longValue() : Long.parseLong(countObj.toString());
+            if (count > 0L) {
+                em.createNativeQuery("DELETE FROM " + nomeTabela).executeUpdate();
+            }
+        } catch (Exception ignored) {
+            // Tabela auxiliar pode não existir em bancos recém-criados
+        }
     }
 }

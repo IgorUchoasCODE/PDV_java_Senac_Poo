@@ -220,11 +220,11 @@ public class JPAUtil {
                                 "DECLARE v_consumir DECIMAL(20,6); " +
                                 "DECLARE v_fim_cursor INT DEFAULT 0; " +
                                 "DECLARE cur_fifo CURSOR FOR SELECT id, quantidade_disponivel, valor, data_validade FROM item " +
-                                "WHERE id_produto = p_id_produto AND quantidade_disponivel > 0 AND (data_validade IS NULL OR data_validade >= CURDATE()) " +
+                                "WHERE id_produto = p_id_produto AND quantidade_disponivel > 0 " +
                                 "ORDER BY data ASC, COALESCE(data_validade, '9999-12-31') ASC, id ASC FOR UPDATE; " +
                                 "DECLARE CONTINUE HANDLER FOR NOT FOUND SET v_fim_cursor = 1; " +
                                 "SELECT COALESCE(SUM(quantidade_disponivel), 0) INTO v_saldo_total FROM item " +
-                                "WHERE id_produto = p_id_produto AND quantidade_disponivel > 0 AND (data_validade IS NULL OR data_validade >= CURDATE()); " +
+                                "WHERE id_produto = p_id_produto AND quantidade_disponivel > 0; " +
                                 "IF v_saldo_total < p_quantidade_total THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Estoque insuficiente (FIFO).'; END IF; " +
                                 "OPEN cur_fifo; " +
                                 "WHILE v_restante > 0 AND v_fim_cursor = 0 DO " +
@@ -234,6 +234,9 @@ public class JPAUtil {
                                 "UPDATE item SET quantidade_disponivel = quantidade_disponivel - v_consumir WHERE id = v_id_lote; " +
                                 "INSERT INTO item (id_nota, id_produto, id_item_origem, valor, desconto, quantidade, quantidade_disponivel, data, data_validade) " +
                                 "VALUES (p_id_nota_venda, p_id_produto, v_id_lote, COALESCE(NULLIF(p_preco_venda, 0), v_custo_lote), 0, v_consumir, 0, NOW(6), v_validade); " +
+                                "IF v_validade IS NOT NULL AND v_validade < CURDATE() THEN " +
+                                "UPDATE nota SET descricao = CASE WHEN descricao IS NULL OR TRIM(descricao) = '' THEN 'Venda realizada com produto vencido.' WHEN LOCATE('produto vencido', descricao) = 0 THEN CONCAT(descricao, ' | Venda realizada com produto vencido.') ELSE descricao END WHERE id = p_id_nota_venda; " +
+                                "END IF; " +
                                 "SET v_restante = v_restante - v_consumir; " +
                                 "END IF; " +
                                 "END WHILE; " +
@@ -253,11 +256,13 @@ public class JPAUtil {
                                 "SELECT id_produto, quantidade_disponivel, valor, data_validade INTO v_id_produto, v_qtd_disp, v_custo_lote, v_validade " +
                                 "FROM item WHERE id = p_id_lote_desejado FOR UPDATE; " +
                                 "IF v_id_produto IS NULL THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Lote desejado nao encontrado.'; END IF; " +
-                                "IF v_validade IS NOT NULL AND v_validade < CURDATE() THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Lote escolhido vencido.'; END IF; " +
                                 "IF v_qtd_disp < p_quantidade OR p_quantidade <= 0 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Saldo insuficiente no lote escolhido.'; END IF; " +
                                 "UPDATE item SET quantidade_disponivel = quantidade_disponivel - p_quantidade WHERE id = p_id_lote_desejado; " +
                                 "INSERT INTO item (id_nota, id_produto, id_item_origem, valor, desconto, quantidade, quantidade_disponivel, data, data_validade) " +
                                 "VALUES (p_id_nota_venda, v_id_produto, p_id_lote_desejado, COALESCE(NULLIF(p_preco_venda, 0), v_custo_lote), 0, p_quantidade, 0, NOW(6), v_validade); " +
+                                "IF v_validade IS NOT NULL AND v_validade < CURDATE() THEN " +
+                                "UPDATE nota SET descricao = CASE WHEN descricao IS NULL OR TRIM(descricao) = '' THEN 'Venda realizada com produto vencido.' WHEN LOCATE('produto vencido', descricao) = 0 THEN CONCAT(descricao, ' | Venda realizada com produto vencido.') ELSE descricao END WHERE id = p_id_nota_venda; " +
+                                "END IF; " +
                                 "END"
                         );
                     }

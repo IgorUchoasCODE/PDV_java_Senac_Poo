@@ -55,6 +55,16 @@ public class ConjuntoProdutoDAO implements PadraoDAO<ConjuntoProduto, ConjuntoPr
         }
     }
 
+    public List<ConjuntoProduto> listarPaisPorItem(Long idItem) {
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            return em.createQuery(
+                            "SELECT cp FROM ConjuntoProduto cp JOIN FETCH cp.produto p LEFT JOIN FETCH p.um WHERE cp.item.id = :idItem",
+                            ConjuntoProduto.class)
+                    .setParameter("idItem", idItem)
+                    .getResultList();
+        }
+    }
+
     @Override
     public List<ConjuntoProduto> listarTodos() {
         try (EntityManager em = JPAUtil.getEntityManager()) {

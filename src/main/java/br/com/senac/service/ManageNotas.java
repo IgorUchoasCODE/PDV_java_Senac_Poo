@@ -253,7 +253,12 @@ public class ManageNotas {
                         boolean provedorDeEventos = provedor instanceof SymplaService
                                 || provedor instanceof br.com.senac.integracao.eventos.MinisterioCulturaService;
                         if (eventosEmCache && provedorDeEventos) continue;
-                        provedor.enriquecerVinculo(data, coord, novo);
+                        try {
+                            provedor.enriquecerVinculo(data, coord, novo);
+                        } catch (Exception e) {
+                            System.err.println("[ManageNotas] Aviso no provedor externo "
+                                    + provedor.getClass().getSimpleName() + ": " + e.getMessage());
+                        }
                     }
                     VinculoFatorExternoNota salvo = vinculoDAO.salvarOuReutilizar(novo);
                     try {

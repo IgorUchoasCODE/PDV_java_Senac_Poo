@@ -113,6 +113,11 @@ public class RoteadorController {
                     inicializarSistemaCompleto();
                     yield "Dados padrão (Um, FormaPagamento e Cliente Padrão) inicializados com sucesso.";
                 }
+                case SISTEMA_RESETAR_BANCO_RESTRITO -> {
+                    String confirmacao = str(p, "confirmacao", str(p, "token", null));
+                    inicializadorService.resetarBancoParaDadosFundamentais(confirmacao);
+                    yield "Banco de dados resetado com sucesso. Apenas dados fundamentais (Unidades de Medida, Formas de Pagamento e Cliente Padrão) foram mantidos.";
+                }
                 case BUSCA_PADRAO_IA -> executarBuscaPadraoLeituraIA(p);
 
                 // 2. PRODUTO
@@ -291,7 +296,18 @@ public class RoteadorController {
                 case PESSOA_BUSCAR, PESSOA_BUSCAR_UNICA -> {
                     String termo = str(p, "termo", str(p, "nome", str(p, "documento", str(p, "registro", null))));
                     Long id = p.containsKey("idPessoa") ? lng(p, "idPessoa") : lng(p, "id");
-                    yield pessoaController.buscarEspecificaOuListarParaEscolha(id, termo, str(p, "papel", null));
+                    String papel = str(p, "papel", null);
+                    if (id == null && (termo == null || termo.isBlank()) && papel != null && !papel.isBlank()) {
+                        String papelUpper = papel.trim().toUpperCase(Locale.ROOT);
+                        if ("CLIENTE".equals(papelUpper) || "CLIENTES".equals(papelUpper)) {
+                            yield pessoaController.listarClientes();
+                        }
+                        if ("FORNECEDOR".equals(papelUpper) || "FORNECEDORES".equals(papelUpper)) {
+                            yield pessoaController.listarFornecedores();
+                        }
+                        yield pessoaController.listarTodasPessoas();
+                    }
+                    yield pessoaController.buscarEspecificaOuListarParaEscolha(id, termo, papel);
                 }
                 case PESSOA_REGISTRO_BUSCAR_UNICO -> {
                     String tipo = str(p, "tipoDocumento", str(p, "tipo", null));
@@ -406,11 +422,17 @@ public class RoteadorController {
                 case ESTOQUE_LOTES_PROXIMOS_VALIDADE -> estoqueController.consultarLotesProximosAoVencimento(
                         p.get("dataLimite") instanceof LocalDate ld ? ld : LocalDate.now().plusMonths(3)
                 );
-                case ESTOQUE_BAIXAR_PERDA_DIRETA -> estoqueController.baixarPerdaEmLoteEstoque(
-                        lng(p, "idLote") != null ? lng(p, "idLote") : lng(p, "idItemLote"),
-                        bd(p, "quantidade", str(p, "quantidadePerda", "1.000000")),
-                        str(p, "motivo", str(p, "motivoPerda", "Perda operacional de estoque"))
-                );
+                case ESTOQUE_BAIXAR_PERDA_DIRETA -> {
+                    LocalDateTime dtPerda = (p.containsKey("dataGerada") || p.containsKey("dataNota") || p.containsKey("data"))
+                            ? resolverDataHoraNota(p)
+                            : null;
+                    yield estoqueController.baixarPerdaEmLoteEstoque(
+                            lng(p, "idLote") != null ? lng(p, "idLote") : lng(p, "idItemLote"),
+                            bd(p, "quantidade", str(p, "quantidadePerda", "1.000000")),
+                            str(p, "motivo", str(p, "motivoPerda", "Perda operacional de estoque")),
+                            dtPerda
+                    );
+                }
 
                 // 6. NOTA
                 case NOTA_COMPRA_EMITIR -> {
@@ -577,17 +599,68 @@ public class RoteadorController {
                     yield notaController.buscarNotaPorId(idNota);
                 }
                 case NOTA_LISTAR_PADRAO -> {
-                    if (p.containsKey("idPessoa")) {
-                        yield notaController.listarNotasPorPessoa(lng(p, "idPessoa"));
+                    Long idPessoa = p.containsKey("idPessoa") ? lng(p, "idPessoa") : null;
+                    String termoPessoa = str(p, "termoPessoa", str(p, "nomePessoa", str(p, "cliente", str(p, "fornecedor", null))));
+                    if (idPessoa == null && termoPessoa != null && !termoPessoa.isBlank()) {
+                        List<Pessoa> encontradas = pessoaController.buscarPessoasPorTermo(termoPessoa.trim(), null);
+                        if (encontradas.isEmpty()) {
+                            yield java.util.Collections.emptyList();
+                        }
+                        if (encontradas.size() == 1) {
+                            idPessoa = encontradas.get(0).getId();
+                        } else {
+                            final java.util.Set<Long> idsPessoa = encontradas.stream()
+                                    .map(Pessoa::getId)
+                                    .collect(java.util.stream.Collectors.toSet());
+                            p.put("_idsPessoaFiltro", idsPessoa);
+                        }
                     }
+
                     String tipo = str(p, "tipoNota", str(p, "tipo", "TODAS")).toUpperCase(Locale.ROOT);
-                    yield switch (tipo) {
-                        case "COMPRA", "NOTACOMPRA" -> notaController.listarNotasPorTipo(NotaCompra.class);
-                        case "VENDA", "NOTAVENDA" -> notaController.listarNotasPorTipo(NotaVenda.class);
-                        case "DEVOLUCAO", "NOTADEVOLUCAO" -> notaController.listarNotasPorTipo(NotaDevolucao.class);
-                        case "PERDA", "NOTAPERDA" -> notaController.listarNotasPorTipo(NotaPerda.class);
-                        default -> notaController.listarTodasNotas();
-                    };
+                    boolean apenasVencidas = bool(p, "apenasVencidas", false);
+                    List<? extends Nota> base;
+                    if (apenasVencidas) {
+                        base = switch (tipo) {
+                            case "COMPRA", "NOTACOMPRA" -> notaController.listarNotasComProdutoVencido(NotaCompra.class);
+                            case "VENDA", "NOTAVENDA" -> notaController.listarNotasComProdutoVencido(NotaVenda.class);
+                            case "DEVOLUCAO", "NOTADEVOLUCAO" -> notaController.listarNotasComProdutoVencido(NotaDevolucao.class);
+                            case "PERDA", "NOTAPERDA" -> notaController.listarNotasComProdutoVencido(NotaPerda.class);
+                            default -> notaController.listarNotasComProdutoVencido(Nota.class);
+                        };
+                    } else if (idPessoa != null && ("TODAS".equals(tipo) || tipo.isBlank())) {
+                        base = notaController.listarNotasPorPessoa(idPessoa);
+                    } else {
+                        base = switch (tipo) {
+                            case "COMPRA", "NOTACOMPRA" -> notaController.listarNotasPorTipo(NotaCompra.class);
+                            case "VENDA", "NOTAVENDA" -> notaController.listarNotasPorTipo(NotaVenda.class);
+                            case "DEVOLUCAO", "NOTADEVOLUCAO" -> notaController.listarNotasPorTipo(NotaDevolucao.class);
+                            case "PERDA", "NOTAPERDA" -> notaController.listarNotasPorTipo(NotaPerda.class);
+                            default -> notaController.listarTodasNotas();
+                        };
+                    }
+
+                    final Long idPessoaFinal = idPessoa;
+                    @SuppressWarnings("unchecked")
+                    final java.util.Set<Long> idsPessoaFiltro = (java.util.Set<Long>) p.get("_idsPessoaFiltro");
+                    final java.time.LocalDate dataFiltro = parsearDataFiltroNota(str(p, "data", null));
+                    Long limite = p.containsKey("limite") ? lng(p, "limite") : null;
+
+                    java.util.stream.Stream<? extends Nota> stream = base.stream();
+                    if (idPessoaFinal != null) {
+                        stream = stream.filter(n -> n.getPessoa() != null && idPessoaFinal.equals(n.getPessoa().getId()));
+                    } else if (idsPessoaFiltro != null) {
+                        stream = stream.filter(n -> n.getPessoa() != null && idsPessoaFiltro.contains(n.getPessoa().getId()));
+                    }
+                    if (dataFiltro != null) {
+                        stream = stream.filter(n -> n.getDataGerada() != null && dataFiltro.equals(n.getDataGerada().toLocalDate()));
+                    }
+                    stream = stream.sorted(java.util.Comparator
+                            .comparing(Nota::getDataGerada, java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder()))
+                            .thenComparing(Nota::getId, java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())));
+                    if (limite != null && limite > 0) {
+                        stream = stream.limit(limite);
+                    }
+                    yield stream.toList();
                 }
                 case NOTA_DEFINIR_DATA -> {
                     Long idNota = p.containsKey("idNota") ? lng(p, "idNota") : lng(p, "id");
@@ -653,36 +726,64 @@ public class RoteadorController {
         Long id = p.containsKey("id") ? lng(p, "id") : (p.containsKey("idProduto") ? lng(p, "idProduto")
                 : (p.containsKey("idPessoa") ? lng(p, "idPessoa") : (p.containsKey("idNota") ? lng(p, "idNota") : lng(p, "idLote"))));
         String termo = str(p, "termo", str(p, "nome", str(p, "documento", str(p, "registro", null))));
+        String excluiTermos = str(p, "excluiTermos", null);
+        String unidadeFiltro = str(p, "unidade", null);
+        String tipoNotaFiltro = str(p, "tipoNota", null);
+        Long idMin = p.containsKey("idMin") ? lng(p, "idMin") : null;
+        Long idMax = p.containsKey("idMax") ? lng(p, "idMax") : null;
+        BigDecimal valorMin = p.containsKey("valorMin") ? bd(p, "valorMin", null) : null;
+        BigDecimal valorMax = p.containsKey("valorMax") ? bd(p, "valorMax", null) : null;
+        LocalDate dataInicio = parsearDataFiltroNota(str(p, "dataInicio", null));
+        LocalDate dataFim = parsearDataFiltroNota(str(p, "dataFim", null));
         boolean apenasEstoqueValido = bool(p, "apenasEstoqueValido", false) || bool(p, "comEstoqueValido", false);
-        boolean unico = bool(p, "unico", id != null || (termo != null && !termo.isBlank()));
+        boolean apenasComSaldo = bool(p, "apenasComSaldo", false);
+        String modoParam = str(p, "modo", null);
+        boolean temFiltrosCompostos = (excluiTermos != null && !excluiTermos.isBlank())
+                || (unidadeFiltro != null && !unidadeFiltro.isBlank())
+                || (tipoNotaFiltro != null && !tipoNotaFiltro.isBlank())
+                || idMin != null || idMax != null || valorMin != null || valorMax != null
+                || dataInicio != null || dataFim != null || apenasComSaldo
+                || "RESUMO".equalsIgnoreCase(modoParam) || "CONTAGEM".equalsIgnoreCase(modoParam)
+                || "LISTA".equalsIgnoreCase(modoParam);
+        boolean unico = "UNICO".equalsIgnoreCase(modoParam)
+                || (!temFiltrosCompostos && bool(p, "unico", id != null || (termo != null && !termo.isBlank())));
+        String modoRetorno = modoParam != null && !modoParam.isBlank()
+                ? modoParam.trim().toUpperCase(Locale.ROOT)
+                : (unico ? "UNICO" : "LISTA");
 
         Map<String, Object> respostaIA = new LinkedHashMap<>();
         respostaIA.put("entidadeConsultada", entidade);
-        respostaIA.put("modoRetorno", unico ? "UNICO" : "LISTA");
+        respostaIA.put("modoRetorno", modoRetorno);
 
         Object dados = switch (entidade) {
-            case "PRODUTO", "PRODUTOS" -> {
-                if (unico || id != null || (termo != null && !termo.isBlank())) {
+            case "PRODUTO", "PRODUTOS", "ESTOQUE" -> {
+                if (unico && (id != null || (termo != null && !termo.isBlank()))) {
                     yield produtoController.buscarEspecificoOuListarParaEscolha(id, termo, apenasEstoqueValido);
                 }
-                yield apenasEstoqueValido
+                List<Produto> base = apenasEstoqueValido
                         ? produtoController.listarProdutosComEstoqueValido()
                         : produtoController.listarTodosProdutos();
+                yield filtrarProdutosComCondicoes(base, termo, excluiTermos, unidadeFiltro,
+                        idMin, idMax, valorMin, valorMax, apenasComSaldo || "ESTOQUE".equals(entidade));
             }
             case "PRODUTO_ESTOQUE_VALIDO", "ESTOQUE_VALIDO_UNICO" ->
                     produtoController.buscarEspecificoOuListarParaEscolha(id, termo, true);
             case "PRODUTOS_ESTOQUE_VALIDO", "ESTOQUE_VALIDO" ->
-                    produtoController.listarProdutosComEstoqueValido();
+                    filtrarProdutosComCondicoes(produtoController.listarProdutosComEstoqueValido(),
+                            termo, excluiTermos, unidadeFiltro, idMin, idMax, valorMin, valorMax, apenasComSaldo);
             case "PESSOA", "PESSOAS", "CLIENTE", "FORNECEDOR" -> {
                 String papelFiltro = ("CLIENTE".equals(entidade) || "FORNECEDOR".equals(entidade))
                         ? entidade
                         : str(p, "papel", null);
-                if (unico || id != null || (termo != null && !termo.isBlank())) {
+                if (unico && (id != null || (termo != null && !termo.isBlank()))) {
                     yield pessoaController.buscarEspecificaOuListarParaEscolha(id, termo, papelFiltro);
                 }
-                yield "FORNECEDOR".equals(papelFiltro)
+                List<Pessoa> base = "FORNECEDOR".equalsIgnoreCase(papelFiltro)
                         ? pessoaController.listarFornecedores()
-                        : pessoaController.listarClientes();
+                        : ("CLIENTE".equalsIgnoreCase(papelFiltro)
+                            ? pessoaController.listarClientes()
+                            : pessoaController.listarTodasPessoas());
+                yield filtrarPessoasComCondicoes(base, termo, excluiTermos, idMin, idMax);
             }
             case "REGISTRO", "DOCUMENTO" ->
                     pessoaController.buscarPessoaPorRegistroUnico(str(p, "tipoDocumento", null), termo != null ? termo : "");
@@ -695,14 +796,26 @@ public class RoteadorController {
                 List<Item<? extends Produto>> validos = estoqueController.listarTodosLotesComEstoqueValido();
                 yield validos.isEmpty() ? null : validos.get(0);
             }
-            case "LOTES_VALIDOS", "LOTES" ->
-                    id != null ? estoqueController.listarLotesDisponiveisFIFO(id)
-                            : estoqueController.listarTodosLotesComEstoqueValido();
+            case "LOTES_VALIDOS", "LOTES" -> {
+                List<Item<? extends Produto>> base = id != null
+                        ? estoqueController.listarLotesDisponiveisFIFO(id)
+                        : estoqueController.listarTodosLotesComEstoqueValido();
+                yield filtrarLotesComCondicoes(base, termo, excluiTermos, unidadeFiltro, idMin, idMax, dataInicio, dataFim);
+            }
             case "NOTA", "NOTAS" -> {
                 if (unico && id != null) {
                     yield notaController.buscarNotaPorId(id);
                 }
-                yield notaController.listarTodasNotas();
+                List<? extends Nota> base = (tipoNotaFiltro != null && !tipoNotaFiltro.isBlank())
+                        ? switch (tipoNotaFiltro.trim().toUpperCase(Locale.ROOT)) {
+                            case "COMPRA", "NOTACOMPRA" -> notaController.listarNotasPorTipo(NotaCompra.class);
+                            case "VENDA", "NOTAVENDA" -> notaController.listarNotasPorTipo(NotaVenda.class);
+                            case "DEVOLUCAO", "NOTADEVOLUCAO" -> notaController.listarNotasPorTipo(NotaDevolucao.class);
+                            case "PERDA", "NOTAPERDA" -> notaController.listarNotasPorTipo(NotaPerda.class);
+                            default -> notaController.listarTodasNotas();
+                        }
+                        : notaController.listarTodasNotas();
+                yield filtrarNotasComCondicoes(base, termo, excluiTermos, idMin, idMax, valorMin, valorMax, dataInicio, dataFim);
             }
             case "UNIDADE_MEDIDA", "UM" -> produtoController.listarUnidadesMedida();
             case "FORMA_PAGAMENTO", "PAGAMENTO" -> pagamentoController.listarFormasPagamentoAtivas();
@@ -711,14 +824,200 @@ public class RoteadorController {
             default -> produtoController.listarTodosProdutos();
         };
 
+        int totalRegistros = dados instanceof Collection<?> c ? c.size() : (dados != null ? 1 : 0);
         boolean bloqueado = id != null && br.com.senac.repository.dao.PadraoDAO.BLOQUEIOS_BANDEJA_IA.keySet().stream()
                 .anyMatch(k -> k.endsWith(":" + id));
         respostaIA.put("bloqueadoBandejaIA", bloqueado);
-        respostaIA.put("encontrado", dados != null && (!(dados instanceof Collection<?> c) || !c.isEmpty()));
-        respostaIA.put("quantidadeRegistros", dados instanceof Collection<?> c ? c.size() : (dados != null ? 1 : 0));
+        respostaIA.put("encontrado", totalRegistros > 0);
+        respostaIA.put("totalRegistros", totalRegistros);
+
+        if (("RESUMO".equals(modoRetorno) || "CONTAGEM".equals(modoRetorno)) && dados instanceof List<?> lista) {
+            String resumoTexto = gerarResumoAtomicoBusca(entidade, lista);
+            respostaIA.put("resumoTexto", resumoTexto);
+            respostaIA.put("quantidadeRegistros", lista.size());
+            respostaIA.put("dados", lista.size() > 5 ? lista.subList(0, 5) : lista);
+            respostaIA.put("resumoLeituraIA", resumoTexto);
+            return respostaIA;
+        }
+
+        if (dados instanceof List<?> lista) {
+            int limite = p.containsKey("limite") ? Math.max(1, (int) Math.min(100, lng(p, "limite"))) : 15;
+            int offset = p.containsKey("offset") ? Math.max(0, (int) Math.min(lista.size(), lng(p, "offset"))) : 0;
+            int fim = Math.min(lista.size(), offset + limite);
+            List<?> pagina = offset < lista.size() ? lista.subList(offset, fim) : Collections.emptyList();
+            boolean temMais = fim < lista.size();
+            respostaIA.put("offset", offset);
+            respostaIA.put("limite", limite);
+            respostaIA.put("temMais", temMais);
+            if (temMais) {
+                respostaIA.put("proximoOffset", fim);
+                respostaIA.put("avisoPaginacao", String.format(
+                        "Mostrando %d a %d de %d registros. Peça \"ver mais\" (offset=%d) para listar os próximos.",
+                        offset + 1, fim, lista.size(), fim));
+            }
+            respostaIA.put("quantidadeRegistros", pagina.size());
+            respostaIA.put("dados", pagina);
+            respostaIA.put("resumoLeituraIA", pagina.toString());
+            return respostaIA;
+        }
+
+        respostaIA.put("quantidadeRegistros", totalRegistros);
         respostaIA.put("dados", dados);
         respostaIA.put("resumoLeituraIA", dados != null ? dados.toString() : "Nenhum registro encontrado.");
         return respostaIA;
+    }
+
+    private List<String> parsearTermosExclusao(String excluiTermos) {
+        if (excluiTermos == null || excluiTermos.isBlank()) return Collections.emptyList();
+        List<String> out = new ArrayList<>();
+        for (String parte : excluiTermos.split("[,;|]+")) {
+            String limpo = parte.trim().toLowerCase(Locale.ROOT);
+            if (!limpo.isBlank()) out.add(limpo);
+        }
+        return out;
+    }
+
+    private boolean atendeInclusaoExclusao(String textoAlvo, String termo, List<String> excluidos) {
+        String base = textoAlvo != null ? textoAlvo.toLowerCase(Locale.ROOT) : "";
+        for (String exc : excluidos) {
+            if (base.contains(exc)) return false;
+        }
+        if (termo != null && !termo.isBlank()) {
+            String[] palavras = termo.trim().toLowerCase(Locale.ROOT).split("\\s+");
+            for (String pal : palavras) {
+                if (!pal.isBlank() && !base.contains(pal)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private List<Produto> filtrarProdutosComCondicoes(
+            List<Produto> base, String termo, String excluiTermos, String unidade,
+            Long idMin, Long idMax, BigDecimal valorMin, BigDecimal valorMax, boolean apenasComSaldo) {
+        List<String> excluidos = parsearTermosExclusao(excluiTermos);
+        List<Produto> filtrados = new ArrayList<>();
+        for (Produto prod : base) {
+            if (idMin != null && (prod.getId() == null || prod.getId() < idMin)) continue;
+            if (idMax != null && (prod.getId() == null || prod.getId() > idMax)) continue;
+            if (unidade != null && !unidade.isBlank()) {
+                String sigla = prod.getUm() != null ? prod.getUm().getSigla() : "";
+                if (!unidade.trim().equalsIgnoreCase(sigla)) continue;
+            }
+            BigDecimal preco = prod.getPrecoVenda() != null ? prod.getPrecoVenda() : BigDecimal.ZERO;
+            if (valorMin != null && preco.compareTo(valorMin) < 0) continue;
+            if (valorMax != null && preco.compareTo(valorMax) > 0) continue;
+            String texto = (prod.getNome() != null ? prod.getNome() : "") + " " + (prod.getDescricao() != null ? prod.getDescricao() : "");
+            if (!atendeInclusaoExclusao(texto, termo, excluidos)) continue;
+            if (apenasComSaldo) {
+                BigDecimal saldo = estoqueController.consultarSaldoTotalProduto(prod.getId());
+                if (saldo == null || saldo.compareTo(BigDecimal.ZERO) <= 0) continue;
+            }
+            filtrados.add(prod);
+        }
+        return filtrados;
+    }
+
+    private List<Pessoa> filtrarPessoasComCondicoes(
+            List<Pessoa> base, String termo, String excluiTermos, Long idMin, Long idMax) {
+        List<String> excluidos = parsearTermosExclusao(excluiTermos);
+        List<Pessoa> filtrados = new ArrayList<>();
+        for (Pessoa pes : base) {
+            if (idMin != null && (pes.getId() == null || pes.getId() < idMin)) continue;
+            if (idMax != null && (pes.getId() == null || pes.getId() > idMax)) continue;
+            if (!atendeInclusaoExclusao(pes.getNome(), termo, excluidos)) continue;
+            filtrados.add(pes);
+        }
+        return filtrados;
+    }
+
+    private List<Item<? extends Produto>> filtrarLotesComCondicoes(
+            List<Item<? extends Produto>> base, String termo, String excluiTermos, String unidade,
+            Long idMin, Long idMax, LocalDate dataInicio, LocalDate dataFim) {
+        List<String> excluidos = parsearTermosExclusao(excluiTermos);
+        List<Item<? extends Produto>> filtrados = new ArrayList<>();
+        for (Item<? extends Produto> lote : base) {
+            if (idMin != null && (lote.getId() == null || lote.getId() < idMin)) continue;
+            if (idMax != null && (lote.getId() == null || lote.getId() > idMax)) continue;
+            Produto prod = lote.getProduto();
+            if (unidade != null && !unidade.isBlank()) {
+                String sigla = prod != null && prod.getUm() != null ? prod.getUm().getSigla() : "";
+                if (!unidade.trim().equalsIgnoreCase(sigla)) continue;
+            }
+            String nomeProd = prod != null ? prod.getNome() : "";
+            if (!atendeInclusaoExclusao(nomeProd, termo, excluidos)) continue;
+            LocalDate dt = lote.getDataValidade();
+            if (dataInicio != null && (dt == null || dt.isBefore(dataInicio))) continue;
+            if (dataFim != null && (dt == null || dt.isAfter(dataFim))) continue;
+            filtrados.add(lote);
+        }
+        return filtrados;
+    }
+
+    private List<Nota> filtrarNotasComCondicoes(
+            List<? extends Nota> base, String termo, String excluiTermos,
+            Long idMin, Long idMax, BigDecimal valorMin, BigDecimal valorMax,
+            LocalDate dataInicio, LocalDate dataFim) {
+        List<String> excluidos = parsearTermosExclusao(excluiTermos);
+        List<Nota> filtrados = new ArrayList<>();
+        for (Nota n : base) {
+            if (idMin != null && (n.getId() == null || n.getId() < idMin)) continue;
+            if (idMax != null && (n.getId() == null || n.getId() > idMax)) continue;
+            BigDecimal total = n.getValorTotal() != null ? n.getValorTotal() : BigDecimal.ZERO;
+            if (valorMin != null && total.compareTo(valorMin) < 0) continue;
+            if (valorMax != null && total.compareTo(valorMax) > 0) continue;
+            LocalDate dt = n.getDataGerada() != null ? n.getDataGerada().toLocalDate() : null;
+            if (dataInicio != null && (dt == null || dt.isBefore(dataInicio))) continue;
+            if (dataFim != null && (dt == null || dt.isAfter(dataFim))) continue;
+            String nomePes = n.getPessoa() != null && n.getPessoa().getNome() != null ? n.getPessoa().getNome() : "";
+            String desc = n.getDescricao() != null ? n.getDescricao() : "";
+            if (!atendeInclusaoExclusao(nomePes + " " + desc, termo, excluidos)) continue;
+            filtrados.add(n);
+        }
+        return filtrados;
+    }
+
+    private String gerarResumoAtomicoBusca(String entidade, List<?> lista) {
+        if (lista.isEmpty()) {
+            return "Nenhum registro encontrado para os critérios informados.";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("Resumo de %s (%d registro(s) encontrado(s)):\n", entidade, lista.size()));
+        if (lista.get(0) instanceof Produto) {
+            BigDecimal saldoTotal = BigDecimal.ZERO;
+            int max = Math.min(10, lista.size());
+            for (int i = 0; i < lista.size(); i++) {
+                Produto prod = (Produto) lista.get(i);
+                BigDecimal saldo = estoqueController.consultarSaldoTotalProduto(prod.getId());
+                if (saldo != null) saldoTotal = saldoTotal.add(saldo);
+                if (i < max) {
+                    String um = prod.getUm() != null ? prod.getUm().getSigla() : "UN";
+                    sb.append(String.format("  • #%d - %s | Saldo: %s %s | Preço: R$ %s\n",
+                            prod.getId(), prod.getNome(),
+                            saldo != null ? saldo.stripTrailingZeros().toPlainString() : "0",
+                            um,
+                            prod.getPrecoVenda() != null ? prod.getPrecoVenda().setScale(2, java.math.RoundingMode.HALF_EVEN) : "0.00"));
+                }
+            }
+            sb.append("  Saldo total somado nos itens filtrados: ").append(saldoTotal.stripTrailingZeros().toPlainString());
+            if (lista.size() > max) {
+                sb.append("\n  (Exibindo os primeiros ").append(max).append(" de ").append(lista.size()).append("; peça 'listar todos' ou 'ver mais' para expandir.)");
+            }
+        } else if (lista.get(0) instanceof Nota) {
+            BigDecimal soma = BigDecimal.ZERO;
+            for (Object o : lista) {
+                Nota n = (Nota) o;
+                if (n.getValorTotal() != null) soma = soma.add(n.getValorTotal());
+            }
+            sb.append("  Valor total somado: R$ ").append(soma.setScale(2, java.math.RoundingMode.HALF_EVEN));
+        } else {
+            int max = Math.min(5, lista.size());
+            for (int i = 0; i < max; i++) {
+                sb.append("  • ").append(lista.get(i)).append("\n");
+            }
+        }
+        return sb.toString().trim();
     }
 
     /**
@@ -828,6 +1127,9 @@ public class RoteadorController {
                     BigDecimal valor = resolverValorItem(map, prod);
                     LocalDate validade = resolverValidadeItem(map);
                     Item<Produto> item = new Item<>(prod, valor, qtd, validade);
+                    if (dataNota != null) {
+                        item.setData(dataNota);
+                    }
                     if (map.containsKey("desconto")) {
                         item.aplicarDesconto(bd(map, "desconto", "0.0000"));
                     }
@@ -1057,8 +1359,19 @@ public class RoteadorController {
         if (v == null) v = map.get("validade");
         if (v instanceof LocalDate ld) return ld;
         if (v != null && !v.toString().isBlank()) {
+            String s = v.toString().trim();
             try {
-                return LocalDate.parse(v.toString().trim());
+                if (s.length() >= 10 && s.charAt(4) == '-' && s.charAt(7) == '-') {
+                    return LocalDate.parse(s.substring(0, 10));
+                }
+                if (s.matches("\\d{2}/\\d{2}/\\d{4}")) {
+                    return LocalDate.parse(s, java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                }
+                java.util.regex.Matcher mDias = java.util.regex.Pattern.compile("(?i)^(\\d+)\\s*dias?$").matcher(s);
+                if (mDias.find()) {
+                    return LocalDate.now().plusDays(Long.parseLong(mDias.group(1)));
+                }
+                return LocalDate.parse(s);
             } catch (Exception ignored) {}
         }
         return null;
@@ -1081,6 +1394,30 @@ public class RoteadorController {
             } catch (Exception ignored) {}
         }
         return LocalDateTime.now();
+    }
+
+    private LocalDate parsearDataFiltroNota(String dataStr) {
+        if (dataStr == null || dataStr.isBlank()) {
+            return null;
+        }
+        String s = dataStr.trim().toLowerCase(Locale.ROOT);
+        if ("hoje".equals(s) || "today".equals(s)) {
+            return LocalDate.now();
+        }
+        if ("ontem".equals(s) || "yesterday".equals(s)) {
+            return LocalDate.now().minusDays(1);
+        }
+        try {
+            if (s.length() >= 10 && s.charAt(4) == '-' && s.charAt(7) == '-') {
+                return LocalDate.parse(s.substring(0, 10));
+            }
+            if (s.matches("\\d{2}/\\d{2}/\\d{4}")) {
+                return LocalDate.parse(s, java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            }
+            return LocalDate.parse(s);
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     @SuppressWarnings("unchecked")

@@ -232,4 +232,8 @@ public class NotaController {
     public <T extends Nota> List<T> listarNotasPorTipo(Class<T> tipoNota) {
         return notaDAO.listarNotasPorTipo(tipoNota);
     }
+
+    public <T extends Nota> List<T> listarNotasComProdutoVencido(Class<T> tipoNota) {
+        return notaDAO.buscarNotasComProdutoVencido(tipoNota);
+    }
 }
