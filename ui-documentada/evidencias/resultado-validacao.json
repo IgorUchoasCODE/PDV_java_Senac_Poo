@@ -1,0 +1,9 @@
+{
+  "arquivos_conferidos": 212,
+  "arquivos_alterados": [],
+  "verificacoes_ui_aprovadas": 210,
+  "rotas_com_formulario": 85,
+  "campos_documentados": 190,
+  "banco_teste": "H2 isolado em memoria",
+  "suite_completa_backend_executada": false
+}
