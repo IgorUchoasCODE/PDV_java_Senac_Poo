@@ -31,7 +31,7 @@ public class ImagemProdutoService {
 
     private final ProdutoDAO produtoDAO;
     private final ProdutoImagemDAO produtoImagemDAO;
-    private final Path diretorioArmazenamento;
+    private Path diretorioArmazenamento;
 
     public ImagemProdutoService() {
         this(new ProdutoDAO(), new ProdutoImagemDAO(), Paths.get(DIRETORIO_PADRAO));
@@ -45,13 +45,47 @@ public class ImagemProdutoService {
     }
 
     private void inicializarDiretorio() {
-        try {
-            if (!Files.exists(diretorioArmazenamento)) {
-                Files.createDirectories(diretorioArmazenamento);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Não foi possível inicializar o diretório de imagens: " + diretorioArmazenamento, e);
+        if (prepararEGarantirEscrita(diretorioArmazenamento)) {
+            return;
         }
+        for (Path candidato : obterDiretoriosFallbackUsuario()) {
+            if (prepararEGarantirEscrita(candidato)) {
+                this.diretorioArmazenamento = candidato;
+                return;
+            }
+        }
+        throw new RuntimeException("Não foi possível inicializar o diretório de imagens nem os fallbacks do usuário a partir de: "
+                + diretorioArmazenamento);
+    }
+
+    private boolean prepararEGarantirEscrita(Path diretorio) {
+        try {
+            if (!Files.exists(diretorio)) {
+                Files.createDirectories(diretorio);
+            }
+            Path sonda = Files.createTempFile(diretorio, ".perm_", ".tmp");
+            Files.deleteIfExists(sonda);
+            return true;
+        } catch (IOException | SecurityException e) {
+            return false;
+        }
+    }
+
+    private List<Path> obterDiretoriosFallbackUsuario() {
+        List<Path> candidatos = new ArrayList<>();
+        String localAppData = System.getenv("LOCALAPPDATA");
+        if (localAppData != null && !localAppData.isBlank()) {
+            candidatos.add(Paths.get(localAppData, "Sazonalisei", "storage", "imagens", "produtos"));
+        }
+        String userHome = System.getProperty("user.home");
+        if (userHome != null && !userHome.isBlank()) {
+            candidatos.add(Paths.get(userHome, "Sazonalisei", "storage", "imagens", "produtos"));
+        }
+        String tmpDir = System.getProperty("java.io.tmpdir");
+        if (tmpDir != null && !tmpDir.isBlank()) {
+            candidatos.add(Paths.get(tmpDir, "Sazonalisei", "storage", "imagens", "produtos"));
+        }
+        return candidatos;
     }
 
     /**
