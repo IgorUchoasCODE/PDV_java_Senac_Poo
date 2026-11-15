@@ -76,6 +76,14 @@ public class ChatBotTerminal {
                 continue;
             }
 
+            if (entrada.equalsIgnoreCase(":simular") || entrada.equalsIgnoreCase(":sim")) {
+                var bandejaAtual = agente.obterBandeja(sessaoTerminal);
+                String sim = br.com.senac.integracao.ia.bandeja.SimuladorBandejaService
+                        .gerarRelatorioSimulacaoUsuario(bandejaAtual, agente.getRoteadorController());
+                System.out.println("\n" + AMARELO + sim + RESET);
+                continue;
+            }
+
             if (entrada.equalsIgnoreCase(":fechar")) {
                 agente.fecharJanelaContexto(sessaoTerminal);
                 System.out.println(VERDE + "✔ Janela de contexto encerrada com sucesso. Sessão limpa e pronta!" + RESET);
@@ -267,7 +275,7 @@ public class ChatBotTerminal {
         System.out.println(" • Rotas Oficiais: " + CIANO + RotaSistema.values().length + " rotas do RoteadorController integradas" + RESET);
         System.out.println(CIANO + "--------------------------------------------------------------------------------" + RESET);
         System.out.println(" Digite em linguagem natural (ex: 'qual o preço do produto 86?', 'listar produtos')");
-        System.out.println(" Comandos: " + NEGRITO + ":ajuda" + RESET + " | " + NEGRITO + ":bandeja" + RESET + " | " + NEGRITO + ":fechar" + RESET + " | " + NEGRITO + ":logs" + RESET + " | " + NEGRITO + ":rotas" + RESET + " | " + NEGRITO + ":persona <texto>" + RESET + " | " + NEGRITO + ":sair" + RESET);
+        System.out.println(" Comandos: " + NEGRITO + ":ajuda" + RESET + " | " + NEGRITO + ":bandeja" + RESET + " | " + NEGRITO + ":simular" + RESET + " | " + NEGRITO + ":fechar" + RESET + " | " + NEGRITO + ":logs" + RESET + " | " + NEGRITO + ":rotas" + RESET + " | " + NEGRITO + ":persona <texto>" + RESET + " | " + NEGRITO + ":sair" + RESET);
         System.out.println(CIANO + "================================================================================" + RESET);
     }
 
@@ -275,6 +283,7 @@ public class ChatBotTerminal {
         System.out.println("\n" + NEGRITO + CIANO + "📖 COMANDOS DISPONÍVEIS NO TERMINAL:" + RESET);
         System.out.println("  • " + VERDE + "<texto livre>" + RESET + "       : Envia comando em linguagem natural para a IA.");
         System.out.println("  • " + VERDE + ":bandeja" + RESET + "            : Exibe o status atual da Bandeja de Contexto (instruções validadas e pendentes).");
+        System.out.println("  • " + VERDE + ":simular" + RESET + "            : Simula custos, lucro, margem e impacto no estoque dos itens na bandeja.");
         System.out.println("  • " + VERDE + ":fechar" + RESET + "             : Encerra e limpa a janela de contexto atual (descarta pendências e limpa memória).");
         System.out.println("  • " + VERDE + ":logs [on|off|ver]" + RESET + "  : Ativa/desativa o salvamento de logs do fluxo (pré, IA, pós e retorno) e exibe ao finalizar a bandeja ou sair.");
         System.out.println("  • " + VERDE + ":rotas" + RESET + "              : Exibe o catálogo completo de rotas oficiais mapeadas.");

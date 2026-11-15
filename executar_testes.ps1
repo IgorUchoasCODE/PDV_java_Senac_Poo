@@ -51,6 +51,10 @@ Write-Host "--- Executando Teste da Bandeja Passo a Passo (TesteBandejaPassoAPas
 & java "-Dfile.encoding=UTF-8" -cp "$fullCp" br.com.senac.application.TesteBandejaPassoAPasso
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+Write-Host "--- Executando Teste de Simulação e Perguntas na Bandeja (TesteSimulacaoBandeja) ---" -ForegroundColor Cyan
+& java "-Dfile.encoding=UTF-8" -cp "$fullCp" br.com.senac.application.TesteSimulacaoBandeja
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Write-Host "--- Executando Teste do Parser AST e Pré-processador (TesteParserEPreProcessador) ---" -ForegroundColor Cyan
 & java "-Dfile.encoding=UTF-8" -cp "$fullCp" br.com.senac.application.TesteParserEPreProcessador
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

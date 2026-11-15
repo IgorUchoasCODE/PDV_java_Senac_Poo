@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
 public record ComandoBandeja(Acao acao, String alvo) {
 
     public enum Acao {
-        EXECUTAR_ITEM, EXECUTAR_PROXIMO, PULAR, RETOMAR, ANTERIOR, IR_PARA, VER, REMOVER
+        EXECUTAR_ITEM, EXECUTAR_PROXIMO, PULAR, RETOMAR, ANTERIOR, IR_PARA, VER, REMOVER, SIMULAR
     }
 
     private static final String ALVO = "(?:item\\s+|instrucao\\s+|op\\s*-?\\s*)?(\\d+)";
@@ -37,6 +37,8 @@ public record ComandoBandeja(Acao acao, String alvo) {
             Pattern.compile("^(?:remover|remove|remova|tirar|tira|tire|excluir|exclui|exclua|apagar|apaga|apague)\\s+(?:a\\s+|o\\s+)?" + ALVO + "$");
     private static final Pattern VER =
             Pattern.compile("^(?:ver bandeja|mostrar bandeja|mostra bandeja|bandeja|o que falta|o que tem na bandeja)$");
+    private static final Pattern SIMULAR =
+            Pattern.compile("^(?:simular|simulacao|simula)(?:\\s+(?:a\\s+|os\\s+itens\\s+da\\s+)?bandeja)?$");
 
     public static Optional<ComandoBandeja> interpretar(String mensagem) {
         if (mensagem == null || mensagem.isBlank()) return Optional.empty();
@@ -60,6 +62,7 @@ public record ComandoBandeja(Acao acao, String alvo) {
         m = REMOVER.matcher(t);
         if (m.matches()) return Optional.of(new ComandoBandeja(Acao.REMOVER, idOp(m.group(1))));
         if (VER.matcher(t).matches()) return Optional.of(new ComandoBandeja(Acao.VER, null));
+        if (SIMULAR.matcher(t).matches()) return Optional.of(new ComandoBandeja(Acao.SIMULAR, null));
         return Optional.empty();
     }
 

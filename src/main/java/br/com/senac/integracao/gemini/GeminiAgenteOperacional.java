@@ -102,10 +102,23 @@ public class GeminiAgenteOperacional {
 
     private String extrairResumoParaHistorico(String texto) {
         if (texto == null) return "";
-        return texto.replaceAll("\u001B\\[[;?0-9]*[a-zA-Z]", "")
+        String semBandeja = removerRodapeBandejaDuplicado(texto);
+        return semBandeja.replaceAll("\u001B\\[[;?0-9]*[a-zA-Z]", "")
                 .replace("[BOTAO_CONFIRMAR:SIM] [BOTAO_CANCELAR:NAO]", "")
                 .replace("[ACAO_CONFIRMAR:SIM] [ACAO_CANCELAR:NAO]", "")
                 .trim();
+    }
+
+    private String removerRodapeBandejaDuplicado(String texto) {
+        if (texto == null || texto.isBlank()) return "";
+        String limpo = texto
+                .replace("[BOTAO_CONFIRMAR:SIM] [BOTAO_CANCELAR:NAO]", "")
+                .replace("[ACAO_CONFIRMAR:SIM] [ACAO_CANCELAR:NAO]", "");
+        int idxBandeja = limpo.indexOf("BANDEJA DE CONTEXTO ATIVA");
+        if (idxBandeja >= 0) {
+            limpo = limpo.substring(0, idxBandeja);
+        }
+        return limpo.trim();
     }
 
     public GeminiAgenteOperacional() {
@@ -400,7 +413,8 @@ public class GeminiAgenteOperacional {
         }
 
         // Perguntas contextuais sobre o produto em foco ("o que vem nele?", "quais os componentes?", "é conjunto?", etc.)
-        if (lower.matches(".*\\b(o\\s*que\\s+vem\\s+nel[ea]|o\\s*que\\s+tem\\s+dentr?o|quais\\s+(?:s[aã]o\\s+)?os\\s+componentes|quais\\s+(?:s[aã]o\\s+)?os\\s+itens|itens\\s+do\\s+kit|componentes\\s+do\\s+kit|esse\\s+produto\\s+[eé]\\s+conjunto|[eé]\\s+conjunto)\\b.*")) {
+        if (!lower.contains("bandeja") && !lower.contains("op-")
+                && lower.matches(".*\\b(o\\s*que\\s+vem\\s+nel[ea]|o\\s*que\\s+tem\\s+dentr?o|quais\\s+(?:s[aã]o\\s+)?os\\s+componentes|quais\\s+(?:s[aã]o\\s+)?os\\s+itens|itens\\s+do\\s+kit|componentes\\s+do\\s+kit|esse\\s+produto\\s+[eé]\\s+conjunto|[eé]\\s+conjunto)\\b.*")) {
             var foco = compiladorInstrucoesCurta.obterFocoSessao(idSessao);
             Long idProdFoco = foco != null ? foco.getIdUltimoProduto() : null;
             if (idProdFoco != null) {
@@ -586,7 +600,12 @@ public class GeminiAgenteOperacional {
             }
             BandejaOperacoesContexto bandeja = bandejasPorSessao.get(idSessao);
             if (bandeja != null && bandeja.temItens()) {
-                return textoIA + "\n\n" + bandeja.formatarVisualizacao();
+                String textoLimpo = removerRodapeBandejaDuplicado(textoIA);
+                if (textoLimpo.isBlank() && ehPerguntaOuSimulacao(obterUltimaMensagemUsuario(idSessao))) {
+                    textoLimpo = br.com.senac.integracao.ia.bandeja.SimuladorBandejaService
+                            .gerarRelatorioSimulacaoUsuario(bandeja, roteadorController);
+                }
+                return (textoLimpo.isBlank() ? "" : textoLimpo + "\n\n") + bandeja.formatarVisualizacao();
             }
             return textoIA;
         }
@@ -620,7 +639,8 @@ public class GeminiAgenteOperacional {
             }
         }
 
-        // Se a IA chamou apenas ferramentas de leitura, decide se precisa de follow-up (escrita pendente ou análise multi-rota)
+        // Se a IA chamou apenas ferramentas de leitura, decide se precisa de follow-up (bandeja ativa, simulação, escrita pendente ou análise multi-rota)
+        BandejaOperacoesContexto bandejaAntesEscrita = bandejasPorSessao.get(idSessao);
         if (chamadasEscrita.isEmpty() && !chamadasLeitura.isEmpty() && nivelLoop < 3 && provedor != null
                 && precisaFollowUpLeitura(idSessao, chamadasLeitura)) {
             try {
@@ -629,13 +649,18 @@ public class GeminiAgenteOperacional {
                 }
                 notificarProgresso("IA correlacionando dados...");
                 List<Map<String, Object>> historico = obterHistoricoSessao(idSessao);
+                String contextoBandejaFollowUp = (bandejaAntesEscrita != null && bandejaAntesEscrita.temItens())
+                        ? "\n\n" + resumirBandejaParaEdicaoIA(bandejaAntesEscrita)
+                        : "";
                 String promptFollowUp = "Resultados das consultas realizadas no sistema:\n"
-                        + resultadosLeitura.toString() + "\n\n"
+                        + resultadosLeitura.toString() + contextoBandejaFollowUp + "\n\n"
                         + "Com base nos dados acima e na última solicitação do usuário no histórico:\n"
                         + "1) Se for uma AÇÃO de escrita (cadastrar/atualizar/kit/nota), chame TODAS as ferramentas de escrita necessárias NA MESMA resposta.\n"
                         + "   - Pessoa inexistente: enfileire cadastro (OP-1) E nota usando 'OP-1'.\n"
                         + "   - Kits/conjuntos: cadastre itens faltantes (precoVenda='0.00' se não informado) E chame produto_kit_adicionar_componente usando ID existente ou 'OP-1', 'OP-2'...\n"
-                        + "2) Se for uma PERGUNTA ANALÍTICA / CORRELACIONAL (ex: vencidos vendidos x devoluções, temperatura x estrago, distância de eventos x vendas, padrões sazonais):\n"
+                        + "2) Se for uma PERGUNTA ou SIMULAÇÃO sobre itens da Bandeja de Contexto (ex: lucro, margem, custo, desconto, estoque projetado, cenários diários):\n"
+                        + "   - NÃO chame ferramentas de escrita e NÃO repita o texto 'BANDEJA DE CONTEXTO ATIVA'. Responda diretamente com cálculos claros em Reais (R$).\n"
+                        + "3) Se for uma PERGUNTA ANALÍTICA / CORRELACIONAL (ex: vencidos vendidos x devoluções, temperatura x estrago, distância de eventos x vendas, padrões sazonais):\n"
                         + "   - Se ainda precisar cruzar com outras rotas (ex: busca_padrao_ia, estatistica_*, fator_externo_*, relatorio_*), chame-as agora.\n"
                         + "   - Se já tiver os dados suficientes, NÃO chame ferramentas — responda diretamente com uma análise objetiva, citando números, correlações e limites observados.";
                 RespostaIA followUpResp = provedor.conversar(new PedidoIA(promptFollowUp, null, null, historico));
@@ -643,7 +668,12 @@ public class GeminiAgenteOperacional {
                     return processarRespostaIAComLoop(idSessao, followUpResp, nivelLoop + 1, substituirBandejaSeHouverEscrita);
                 }
                 if (followUpResp.texto() != null && !followUpResp.texto().isBlank()) {
-                    return followUpResp.texto().trim();
+                    String textoLimpo = removerRodapeBandejaDuplicado(followUpResp.texto());
+                    BandejaOperacoesContexto bandejaAtual = bandejasPorSessao.get(idSessao);
+                    if (bandejaAtual != null && bandejaAtual.temItens()) {
+                        return (textoLimpo.isBlank() ? "" : textoLimpo + "\n\n") + bandejaAtual.formatarVisualizacao();
+                    }
+                    return textoLimpo.isBlank() ? followUpResp.texto().trim() : textoLimpo;
                 }
             } catch (Exception ignored) {}
         }
@@ -669,15 +699,48 @@ public class GeminiAgenteOperacional {
         BandejaOperacoesContexto bandeja = obterBandeja(idSessao);
         if (bandeja.temItens()) {
             String prefixoAviso = avisosEscritas.length() > 0 ? avisosEscritas + "\n\n" : "";
+            String ultimaMsgUsuario = obterUltimaMensagemUsuario(idSessao);
+            boolean temPerguntaOuSim = ehPerguntaOuSimulacao(ultimaMsgUsuario);
+            String textoBase = removerRodapeBandejaDuplicado(resp.texto());
+
+            // Quando houve apenas leitura (sem escrita) e a bandeja está ativa, nunca descartar os resultados lidos!
+            if (chamadasEscrita.isEmpty() && resultadosLeitura.length() > 0) {
+                StringBuilder corpoLeitura = new StringBuilder();
+                if (!textoBase.isBlank()) {
+                    corpoLeitura.append(textoBase).append("\n\n");
+                }
+                corpoLeitura.append(resultadosLeitura);
+                if (temPerguntaOuSim) {
+                    String sim = br.com.senac.integracao.ia.bandeja.SimuladorBandejaService
+                            .gerarRelatorioSimulacaoUsuario(bandeja, roteadorController);
+                    if (!sim.isBlank()) {
+                        corpoLeitura.append("\n\n").append(sim);
+                    }
+                }
+                return prefixoAviso + corpoLeitura.toString().trim() + "\n\n" + bandeja.formatarVisualizacao();
+            }
+
+            // Se o usuário pediu operações E também fez uma pergunta/simulação na mesma mensagem,
+            // gera a resposta da simulação com os itens recém-preparados na bandeja.
+            if (temPerguntaOuSim && (textoBase.isBlank() || !contemCalculoOuMoeda(textoBase))) {
+                String respostaSimulada = sintetizarSimulacaoBandeja(idSessao, bandeja, resultadosLeitura.toString(), nivelLoop);
+                if (respostaSimulada != null && !respostaSimulada.isBlank()) {
+                    textoBase = respostaSimulada;
+                }
+            }
+
             if (bandeja.totalItens() == 1) {
                 Deque<String> fila = ticketsPendentesPorSessao.get(idSessao);
                 if (fila != null && !fila.isEmpty()) {
                     ConfirmacaoAcaoGatekeeper.TicketConfirmacao t = gatekeeper.buscarTicket(fila.peekFirst());
-                    if (t != null) return prefixoAviso + montarPergunta(t);
+                    if (t != null) {
+                        String prefixoResp = (!textoBase.isBlank()) ? textoBase + "\n\n" : "";
+                        return prefixoAviso + prefixoResp + montarPergunta(t);
+                    }
                 }
             }
-            String explicacao = (resp.texto() != null && !resp.texto().isBlank())
-                    ? resp.texto().trim()
+            String explicacao = !textoBase.isBlank()
+                    ? textoBase
                     : gerarBreveExplicacaoBandeja(bandeja);
             return prefixoAviso + explicacao + "\n\n" + bandeja.formatarVisualizacao();
         }
@@ -1009,6 +1072,11 @@ public class GeminiAgenteOperacional {
                 return "Removi " + removido.getIdItem() + " (" + removido.getDescricaoAmigavel() + ") da bandeja.\n\n"
                         + bandeja.formatarVisualizacao();
             }
+            case SIMULAR -> {
+                String simulacao = br.com.senac.integracao.ia.bandeja.SimuladorBandejaService
+                        .gerarRelatorioSimulacaoUsuario(bandeja, roteadorController);
+                return simulacao + "\n\n" + bandeja.formatarVisualizacao();
+            }
             default -> {
                 return bandeja.formatarVisualizacao();
             }
@@ -1016,20 +1084,32 @@ public class GeminiAgenteOperacional {
     }
 
     private String resumirBandejaParaEdicaoIA(BandejaOperacoesContexto bandeja) {
-        StringBuilder sb = new StringBuilder("[Bandeja de Contexto Atual - Em Edição]:\n");
+        StringBuilder sb = new StringBuilder("[Bandeja de Contexto Atual - Aguardando Confirmação]:\n");
         for (ItemBandeja item : bandeja.getItens()) {
             sb.append(" - ").append(item.getIdItem())
-              .append(" [").append(item.getRota().name()).append("] ")
+              .append(" [").append(item.getStatus()).append(" | ").append(item.getRota().name()).append("] ")
               .append(item.getDescricaoAmigavel())
               .append(" | params=").append(item.getParametros()).append("\n");
         }
-        sb.append("Se o usuário estiver corrigindo, modificando ou substituindo este plano, reemita TODAS as ferramentas de escrita corrigidas para substituir a bandeja via pós-processamento.");
+        String simulacao = br.com.senac.integracao.ia.bandeja.SimuladorBandejaService
+                .gerarContextoSimulacaoParaIA(bandeja, roteadorController);
+        if (!simulacao.isBlank()) {
+            sb.append("\n").append(simulacao).append("\n");
+        }
+        sb.append("\nINSTRUÇÕES SOBRE A BANDEJA ATIVA:\n")
+          .append("1) PERGUNTAS E SIMULAÇÕES (lucro, margem, custo, desconto, estoque projetado, 'como ficaria', 'quanto lucraria', 'se eu vender X'): ")
+          .append("NÃO chame ferramentas de escrita e NÃO repita o bloco 'BANDEJA DE CONTEXTO ATIVA'. Responda com cálculos objetivos usando os dados da bandeja e a simulação acima (e consultas READ_ONLY apenas se precisar de dados extras do banco).\n")
+          .append("2) CORREÇÃO/SUBSTITUIÇÃO: Se o usuário pedir explicitamente para corrigir ou trocar algo do plano, reemita as ferramentas de escrita corrigidas.\n")
+          .append("3) NOVAS ADIÇÕES: Se o usuário pedir novas operações além das atuais, chame APENAS as novas ferramentas (não duplique os itens já listados na bandeja).");
         return sb.toString();
     }
 
     private boolean ehIntencaoCorrecaoBandeja(String msg) {
         if (msg == null || msg.isBlank()) return false;
         String lower = msg.toLowerCase(Locale.ROOT).trim();
+        if (lower.endsWith("?") || lower.matches("^(?:n[aã]o\\s+(?:entendi|sei|compreendi))\\b.*")) {
+            return false;
+        }
         return lower.matches("^(?:n[aã]o|na\\s+verdade|em\\s+vez|ao\\s+inv[eé]s|corrig\\w*|ajust\\w*|modifi\\w*|alter\\w*|troc\\w*|substitu\\w*|refa[cz]\\w*|quero\\s+que\\s+(?:modifi|alter|troc|corrij|mud)).*");
     }
 
@@ -1042,22 +1122,77 @@ public class GeminiAgenteOperacional {
         return CompiladorInstrucoesCurtaService.ehComandoEncurtado(candidato) ? candidato : null;
     }
 
-    private boolean precisaFollowUpLeitura(String idSessao, List<ChamadaFerramenta> chamadasLeitura) {
-        if (chamadasLeitura != null && chamadasLeitura.size() > 1) return true;
+    private String obterUltimaMensagemUsuario(String idSessao) {
         List<Map<String, Object>> hist = historicoPorSessao.get(idSessao);
-        if (hist == null || hist.isEmpty()) return true;
-        String ultimaMsgUsuario = "";
+        if (hist == null || hist.isEmpty()) return "";
         for (int i = hist.size() - 1; i >= 0; i--) {
             if ("user".equals(hist.get(i).get("role"))) {
                 Object partsObj = hist.get(i).get("parts");
                 if (partsObj instanceof List<?> parts && !parts.isEmpty() && parts.get(0) instanceof Map<?, ?> m) {
                     Object txt = m.get("text");
-                    if (txt != null) ultimaMsgUsuario = txt.toString().toLowerCase(Locale.ROOT);
+                    if (txt != null) return txt.toString();
                 }
                 break;
             }
         }
-        if (ultimaMsgUsuario.isBlank()) return true;
+        return "";
+    }
+
+    private boolean ehPerguntaOuSimulacao(String msg) {
+        if (msg == null || msg.isBlank()) return false;
+        String lower = java.text.Normalizer.normalize(msg, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT)
+                .trim();
+        if (lower.endsWith("?")) return true;
+        return lower.matches(".*\\b(quanto|quantos|quantas|como\\s+ficaria|como\\s+fica|como\\s+fez|como\\s+voce|qual\\s+(?:o|a|e|sera|seria)|quais|por\\s+que|porque|lucro\\w*|lucr\\w*|margem\\w*|simul\\w*|calcul\\w*|estim\\w*|previs\\w*|ficaria|seria|daria|valeria|custaria|ganharia|compensa|vale\\s+a\\s+pena|prejuizo|impacto|me\\s+fale|me\\s+diga|responda|explique|explica)\\b.*");
+    }
+
+    private boolean contemCalculoOuMoeda(String texto) {
+        if (texto == null || texto.isBlank()) return false;
+        return (texto.contains("R$") || texto.contains("%")) && texto.matches("(?s).*\\d.*");
+    }
+
+    private String sintetizarSimulacaoBandeja(String idSessao, BandejaOperacoesContexto bandeja, String leituraExtra, int nivelLoop) {
+        String resumoSim = br.com.senac.integracao.ia.bandeja.SimuladorBandejaService
+                .gerarRelatorioSimulacaoUsuario(bandeja, roteadorController);
+        if (provedor != null && nivelLoop < 2) {
+            try {
+                if (!Thread.currentThread().isInterrupted()) {
+                    notificarProgresso("Calculando simulação da bandeja...");
+                    List<Map<String, Object>> historico = obterHistoricoSessao(idSessao);
+                    StringBuilder promptSim = new StringBuilder();
+                    promptSim.append("As operações solicitadas já foram preparadas na Bandeja de Contexto:\n")
+                             .append(resumirBandejaParaEdicaoIA(bandeja)).append("\n");
+                    if (leituraExtra != null && !leituraExtra.isBlank()) {
+                        promptSim.append("\nConsultas auxiliares realizadas:\n").append(leituraExtra).append("\n");
+                    }
+                    promptSim.append("\nAgora responda APENAS à pergunta ou simulação feita pelo usuário na última mensagem ")
+                             .append("(ex: lucro unitário, lucro diário/total, margem, desconto, estoque projetado), ")
+                             .append("usando os valores exatos da simulação acima. ")
+                             .append("NÃO chame nenhuma ferramenta e NÃO escreva 'BANDEJA DE CONTEXTO ATIVA'.");
+                    RespostaIA respSim = provedor.conversar(new PedidoIA(promptSim.toString(), null, null, historico));
+                    if (respSim != null && !respSim.temChamadas() && respSim.texto() != null && !respSim.texto().isBlank()) {
+                        String limpo = removerRodapeBandejaDuplicado(respSim.texto());
+                        if (!limpo.isBlank()) {
+                            return limpo;
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return resumoSim;
+    }
+
+    private boolean precisaFollowUpLeitura(String idSessao, List<ChamadaFerramenta> chamadasLeitura) {
+        if (chamadasLeitura != null && chamadasLeitura.size() > 1) return true;
+        BandejaOperacoesContexto bandejaAtiva = bandejasPorSessao.get(idSessao);
+        if (bandejaAtiva != null && bandejaAtiva.temItens()) return true;
+        String ultimaMsg = obterUltimaMensagemUsuario(idSessao);
+        if (ultimaMsg.isBlank()) return true;
+        if (ehPerguntaOuSimulacao(ultimaMsg)) return true;
+        String ultimaMsgUsuario = ultimaMsg.toLowerCase(Locale.ROOT);
         return ultimaMsgUsuario.matches(".*\\b(criar|cria|crie|cadastr\\w*|atualiz\\w*|mud\\w*|alter\\w*|modifi\\w*|coloc\\w*|adicion\\w*|transform\\w*|edit\\w*|apag\\w*|exclu\\w*|delet\\w*|remov\\w*|compr\\w*|vend\\w*|registr\\w*|emiti\\w*|reajust\\w*|chance\\w*|correla\\w*|vencid\\w*|devolv\\w*|grau\\w*|clima|temperatura|dist[aâ]ncia|impact\\w*|padr[aã]o|padr[oõ]es|sazonal\\w*|estrag\\w*|motivo\\w*|estat[ií]st\\w*|compara\\w*|tend[eê]ncia|previs\\w*|quantos|quantas|soma\\w*|total|m[eé]dia|por\\s+que)\\b.*");
     }
 
