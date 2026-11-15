@@ -37,6 +37,7 @@ public class TesteTerminalInterativoHelper {
             testarIdentificacaoEntidadesTextoNormal();
             testarIdentificacaoEDicasDsl();
             testarEditorSimuladoComTabEBackSpace();
+            testarColagemMultilinhaEShiftEnter();
             testarIntegracaoCatalogoControladores();
             System.out.println("✅ PASSOU: TesteTerminalInterativoHelper validado com sucesso.");
         } finally {
@@ -145,6 +146,66 @@ public class TesteTerminalInterativoHelper {
         String resultado = editor.editar("", 80, fila::poll);
         assertEquals(":transcrever voz.wav", resultado,
                 "Editor deve aplicar TAB, BACKSPACE e ENTER corretamente em modo interativo");
+    }
+
+    private static void testarColagemMultilinhaEShiftEnter() {
+        AnalisadorTextoTerminal analisador = new AnalisadorTextoTerminal(criarFonteSimulada());
+        EditorTerminalInterativo editor = new EditorTerminalInterativo(analisador);
+
+        // 1. Colagem longa (>1000 chars) com várias quebras de linha em rajada + 'x' interno não deve enviar antes da hora
+        String textoColado = String.join("\n",
+                "Cadastre a unidade de medida PT (Pacote, base 1). Cadastre o fornecedor Atacadao Sabor do Norte com CNPJ 12.345.678/0001-95.",
+                "Cadastre o cliente Joao Pedro Almeida com CPF 111.222.333-44 e limite de credito de 1500 reais e VOUCHER_FESTA a vista.",
+                "Cadastre 4 produtos fisicos: Chocolate Bombom (UN, 3,50, 5x5x3 cm, peso bruto 0,05 kg e liquido 0,04 kg), Suco de Uva (UN, 12,00),",
+                "Biscoito Amanteigado (PT, 8,50) e Cafe Torrado (PT, 18,00), alem do produto digital Vale-Brinde Festa (10,00).",
+                "Crie um kit chamado Cesta Cafe Especial (CX, 95,00) composto por 6x Chocolate Bombom, 1x Suco de Uva, 2x Biscoito e 1x Cafe Torrado.",
+                "Por fim, emita nota de compra do fornecedor Atacadao Sabor do Norte com 100 Chocolate Bombom a 1,80 com 60 dias de validade,",
+                "30 Suco de Uva a 6,50 com 90 dias de validade, 40 Biscoito Amanteigado a 4,50 com 90 dias e 20 Cafe Torrado a 9,00 com 180 dias."
+        );
+        assertTrue(textoColado.length() > 800, "Texto de teste de colagem deve ser longo");
+
+        Deque<EventoTecla> filaColagem = new ArrayDeque<>();
+        for (int i = 0; i < textoColado.length(); i++) {
+            char c = textoColado.charAt(i);
+            boolean temMais = i < textoColado.length() - 1;
+            if (c == '\n') {
+                filaColagem.add(new EventoTecla(TipoTecla.ENTER, '\0', false, false, temMais, 120));
+            } else {
+                filaColagem.add(new EventoTecla(TipoTecla.CHAR, c, false, false, temMais, 120));
+            }
+        }
+        // Enter final manual do usuário após revisar a colagem
+        filaColagem.add(new EventoTecla(TipoTecla.ENTER, '\0', false, false, false, 120));
+
+        String retornoColagem = editor.editar("", 120, filaColagem::poll);
+        assertEquals(textoColado, retornoColagem,
+                "Colagem multilinha longa em rajada deve preservar todas as linhas em um único envio");
+
+        // 2. Shift+Enter manual insere quebra de linha sem enviar
+        Deque<EventoTecla> filaShift = new ArrayDeque<>();
+        for (char c : "linha 1".toCharArray()) {
+            filaShift.add(new EventoTecla(TipoTecla.CHAR, c, false, 80));
+        }
+        filaShift.add(new EventoTecla(TipoTecla.ENTER, '\0', false, true, false, 80));
+        for (char c : "linha 2".toCharArray()) {
+            filaShift.add(new EventoTecla(TipoTecla.CHAR, c, false, 80));
+        }
+        filaShift.add(new EventoTecla(TipoTecla.ENTER, '\0', false, 80));
+        assertEquals("linha 1\nlinha 2", editor.editar("", 80, filaShift::poll),
+                "Shift+Enter deve inserir quebra de linha manual sem submeter");
+
+        // 3. Bloco """...""" e continuação com '\' são normalizados na submissão
+        Deque<EventoTecla> filaAspas = new ArrayDeque<>();
+        for (char c : "\"\"\"item a".toCharArray()) {
+            filaAspas.add(new EventoTecla(TipoTecla.CHAR, c, false, 80));
+        }
+        filaAspas.add(new EventoTecla(TipoTecla.ENTER, '\0', false, 80));
+        for (char c : "item b\"\"\"".toCharArray()) {
+            filaAspas.add(new EventoTecla(TipoTecla.CHAR, c, false, 80));
+        }
+        filaAspas.add(new EventoTecla(TipoTecla.ENTER, '\0', false, 80));
+        assertEquals("item a\nitem b", editor.editar("", 80, filaAspas::poll),
+                "Bloco de aspas triplas deve remover delimitadores na submissão");
     }
 
     private static void testarIntegracaoCatalogoControladores() {

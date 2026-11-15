@@ -358,28 +358,28 @@ public class GeminiAgenteOperacional {
         }
 
         // 2. Busca sequencial contextual em linguagem natural (Nota -> Fornecedor/Cliente -> Contatos -> Produtos -> Pagamentos)
-        if (lower.matches(".*\\b(dessa\\s+nota|dessaa\\s+nota|da\\s+nota|nota\\s+atual|desse\\s+fornecedor|desse\\s+cliente|dessa\\s+pessoa|contatos\\s+del[ea])\\b.*")) {
-            if (lower.matches(".*\\b(fornecedor|fornecedores)\\b.*")) {
+        if (lower.matches("(?s).*\\b(dessa\\s+nota|dessaa\\s+nota|da\\s+nota|nota\\s+atual|desse\\s+fornecedor|desse\\s+cliente|dessa\\s+pessoa|contatos\\s+del[ea])\\b.*")) {
+            if (lower.matches("(?s).*\\b(fornecedor|fornecedores)\\b.*")) {
                 return compiladorInstrucoesCurta.compilarEProcessar(
                         idSessao, "$$ R= #Fornecedor da_nota;", obterBandeja(idSessao), () -> fecharJanelaContexto(idSessao));
             }
-            if (lower.matches(".*\\b(cliente|clientes|clinete|clinetes)\\b.*")) {
+            if (lower.matches("(?s).*\\b(cliente|clientes|clinete|clinetes)\\b.*")) {
                 return compiladorInstrucoesCurta.compilarEProcessar(
                         idSessao, "$$ R= #Cliente da_nota;", obterBandeja(idSessao), () -> fecharJanelaContexto(idSessao));
             }
-            if (lower.matches(".*\\b(pessoa|pessoas)\\b.*") && !lower.matches(".*\\b(contato|contatos)\\b.*")) {
+            if (lower.matches("(?s).*\\b(pessoa|pessoas)\\b.*") && !lower.matches("(?s).*\\b(contato|contatos)\\b.*")) {
                 return compiladorInstrucoesCurta.compilarEProcessar(
                         idSessao, "$$ R= #Pessoa da_nota;", obterBandeja(idSessao), () -> fecharJanelaContexto(idSessao));
             }
-            if (lower.matches(".*\\b(contato|contatos|telefone|whatsapp|email|documento|documentos|registro|registros)\\b.*")) {
+            if (lower.matches("(?s).*\\b(contato|contatos|telefone|whatsapp|email|documento|documentos|registro|registros)\\b.*")) {
                 return compiladorInstrucoesCurta.compilarEProcessar(
                         idSessao, "$$ R= #Contato da_pessoa;", obterBandeja(idSessao), () -> fecharJanelaContexto(idSessao));
             }
-            if (lower.matches(".*\\b(produto|produtos|prodito|itens|item)\\b.*")) {
+            if (lower.matches("(?s).*\\b(produto|produtos|prodito|itens|item)\\b.*")) {
                 return compiladorInstrucoesCurta.compilarEProcessar(
                         idSessao, "$$ R= #Produto da_nota;", obterBandeja(idSessao), () -> fecharJanelaContexto(idSessao));
             }
-            if (lower.matches(".*\\b(pagamento|pagamentos|parcela|parcelas)\\b.*")) {
+            if (lower.matches("(?s).*\\b(pagamento|pagamentos|parcela|parcelas)\\b.*")) {
                 return compiladorInstrucoesCurta.compilarEProcessar(
                         idSessao, "$$ R= #Pagamento da_nota;", obterBandeja(idSessao), () -> fecharJanelaContexto(idSessao));
             }
@@ -414,7 +414,7 @@ public class GeminiAgenteOperacional {
 
         // Perguntas contextuais sobre o produto em foco ("o que vem nele?", "quais os componentes?", "é conjunto?", etc.)
         if (!lower.contains("bandeja") && !lower.contains("op-")
-                && lower.matches(".*\\b(o\\s*que\\s+vem\\s+nel[ea]|o\\s*que\\s+tem\\s+dentr?o|quais\\s+(?:s[aã]o\\s+)?os\\s+componentes|quais\\s+(?:s[aã]o\\s+)?os\\s+itens|itens\\s+do\\s+kit|componentes\\s+do\\s+kit|esse\\s+produto\\s+[eé]\\s+conjunto|[eé]\\s+conjunto)\\b.*")) {
+                && lower.matches("(?s).*\\b(o\\s*que\\s+vem\\s+nel[ea]|o\\s*que\\s+tem\\s+dentr?o|quais\\s+(?:s[aã]o\\s+)?os\\s+componentes|quais\\s+(?:s[aã]o\\s+)?os\\s+itens|itens\\s+do\\s+kit|componentes\\s+do\\s+kit|esse\\s+produto\\s+[eé]\\s+conjunto|[eé]\\s+conjunto)\\b.*")) {
             var foco = compiladorInstrucoesCurta.obterFocoSessao(idSessao);
             Long idProdFoco = foco != null ? foco.getIdUltimoProduto() : null;
             if (idProdFoco != null) {
@@ -424,16 +424,16 @@ public class GeminiAgenteOperacional {
         }
 
         // Não intercepta intenções de escrita/exclusão/atualização
-        if (lower.matches(".*\\b(criar|cria|cadastrar|cadastra|atualizar|atualiza|mudar|muda|alterar|altera|modificar|modifica|modifique|colocar|coloque|adicionar|adicione|transformar|transforme|selecione|selecionar|editar|edite|apagar|apaga|excluir|exclui|deletar|deleta|remover|remove|comprar|comprei|vender|vendi|registrar|registre|emitir|emita)\\b.*")) {
+        if (lower.matches("(?s).*\\b(criar|cria|cadastrar|cadastra|atualizar|atualiza|mudar|muda|alterar|altera|modificar|modifica|modifique|colocar|coloque|adicionar|adicione|transformar|transforme|selecione|selecionar|editar|edite|apagar|apaga|excluir|exclui|deletar|deleta|remover|remove|comprar|comprei|vender|vendi|registrar|registre|emitir|emita)\\b.*")) {
             return null;
         }
 
-        boolean referenciaContextual = lower.matches(".*\\b(dess[ae]s?|del[ae]s?|ess[ae]s?|est[ae]s?|anteriores?|acima|ids?)\\b.*");
+        boolean referenciaContextual = lower.matches("(?s).*\\b(dess[ae]s?|del[ae]s?|ess[ae]s?|est[ae]s?|anteriores?|acima|ids?)\\b.*");
         boolean ehPerguntaNatural = lower.startsWith("qual ") || lower.startsWith("quais ") || texto.endsWith("?");
         boolean mencionaBusca = !referenciaContextual && !ehPerguntaNatural
-                && lower.matches("^(procura|procurar|busca|buscar|acha|achar|localiza|localizar|consulta|consultar|mostra|mostrar|ver|cad[eê])\\b.*");
-        boolean mencionaProduto = lower.matches(".*\\b(produto|produtos|prodito|item|estoque)\\b.*");
-        boolean mencionaPessoa = lower.matches(".*\\b(pessoa|pessoas|cliente|clientes|fornecedor|fornecedores)\\b.*");
+                && lower.matches("(?s)^(procura|procurar|busca|buscar|acha|achar|localiza|localizar|consulta|consultar|mostra|mostrar|ver|cad[eê])\\b.*");
+        boolean mencionaProduto = lower.matches("(?s).*\\b(produto|produtos|prodito|item|estoque)\\b.*");
+        boolean mencionaPessoa = lower.matches("(?s).*\\b(pessoa|pessoas|cliente|clientes|fornecedor|fornecedores)\\b.*");
 
         // Extrai o termo após palavras de comando comuns
         String termo = texto.replaceAll("(?i)^(procura|procurar|busca|buscar|acha|achar|localiza|localizar|consulta|consultar|mostra|mostrar|ver)\\s+", "")
@@ -1107,10 +1107,10 @@ public class GeminiAgenteOperacional {
     private boolean ehIntencaoCorrecaoBandeja(String msg) {
         if (msg == null || msg.isBlank()) return false;
         String lower = msg.toLowerCase(Locale.ROOT).trim();
-        if (lower.endsWith("?") || lower.matches("^(?:n[aã]o\\s+(?:entendi|sei|compreendi))\\b.*")) {
+        if (lower.endsWith("?") || lower.matches("(?s)^(?:n[aã]o\\s+(?:entendi|sei|compreendi))\\b.*")) {
             return false;
         }
-        return lower.matches("^(?:n[aã]o|na\\s+verdade|em\\s+vez|ao\\s+inv[eé]s|corrig\\w*|ajust\\w*|modifi\\w*|alter\\w*|troc\\w*|substitu\\w*|refa[cz]\\w*|quero\\s+que\\s+(?:modifi|alter|troc|corrij|mud)).*");
+        return lower.matches("(?s)^(?:n[aã]o|na\\s+verdade|em\\s+vez|ao\\s+inv[eé]s|corrig\\w*|ajust\\w*|modifi\\w*|alter\\w*|troc\\w*|substitu\\w*|refa[cz]\\w*|quero\\s+que\\s+(?:modifi|alter|troc|corrij|mud)).*");
     }
 
     private String extrairBlocoDsl(String texto) {
@@ -1145,7 +1145,7 @@ public class GeminiAgenteOperacional {
                 .toLowerCase(Locale.ROOT)
                 .trim();
         if (lower.endsWith("?")) return true;
-        return lower.matches(".*\\b(quanto|quantos|quantas|como\\s+ficaria|como\\s+fica|como\\s+fez|como\\s+voce|qual\\s+(?:o|a|e|sera|seria)|quais|por\\s+que|porque|lucro\\w*|lucr\\w*|margem\\w*|simul\\w*|calcul\\w*|estim\\w*|previs\\w*|ficaria|seria|daria|valeria|custaria|ganharia|compensa|vale\\s+a\\s+pena|prejuizo|impacto|me\\s+fale|me\\s+diga|responda|explique|explica)\\b.*");
+        return lower.matches("(?s).*\\b(quanto|quantos|quantas|como\\s+ficaria|como\\s+fica|como\\s+fez|como\\s+voce|qual\\s+(?:o|a|e|sera|seria)|quais|por\\s+que|porque|lucro\\w*|lucr\\w*|margem\\w*|simul\\w*|calcul\\w*|estim\\w*|previs\\w*|ficaria|seria|daria|valeria|custaria|ganharia|compensa|vale\\s+a\\s+pena|prejuizo|impacto|me\\s+fale|me\\s+diga|responda|explique|explica)\\b.*");
     }
 
     private boolean contemCalculoOuMoeda(String texto) {
@@ -1193,7 +1193,7 @@ public class GeminiAgenteOperacional {
         if (ultimaMsg.isBlank()) return true;
         if (ehPerguntaOuSimulacao(ultimaMsg)) return true;
         String ultimaMsgUsuario = ultimaMsg.toLowerCase(Locale.ROOT);
-        return ultimaMsgUsuario.matches(".*\\b(criar|cria|crie|cadastr\\w*|atualiz\\w*|mud\\w*|alter\\w*|modifi\\w*|coloc\\w*|adicion\\w*|transform\\w*|edit\\w*|apag\\w*|exclu\\w*|delet\\w*|remov\\w*|compr\\w*|vend\\w*|registr\\w*|emiti\\w*|reajust\\w*|chance\\w*|correla\\w*|vencid\\w*|devolv\\w*|grau\\w*|clima|temperatura|dist[aâ]ncia|impact\\w*|padr[aã]o|padr[oõ]es|sazonal\\w*|estrag\\w*|motivo\\w*|estat[ií]st\\w*|compara\\w*|tend[eê]ncia|previs\\w*|quantos|quantas|soma\\w*|total|m[eé]dia|por\\s+que)\\b.*");
+        return ultimaMsgUsuario.matches("(?s).*\\b(criar|cria|crie|cadastr\\w*|atualiz\\w*|mud\\w*|alter\\w*|modifi\\w*|coloc\\w*|adicion\\w*|transform\\w*|edit\\w*|apag\\w*|exclu\\w*|delet\\w*|remov\\w*|compr\\w*|vend\\w*|registr\\w*|emiti\\w*|reajust\\w*|chance\\w*|correla\\w*|vencid\\w*|devolv\\w*|grau\\w*|clima|temperatura|dist[aâ]ncia|impact\\w*|padr[aã]o|padr[oõ]es|sazonal\\w*|estrag\\w*|motivo\\w*|estat[ií]st\\w*|compara\\w*|tend[eê]ncia|previs\\w*|quantos|quantas|soma\\w*|total|m[eé]dia|por\\s+que)\\b.*");
     }
 
     private void limparApenasBandejaParaReconstrucao(String idSessao) {

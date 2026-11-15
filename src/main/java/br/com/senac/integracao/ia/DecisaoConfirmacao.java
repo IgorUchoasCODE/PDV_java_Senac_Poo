@@ -22,10 +22,12 @@ public enum DecisaoConfirmacao {
             "CANCELA", "CANCELAR", "CANCELE", "DESISTI", "DESISTO");
 
     private static final java.util.regex.Pattern INTENCAO_EDICAO_OU_NOVA_ACAO = java.util.regex.Pattern.compile(
-            ".*\\b(QUERO|MODIFI\\w*|MUD\\w*|ALTER\\w*|TROC\\w*|CORRIG\\w*|REMOV\\w*|TIR\\w*|ADICION\\w*|COLOC\\w*|CRI[AE]\\w*|ATUALIZ\\w*|EDIT\\w*|SUBSTITU\\w*|REFA[CZ]\\w*|OP-?\\d+|EM VEZ|AO INVES)\\b.*");
+            ".*\\b(QUERO|MODIFI\\w*|MUD\\w*|ALTER\\w*|TROC\\w*|CORRIG\\w*|REMOV\\w*|TIR\\w*|ADICION\\w*|COLOC\\w*|CRI[AE]\\w*|ATUALIZ\\w*|EDIT\\w*|SUBSTITU\\w*|REFA[CZ]\\w*|OP-?\\d+|EM VEZ|AO INVES)\\b.*",
+            java.util.regex.Pattern.DOTALL);
 
     private static final java.util.regex.Pattern INTENCAO_PERGUNTA_OU_SIMULACAO = java.util.regex.Pattern.compile(
-            ".*\\b(QUANTO|QUANTOS|QUANTAS|COMO|QUAL|QUAIS|ONDE|PORQUE|POR\\s+QUE|SERA|SE|CASO|AO|QUANDO|SIMUL\\w*|CALCULA\\w*|ESTIMA\\w*|PREVIS\\w*|LUCRO\\w*|LUCR\\w*|MARGEM\\w*|CUSTO\\w*|PREJUIZ\\w*|IMPACTO\\w*|EXPLIC\\w*|ENTEND\\w*|DUVID\\w*|PERGUNT\\w*|FICARIA|SERIA|IRIA|TERIA|DARIA|VALERIA|CUSTARIA|GANHARIA|PERDERIA|ACHA|ANTES|DEPOIS|AINDA|MAS|POREM|CONTUDO|ENTRETANTO|APENAS|SOMENTE)\\b.*");
+            ".*\\b(QUANTO|QUANTOS|QUANTAS|COMO|QUAL|QUAIS|ONDE|PORQUE|POR\\s+QUE|SERA|SE|CASO|AO|QUANDO|SIMUL\\w*|CALCULA\\w*|ESTIMA\\w*|PREVIS\\w*|LUCRO\\w*|LUCR\\w*|MARGEM\\w*|CUSTO\\w*|PREJUIZ\\w*|IMPACTO\\w*|EXPLIC\\w*|ENTEND\\w*|DUVID\\w*|PERGUNT\\w*|FICARIA|SERIA|IRIA|TERIA|DARIA|VALERIA|CUSTARIA|GANHARIA|PERDERIA|ACHA|ANTES|DEPOIS|AINDA|MAS|POREM|CONTUDO|ENTRETANTO|APENAS|SOMENTE)\\b.*",
+            java.util.regex.Pattern.DOTALL);
 
     private static final java.util.regex.Pattern VARIANTE_SIM = java.util.regex.Pattern.compile("^S{1,2}I{1,2}M{1,3}$");
 

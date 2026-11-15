@@ -20,7 +20,17 @@ public class EditorTerminalInterativo {
         CHAR, BACKSPACE, DELETE, ENTER, TAB, LEFT, RIGHT, UP, DOWN, HOME, END, ESC, WINDOW_ONLY
     }
 
-    public record EventoTecla(TipoTecla tipo, char caractere, boolean ctrl, int larguraJanela) {}
+    public record EventoTecla(
+            TipoTecla tipo,
+            char caractere,
+            boolean ctrl,
+            boolean shift,
+            boolean emRajada,
+            int larguraJanela) {
+        public EventoTecla(TipoTecla tipo, char caractere, boolean ctrl, int larguraJanela) {
+            this(tipo, caractere, ctrl, false, false, larguraJanela);
+        }
+    }
 
     private final AnalisadorTextoTerminal analisador;
     private final List<String> historico = new ArrayList<>();
@@ -53,22 +63,26 @@ public class EditorTerminalInterativo {
                 case ENTER -> {
                     String atual = buffer.toString();
                     String trim = atual.trim();
-                    boolean continua = trim.endsWith("\\")
+                    boolean continua = ev.emRajada()
+                            || (ev.shift() && !ev.ctrl())
+                            || trim.endsWith("\\")
                             || estaEmBlocoAspasTriplasAberto(trim)
                             || (!trim.startsWith(":") && contarColchetesAbertos(trim) > 0 && !linhaAtualEhVazia(atual, cursor));
-                    if (continua && !ev.ctrl()) {
+                    if (continua && (ev.emRajada() || !ev.ctrl())) {
                         buffer.insert(cursor, '\n');
                         cursor++;
                         break;
                     }
-                    finalizarDesenho(atual, largura, linhaCursorAnterior);
-                    if (!trim.isEmpty()) {
-                        historico.add(trim);
+                    String resultado = normalizarSubmissaoMultilinha(atual);
+                    finalizarDesenho(resultado, largura, linhaCursorAnterior);
+                    if (!resultado.isEmpty()) {
+                        historico.add(resultado);
                     }
-                    return trim;
+                    return resultado;
                 }
                 case CHAR -> {
-                    buffer.insert(cursor, ev.caractere());
+                    char ch = ev.caractere() == '\r' ? '\n' : ev.caractere();
+                    buffer.insert(cursor, ch);
                     cursor++;
                 }
                 case BACKSPACE -> {
@@ -125,7 +139,9 @@ public class EditorTerminalInterativo {
                 }
             }
 
-            linhaCursorAnterior = desenhar(buffer.toString(), cursor, largura, linhaCursorAnterior, false);
+            if (!ev.emRajada()) {
+                linhaCursorAnterior = desenhar(buffer.toString(), cursor, largura, linhaCursorAnterior, false);
+            }
         }
     }
 
@@ -229,6 +245,14 @@ public class EditorTerminalInterativo {
     private static boolean linhaAtualEhVazia(String texto, int cursor) {
         int ini = texto.lastIndexOf('\n', Math.max(0, cursor - 1));
         return texto.substring(ini < 0 ? 0 : ini + 1, cursor).trim().isEmpty();
+    }
+
+    private static String normalizarSubmissaoMultilinha(String texto) {
+        String trim = texto != null ? texto.trim() : "";
+        if (trim.startsWith("\"\"\"") && trim.endsWith("\"\"\"") && trim.length() >= 6) {
+            trim = trim.substring(3, trim.length() - 3).trim();
+        }
+        return trim.replaceAll("[ \\t]*\\\\\\r?\\n", "\n").trim();
     }
 
     private static String truncar(String s, int max) {

@@ -3,6 +3,7 @@ package br.com.senac.application;
 import br.com.senac.controller.RoteadorController;
 import br.com.senac.integracao.gemini.GeminiAgenteOperacional;
 import br.com.senac.integracao.ia.BandejaOperacoesContexto;
+import br.com.senac.integracao.ia.DecisaoConfirmacao;
 import br.com.senac.integracao.ia.bandeja.ExecutorBandeja;
 import br.com.senac.integracao.ia.bandeja.PassoExecutado;
 import br.com.senac.integracao.ia.parser.ErroSintaxe;
@@ -42,6 +43,7 @@ public class TesteParserEPreProcessador {
 
         try {
             testarPreProcessadorMensagem();
+            testarPreProcessamentoEDecisaoMultilinha();
             testarParserInstrucaoAst();
             testarValidacaoAtomicaEErrosSintaxe();
             testarCadastroConjuntoAninhadoIntegrado();
@@ -419,6 +421,29 @@ public class TesteParserEPreProcessador {
             roteador.pessoas().excluirPessoa(forn.getId());
         } catch (Exception ignored) {}
         afirmar(true, "Limpeza de novas regras concluída.");
+    }
+
+    private static void testarPreProcessamentoEDecisaoMultilinha() {
+        PreProcessadorMensagem pre = new PreProcessadorMensagem();
+        String msgMultilinha = "Cadastre o fornecedor Casa das Surpresas com CNPJ 12.345.678/0001-95.\n\n"
+                + "Crie um kit chamado Caixa Especial com venda de 40 reais.\n"
+                + "Emita uma nota de compra com validade de 30 dias e pagamento via pix.\n"
+                + "Calcule o lucro previsto.";
+
+        ResultadoPreProcessamento res = pre.processar(msgMultilinha);
+        afirmar(res.mensagemOriginal().contains("\n") && res.mensagemAnotada().contains("\n"),
+                "Pré-processamento preservou quebras de linha no texto normalizado e anotado.");
+        afirmar(res.rotasSugeridas().contains("nota_compra_emitir")
+                        && res.rotasSugeridas().contains("produto_kit_adicionar_componente")
+                        && res.rotasSugeridas().contains("estoque_saldo_consolidado")
+                        && res.rotasSugeridas().contains("pagamento_criar_a_vista")
+                        && res.rotasSugeridas().contains("relatorio_lucro_contabil_bacen"),
+                "Inferência de rotas prioritárias funcionou atravessando quebras de linha (DOTALL): " + res.rotasSugeridas());
+
+        afirmar(DecisaoConfirmacao.interpretar("não,\nquero corrigir o valor da OP-1") == DecisaoConfirmacao.INDEFINIDA,
+                "DecisaoConfirmacao reconhece edição multilinha sem cancelar a bandeja.");
+        afirmar(DecisaoConfirmacao.interpretar("sim,\nmas quanto fica o lucro no final?") == DecisaoConfirmacao.INDEFINIDA,
+                "DecisaoConfirmacao reconhece simulação multilinha sem executar imediatamente.");
     }
 
     private static void afirmar(boolean condicao, String mensagem) {

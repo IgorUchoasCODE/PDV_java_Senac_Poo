@@ -222,7 +222,7 @@ public class PreProcessadorMensagem {
         boolean temPessoaEnt = entidades.stream().anyMatch(e ->
                 e.tipo() == TipoEntidade.PESSOA_NOMINADA || e.tipo() == TipoEntidade.CPF || e.tipo() == TipoEntidade.CNPJ);
 
-        if (lower.matches(".*\\b(conjunto|conjuntos|kit|kits|composto|componente|componentes|cartela|cartelas|cont[eê]m|contenha|composi[cç][aã]o)\\b.*")) {
+        if (lower.matches("(?s).*\\b(conjunto|conjuntos|kit|kits|composto|componente|componentes|cartela|cartelas|cont[eê]m|contenha|composi[cç][aã]o)\\b.*")) {
             rotas.addAll(List.of(
                     "produto_catalogo_buscar",
                     "produto_fisico_cadastrar",
@@ -231,7 +231,7 @@ public class PreProcessadorMensagem {
             ));
         }
 
-        if (lower.matches(".*\\b(unidade\\s+de\\s+medida|unidades\\s+de\\s+medida|um|sigla|fator|fracion\\w*)\\b.*")) {
+        if (lower.matches("(?s).*\\b(unidade\\s+de\\s+medida|unidades\\s+de\\s+medida|um|sigla|fator|fracion\\w*)\\b.*")) {
             rotas.addAll(List.of(
                     "produto_unidade_listar",
                     "produto_unidade_cadastrar",
@@ -239,7 +239,7 @@ public class PreProcessadorMensagem {
             ));
         }
 
-        if (temProdutoEnt || lower.matches(".*\\b(produto|produtos|item|itens|cat[aá]logo|pre[cç]o|dimens[aã]o|dimens[oõ]es|peso)\\b.*")) {
+        if (temProdutoEnt || lower.matches("(?s).*\\b(produto|produtos|item|itens|cat[aá]logo|pre[cç]o|dimens[aã]o|dimens[oõ]es|peso)\\b.*")) {
             rotas.addAll(List.of(
                     "produto_catalogo_buscar",
                     "produto_catalogo_listar",
@@ -249,7 +249,7 @@ public class PreProcessadorMensagem {
             ));
         }
 
-        if (temPessoaEnt || lower.matches(".*\\b(cliente|clientes|fornecedor|fornecedores|pessoa|pessoas|cpf|cnpj|limite)\\b.*")) {
+        if (temPessoaEnt || lower.matches("(?s).*\\b(cliente|clientes|fornecedor|fornecedores|pessoa|pessoas|cpf|cnpj|limite)\\b.*")) {
             rotas.addAll(List.of(
                     "pessoa_buscar",
                     "pessoa_listar_clientes",
@@ -262,7 +262,7 @@ public class PreProcessadorMensagem {
             ));
         }
 
-        if (lower.matches(".*\\b(nota|notas|compra|comprar|venda|vender|emiti\\w*|fatura|devolu[cç][aã]o)\\b.*")) {
+        if (lower.matches("(?s).*\\b(nota|notas|compra|comprar|venda|vender|emiti\\w*|fatura|devolu[cç][aã]o)\\b.*")) {
             rotas.addAll(List.of(
                     "nota_listar_padrao",
                     "nota_buscar_unica",
@@ -273,7 +273,7 @@ public class PreProcessadorMensagem {
             ));
         }
 
-        if (lower.matches(".*\\b(estoque|lote|lotes|validade|vencid\\w*|perda|fifo|saldo)\\b.*")) {
+        if (lower.matches("(?s).*\\b(estoque|lote|lotes|validade|vencid\\w*|perda|fifo|saldo)\\b.*")) {
             rotas.addAll(List.of(
                     "estoque_saldo_consolidado",
                     "estoque_lotes_validos_listar",
@@ -283,7 +283,7 @@ public class PreProcessadorMensagem {
             ));
         }
 
-        if (lower.matches(".*\\b(pagamento|pagamentos|pagar|parcela|parcelas|quitar|forma\\s+de\\s+pagamento|pix|cart[aã]o|boleto|dinheiro)\\b.*")) {
+        if (lower.matches("(?s).*\\b(pagamento|pagamentos|pagar|parcela|parcelas|quitar|forma\\s+de\\s+pagamento|pix|cart[aã]o|boleto|dinheiro)\\b.*")) {
             rotas.addAll(List.of(
                     "pagamento_forma_listar_ativas",
                     "pagamento_criar_a_vista",
@@ -293,7 +293,7 @@ public class PreProcessadorMensagem {
             ));
         }
 
-        if (lower.matches(".*\\b(lucro|bacen|relat[oó]rio|sazonal\\w*|demanda|ranking|previs[aã]o|clima|temperatura|graus?|rio|rios|evento|eventos|dist[aâ]ncia|impact\\w*|estrag\\w*|motivo\\w*|correla\\w*|chance\\w*|padr[aã]o|padr[oõ]es)\\b.*")) {
+        if (lower.matches("(?s).*\\b(lucro|bacen|relat[oó]rio|sazonal\\w*|demanda|ranking|previs[aã]o|clima|temperatura|graus?|rio|rios|evento|eventos|dist[aâ]ncia|impact\\w*|estrag\\w*|motivo\\w*|correla\\w*|chance\\w*|padr[aã]o|padr[oõ]es)\\b.*")) {
             rotas.addAll(List.of(
                     "busca_padrao_ia",
                     "estatistica_motivos_perda_prematura",
@@ -308,7 +308,7 @@ public class PreProcessadorMensagem {
             ));
         }
 
-        if (lower.matches(".*\\b(soma\\w*|total|quantos|quantas|m[eé]dia|maior|menor|entre|acima|abaixo|exceto|sem|vencid\\w*|devolv\\w*|resumo|filtr\\w*)\\b.*")) {
+        if (lower.matches("(?s).*\\b(soma\\w*|total|quantos|quantas|m[eé]dia|maior|menor|entre|acima|abaixo|exceto|sem|vencid\\w*|devolv\\w*|resumo|filtr\\w*)\\b.*")) {
             rotas.add("busca_padrao_ia");
         }
 

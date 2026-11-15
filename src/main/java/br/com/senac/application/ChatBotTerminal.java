@@ -646,9 +646,8 @@ public class ChatBotTerminal {
         System.out.print("\r" + " ".repeat(Math.min(Math.max(larguraTerminal - 1, 60), 120)) + "\r");
         System.out.flush();
 
-        leitor.descartarEntradaPendente();
-
         if (cancelado) {
+            leitor.descartarEntradaPendente();
             return "⚠️ Operação cancelada pelo usuário. Nenhuma alteração pendente foi corrompida.";
         }
         return resultado.get() != null ? resultado.get() : "";
@@ -719,7 +718,7 @@ public class ChatBotTerminal {
         System.out.println("\n" + NEGRITO + CIANO + "📖 COMANDOS DISPONÍVEIS NO TERMINAL (AVANÇADO & TESTES):" + RESET);
         System.out.println("  • " + VERDE + "<texto livre>" + RESET + "       : Reconhece produtos, fornecedores, clientes, IDs (#12), registros (CPF/CNPJ) e DSL $$.");
         System.out.println("  • " + VERDE + "TAB / ↑↓ / Esc" + RESET + "      : Completa entidades/dicas, navega histórico ou limpa a linha atual.");
-        System.out.println("  • " + VERDE + "\\ ou \"\"\" ou [...]" + RESET + " : Quebra automática pela largura (" + larguraTerminal + " cols) e blocos multilinha.");
+        System.out.println("  • " + VERDE + "Shift+Enter / \\ / \"\"\" / [...]" + RESET + " : Quebra automática pela largura (" + larguraTerminal + " cols), colagem multilinha e blocos.");
         System.out.println("  • " + VERDE + ":voz" + RESET + "                : Grava áudio do microfone e executa diretamente na IA (:mic, :gravar).");
         System.out.println("  • " + VERDE + ":transcrever [arq]" + RESET + "  : Transcreve áudio (mic ou arquivo), permite editar (E) com dicas e confirmar (S/N).");
         System.out.println("  • " + VERDE + ":audio <arquivo>" + RESET + "    : Envia arquivo (.wav, .mp3, .webm, .ogg, .m4a, .aac, .flac) para ação direta.");
