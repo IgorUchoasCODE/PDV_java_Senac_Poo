@@ -348,6 +348,12 @@ public class ParserInstrucao {
                 continue;
             }
 
+            String tLower = t.toLowerCase(Locale.ROOT);
+            if (tLower.equals("da_nota") || tLower.equals("dessa_nota") || tLower.equals("nota_atual")
+                    || tLower.equals("da_pessoa") || tLower.equals("dessa_pessoa") || tLower.equals("pessoa_atual")) {
+                continue;
+            }
+
             // Tratamento de argumentos posicionais (ex.: ++ dinheiro, 1000, dt> <3)
             if (!t.contains(">")) {
                 if (pos == 0 && !mapa.containsKey("nm")) {

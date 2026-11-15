@@ -1,9 +1,13 @@
 package br.com.senac.application;
 
+import br.com.senac.application.terminal.AnalisadorTextoTerminal;
+import br.com.senac.application.terminal.FonteEntidadesTerminal;
+import br.com.senac.application.terminal.ModelosAnaliseTerminal.ResultadoAnaliseTerminal;
 import br.com.senac.controller.RoteadorController;
 import br.com.senac.integracao.gemini.GeminiAgenteOperacional;
 import br.com.senac.integracao.ia.BandejaOperacoesContexto;
 import br.com.senac.integracao.ia.DecisaoConfirmacao;
+import br.com.senac.integracao.ia.FormatadorSaidaIA;
 import br.com.senac.integracao.ia.bandeja.ExecutorBandeja;
 import br.com.senac.integracao.ia.bandeja.PassoExecutado;
 import br.com.senac.integracao.ia.parser.ErroSintaxe;
@@ -23,6 +27,7 @@ import br.com.senac.repository.modal.nota.Item;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Suíte de testes da Fase 3:
@@ -49,6 +54,7 @@ public class TesteParserEPreProcessador {
             testarCadastroConjuntoAninhadoIntegrado();
             testarDetalhesCompletosEntidadesELookupNumerico();
             testarNovasRegrasNotasPagamentosEPerda();
+            testarTerminalSemFalsosPositivosEFormatadorErro();
 
             System.out.println("================================================================================");
             System.out.printf(" RESULTADO: %d / %d TESTES DO PARSER E PRÉ-PROCESSADOR APROVADOS!%n", aprovados, totalTestes);
@@ -444,6 +450,47 @@ public class TesteParserEPreProcessador {
                 "DecisaoConfirmacao reconhece edição multilinha sem cancelar a bandeja.");
         afirmar(DecisaoConfirmacao.interpretar("sim,\nmas quanto fica o lucro no final?") == DecisaoConfirmacao.INDEFINIDA,
                 "DecisaoConfirmacao reconhece simulação multilinha sem executar imediatamente.");
+    }
+
+    private static void testarTerminalSemFalsosPositivosEFormatadorErro() {
+        FonteEntidadesTerminal fonteMock = new FonteEntidadesTerminal() {
+            private final List<ProdutoResumo> produtos = List.of(
+                    new ProdutoResumo(1125L, "Garantia Estendida Digital 24m", "garantia estendida digital 24m",
+                            new BigDecimal("199.90"), "UN", false),
+                    new ProdutoResumo(1122L, "Vale-Brinde Festa", "vale-brinde festa",
+                            new BigDecimal("10.00"), "UN", false)
+            );
+            private final List<PessoaResumo> pessoas = List.of(
+                    new PessoaResumo(738L, "Estação Sabor", "estacao sabor", false, true, "12.345.678/0001-95")
+            );
+
+            @Override public void recarregar() {}
+            @Override public List<ProdutoResumo> listarProdutos() { return produtos; }
+            @Override public List<PessoaResumo> listarPessoas() { return pessoas; }
+            @Override public List<NotaResumo> listarNotas() { return List.of(); }
+            @Override public List<String> listarSiglasUm() { return List.of("UN", "CX", "PT"); }
+            @Override public List<FormaPagamentoResumo> listarFormasPagamento() { return List.of(); }
+            @Override public Optional<ProdutoResumo> buscarProdutoPorId(Long id) {
+                return produtos.stream().filter(p -> p.id().equals(id)).findFirst();
+            }
+            @Override public Optional<PessoaResumo> buscarPessoaPorId(Long id) {
+                return pessoas.stream().filter(p -> p.id().equals(id)).findFirst();
+            }
+            @Override public Optional<NotaResumo> buscarNotaPorId(Long id) { return Optional.empty(); }
+            @Override public Optional<PessoaResumo> buscarPessoaPorRegistro(String r) { return Optional.empty(); }
+        };
+
+        AnalisadorTextoTerminal analisador = new AnalisadorTextoTerminal(fonteMock);
+        String frasePergunta = "se não esta faltando nada, cadastrar produto digital ou físico simples?";
+        ResultadoAnaliseTerminal resPergunta = analisador.analisar(frasePergunta, frasePergunta.length());
+        String resumoPergunta = resPergunta.resumoIdentificacao() != null ? resPergunta.resumoIdentificacao() : "";
+        afirmar(!resumoPergunta.contains("Garantia Estendida Digital 24m") && !resumoPergunta.contains("Estação Sabor"),
+                "Terminal não gerou falsos positivos por 'digital'/'esta'/'nao': " + resumoPergunta);
+
+        String erroBruto = "Motivo da falha: Produto não encontrado: {idProduto=343, quantidade=100}";
+        String erroFormatado = FormatadorSaidaIA.formatarTextoParaIA(erroBruto);
+        afirmar(!erroFormatado.contains("Registros encontrados") && erroFormatado.contains("Produto não encontrado"),
+                "FormatadorSaidaIA não converteu linha de erro em 'Registros encontrados': " + erroFormatado);
     }
 
     private static void afirmar(boolean condicao, String mensagem) {

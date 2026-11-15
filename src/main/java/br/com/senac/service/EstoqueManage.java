@@ -129,8 +129,11 @@ public class EstoqueManage {
             }
         }
 
-        // Produtos digitais (cursos, e-books, licenças sob demanda) podem ser vendidos sem lote físico prévio
-        if (produto.isDigital() && lotesDisponiveis.isEmpty()) {
+        // Produtos digitais simples (cursos, e-books, licenças sob demanda) sem componentes podem ser vendidos sem lote físico prévio.
+        // Quando um produto digital também é Kit/Conjunto com componentes (ex.: combo de cursos), desmembra nos componentes abaixo.
+        if (produto.isDigital()
+                && (!produto.isConjunto() || produto.getItensConjunto() == null || produto.getItensConjunto().isEmpty())
+                && lotesDisponiveis.isEmpty()) {
             Item itemDigital = new Item(produto, produto.getPrecoVenda(), restante, null);
             itemDigital.setQuantidadeDisponivel(MoedaContabilBacen.ZERO_QUANTIDADE);
             notaVenda.addItem(itemDigital);
@@ -189,6 +192,24 @@ public class EstoqueManage {
                                 }
                             }
                         }
+                    }
+                } else if (produto.getPrecoVenda() != null && produto.getPrecoVenda().compareTo(BigDecimal.ZERO) > 0
+                        && !todosItensGeradosDoKit.isEmpty()) {
+                    BigDecimal precoTotalKit = produto.calcularValorProporcional(produto.getPrecoVenda(), restante);
+                    BigDecimal acumulado = BigDecimal.ZERO;
+                    int totalItensKit = todosItensGeradosDoKit.size();
+                    for (int i = 0; i < totalItensKit; i++) {
+                        Item<? extends Produto> itemKit = todosItensGeradosDoKit.get(i);
+                        BigDecimal parcela = (i == totalItensKit - 1)
+                                ? MoedaContabilBacen.arredondarMoeda(precoTotalKit.subtract(acumulado))
+                                : precoTotalKit.divide(BigDecimal.valueOf(totalItensKit),
+                                        MoedaContabilBacen.ESCALA_MOEDA_FINAL, MoedaContabilBacen.ARREDONDAMENTO_BACEN);
+                        acumulado = acumulado.add(parcela);
+                        BigDecimal qtdItem = itemKit.getQuantidade() != null && itemKit.getQuantidade().compareTo(BigDecimal.ZERO) > 0
+                                ? itemKit.getQuantidade() : BigDecimal.ONE;
+                        itemKit.aplicarDesconto(BigDecimal.ZERO);
+                        itemKit.setValor(MoedaContabilBacen.arredondarContabil(
+                                parcela.divide(qtdItem, MoedaContabilBacen.ESCALA_CONTABIL_INTERNA, MoedaContabilBacen.ARREDONDAMENTO_BACEN)));
                     }
                 }
                 return lotesAlterados;

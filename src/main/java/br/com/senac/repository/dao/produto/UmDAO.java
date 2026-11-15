@@ -83,6 +83,17 @@ public class UmDAO implements PadraoDAO<Um, Long> {
         }
     }
 
+    public Um buscarPorNome(String nome) {
+        if (nome == null || nome.isBlank()) return null;
+        try (EntityManager em = JPAUtil.getEntityManager()) {
+            return em.createQuery("SELECT u FROM Um u WHERE UPPER(TRIM(u.nome)) = UPPER(TRIM(:nome))", Um.class)
+                    .setParameter("nome", nome.trim())
+                    .getSingleResult();
+        } catch (NoResultException e) {
+            return null;
+        }
+    }
+
     @Override
     public List<Um> listarTodos() {
         try (EntityManager em = JPAUtil.getEntityManager()) {

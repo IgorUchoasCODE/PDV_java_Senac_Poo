@@ -241,8 +241,11 @@ public class CompiladorInstrucoesCurtaService {
 
         List<String> faltantes = ManualInstrucoesIA.obrigatoriosFaltando(item.getRota(), mod);
         item.mesclarParametros(Map.of(), faltantes);
-        return String.format("Atualizei a instrução [%s] na lista de espera: %s.",
-                item.getIdItem(), item.getParametros());
+        String resumoParams = item.getParametros().entrySet().stream()
+                .map(e -> e.getKey() + "=" + e.getValue())
+                .collect(java.util.stream.Collectors.joining(", "));
+        return String.format("Atualizei a instrução [%s] na lista de espera (%s).",
+                item.getIdItem(), resumoParams);
     }
 
     // ==================== MÉTODOS PÚBLICOS DE COMPATIBILIDADE E CONSULTA ====================

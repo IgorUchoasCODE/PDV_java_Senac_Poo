@@ -29,6 +29,13 @@ public class ProdutoController {
         if (existente != null) {
             return existente;
         }
+        Um existentePorNome = umDAO.buscarPorNome(nome);
+        if (existentePorNome != null) {
+            throw new IllegalArgumentException("Já existe uma unidade de medida com o nome \""
+                    + existentePorNome.getNome() + "\" (sigla \"" + existentePorNome.getSigla()
+                    + "\"). Use a sigla \"" + existentePorNome.getSigla() + "\" ou informe outro nome para \""
+                    + sigla + "\".");
+        }
         Um nova = new Um(sigla, nome, descricao, baseFracionamento);
         umDAO.salvar(nova);
         return nova;
@@ -143,6 +150,9 @@ public class ProdutoController {
         Produto comp = produtoDAO.buscarPorId(idProdutoComponente);
         if (kit == null || comp == null) {
             throw new IllegalArgumentException("Kit ou componente não encontrado.");
+        }
+        if (kit.getId() != null && kit.getId().equals(comp.getId())) {
+            throw new IllegalArgumentException("Um kit/conjunto não pode conter a si mesmo como componente.");
         }
         estoqueManage.montarConjunto(kit, comp, quantidadeComponente);
     }

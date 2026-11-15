@@ -281,8 +281,9 @@ public final class FormatadorSaidaIA {
             return linha;
         }
 
-        // Preserva linhas decorativas de separador e quadros pré-formatados (ex: Bandeja de Contexto)
+        // Preserva linhas decorativas de separador, selos de status e quadros pré-formatados (ex: Bandeja de Contexto)
         if (conteudo.matches("^[=\\-─═]{4,}$")
+                || conteudo.startsWith("[Status Concorrência:")
                 || conteudo.startsWith("╭")
                 || conteudo.startsWith("│")
                 || conteudo.startsWith("╰")
@@ -415,6 +416,9 @@ public final class FormatadorSaidaIA {
         StringBuffer sbUnico = new StringBuffer();
         boolean alterouUnico = false;
         while (mUnico.find()) {
+            if (ehContextoErroNaLinha(atual, mUnico.start())) {
+                continue;
+            }
             alterouUnico = true;
             Map<String, Object> mapa = parsearMapaBruto(mUnico.group());
             String formatado = mapa.isEmpty() ? mUnico.group() : formatarListaMapas(null, List.of(mapa));
@@ -426,6 +430,19 @@ public final class FormatadorSaidaIA {
         }
 
         return atual;
+    }
+
+    private static boolean ehContextoErroNaLinha(String texto, int pos) {
+        int iniLinha = texto.lastIndexOf('\n', Math.max(0, pos - 1));
+        String prefixo = texto.substring(iniLinha < 0 ? 0 : iniLinha + 1, pos).toLowerCase(Locale.ROOT);
+        return prefixo.contains("motivo da falha")
+                || prefixo.contains("não encontrado")
+                || prefixo.contains("nao encontrado")
+                || prefixo.contains("não encontrada")
+                || prefixo.contains("erro inesperado")
+                || prefixo.contains("falhou")
+                || prefixo.contains("❌")
+                || prefixo.contains("⚠️");
     }
 
     private static List<Map<String, Object>> parsearListaMapasBrutos(String bruto) {

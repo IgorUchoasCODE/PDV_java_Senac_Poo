@@ -1,5 +1,6 @@
 package br.com.senac.application;
 
+import br.com.senac.controller.RespostaEndpoint;
 import br.com.senac.controller.RotaSistema;
 import br.com.senac.controller.RoteadorController;
 import br.com.senac.integracao.gemini.GeminiAgenteOperacional;
@@ -11,6 +12,7 @@ import br.com.senac.integracao.ia.bandeja.ExecutorBandeja;
 import br.com.senac.integracao.ia.bandeja.PassoExecutado;
 import br.com.senac.integracao.ia.bandeja.PassoExecutado.Resultado;
 import br.com.senac.repository.dao.JPAUtil;
+import br.com.senac.repository.modal.nota.NotaVenda;
 import br.com.senac.repository.modal.produto.Produto;
 
 import java.math.BigDecimal;
@@ -157,6 +159,9 @@ public class TesteBandejaPassoAPasso {
 
             // ---------- Regressão: Referências OP-N aninhadas em listas/mapas + formato de falha ----------
             testarReferenciasAninhadasEmLoteEPasso(roteador, agente, sufixo);
+
+            // ---------- Regressão: Unidade duplicada, kit digital, OP-N falho e lote por nome ----------
+            testarRegressaoCorrecoesLoteEKit(roteador, agente, sufixo);
 
             // ---------- Limpeza (tambem valida D= com conferencia antes e depois) ----------
             BandejaOperacoesContexto bl = new BandejaOperacoesContexto("passo-limpeza-" + sufixo);
@@ -345,6 +350,154 @@ public class TesteBandejaPassoAPasso {
         String respFalhaFmt = agente.processarMensagem(sessaoFalha, "sim");
         afirmar(respFalhaFmt.contains("[FALHOU - NÃO EXECUTADA]") && respFalhaFmt.contains("Motivo da falha:"),
                 "Relatorio parcial exibe marcador [FALHOU - NÃO EXECUTADA] e Motivo da falha.");
+    }
+
+    private static void testarRegressaoCorrecoesLoteEKit(
+            RoteadorController roteador,
+            GeminiAgenteOperacional agente,
+            String sufixo) {
+        String base36 = Long.toString(System.currentTimeMillis() % (36L * 36L * 36L), 36).toUpperCase();
+        String nomeUmUnico = "UnidadeReg " + sufixo;
+        RespostaEndpoint<?> respUmOk = roteador.executarEndpoint(
+                RotaSistema.PRODUTO_UNIDADE_CADASTRAR,
+                Map.of("sigla", "A" + base36, "nome", nomeUmUnico, "descricao", "Unidade teste regressao", "base", "1")
+        );
+        afirmar(respUmOk.sucesso(), "Unidade de medida unica cadastrada com sucesso.");
+
+        RespostaEndpoint<?> respUmDup = roteador.executarEndpoint(
+                RotaSistema.PRODUTO_UNIDADE_CADASTRAR,
+                Map.of("sigla", "B" + base36, "nome", nomeUmUnico, "descricao", "Duplicada por nome", "base", "1")
+        );
+        afirmar(!respUmDup.sucesso()
+                        && respUmDup.mensagem().contains("Já existe uma unidade de medida com o nome")
+                        && !respUmDup.mensagem().contains("Duplicate entry"),
+                "Unidade com nome duplicado retornou validacao amigavel sem erro SQL bruto: " + respUmDup.mensagem());
+
+        String nmDigital = "DigitalReg " + sufixo;
+        String nmCompReg = "CompReg " + sufixo;
+        roteador.executarEndpoint(RotaSistema.PRODUTO_DIGITAL_CADASTRAR,
+                Map.of("nome", nmDigital, "descricao", "Produto digital de teste", "precoVenda", "10.00"));
+        roteador.executarEndpoint(RotaSistema.PRODUTO_FISICO_CADASTRAR, cadastro(nmCompReg, "5.00"));
+
+        RespostaEndpoint<?> respAutoRef = roteador.executarEndpoint(
+                RotaSistema.PRODUTO_KIT_ADICIONAR_COMPONENTE,
+                Map.of("nomeKit", nmDigital, "nomeComponente", nmDigital, "quantidade", "1")
+        );
+        afirmar(!respAutoRef.sucesso() && respAutoRef.mensagem().contains("si mesmo"),
+                "Auto-referencia no kit bloqueada com mensagem clara: " + respAutoRef.mensagem());
+
+        String sessaoComboDigital = "passo-combo-digital-" + sufixo;
+        BandejaOperacoesContexto bandejaComboDigital = agente.obterBandeja(sessaoComboDigital);
+        String nmExcel = "Curso Excel " + sufixo;
+        String nmWord = "Curso Word " + sufixo;
+        String nmLinux = "Curso Linux " + sufixo;
+        String nmCombo = "Combo Cursos Info " + sufixo;
+        bandejaComboDigital.adicionarOuAtualizar(
+                RotaSistema.PRODUTO_DIGITAL_CADASTRAR,
+                Map.of("nome", nmExcel, "descricao", "Curso de Excel", "precoVenda", "50.00"),
+                "Cadastrar produto digital '" + nmExcel + "'"
+        );
+        bandejaComboDigital.adicionarOuAtualizar(
+                RotaSistema.PRODUTO_DIGITAL_CADASTRAR,
+                Map.of("nome", nmWord, "descricao", "Curso de Word", "precoVenda", "40.00"),
+                "Cadastrar produto digital '" + nmWord + "'"
+        );
+        bandejaComboDigital.adicionarOuAtualizar(
+                RotaSistema.PRODUTO_DIGITAL_CADASTRAR,
+                Map.of("nome", nmLinux, "descricao", "Curso de Linux", "precoVenda", "60.00"),
+                "Cadastrar produto digital '" + nmLinux + "'"
+        );
+        bandejaComboDigital.adicionarOuAtualizar(
+                RotaSistema.PRODUTO_DIGITAL_CADASTRAR,
+                Map.of("nome", nmCombo, "descricao", "Combo de cursos de informatica", "precoVenda", "120.00"),
+                "Cadastrar combo digital '" + nmCombo + "'"
+        );
+        bandejaComboDigital.adicionarOuAtualizar(
+                RotaSistema.PRODUTO_KIT_ADICIONAR_COMPONENTE,
+                Map.of("nomeKit", nmCombo, "nomeComponente", nmExcel, "quantidade", "1"),
+                "Vincular Excel ao combo digital"
+        );
+        bandejaComboDigital.adicionarOuAtualizar(
+                RotaSistema.PRODUTO_KIT_ADICIONAR_COMPONENTE,
+                Map.of("nomeKit", nmCombo, "nomeComponente", nmWord, "quantidade", "1"),
+                "Vincular Word ao combo digital"
+        );
+        bandejaComboDigital.adicionarOuAtualizar(
+                RotaSistema.PRODUTO_KIT_ADICIONAR_COMPONENTE,
+                Map.of("nomeKit", nmCombo, "nomeComponente", nmLinux, "quantidade", "1"),
+                "Vincular Linux ao combo digital"
+        );
+        String respComboDigital = agente.processarMensagem(sessaoComboDigital, "sim");
+        Produto comboSalvo = roteador.produtos().buscarPorNome(nmCombo);
+        afirmar(respComboDigital.contains("BANDEJA DE OPERAÇÕES EXECUTADA COM SUCESSO (7 de 7 concluídas)")
+                        && comboSalvo != null && comboSalvo.isDigital() && comboSalvo.isConjunto()
+                        && comboSalvo.getItensConjunto() != null && comboSalvo.getItensConjunto().size() == 3,
+                "Produto digital configurado como combo/kit com 3 cursos digitais em lote.");
+
+        RespostaEndpoint<?> respVendaCombo = roteador.executarEndpoint(
+                RotaSistema.NOTA_VENDA_EMITIR_BALCAO_CLIENTE_PADRAO,
+                Map.of("itens", List.of(Map.of("nomeProduto", nmCombo, "quantidade", "1")))
+        );
+        NotaVenda nvCombo = respVendaCombo.sucesso() && respVendaCombo.dados() instanceof NotaVenda nv ? nv : null;
+        afirmar(nvCombo != null
+                        && nvCombo.getItens().size() == 3
+                        && nvCombo.getValorTotal().compareTo(new BigDecimal("120.00")) == 0,
+                "Venda de kit digital desmembrou nos 3 cursos mantendo valor total de R$ 120,00.");
+
+        String sessaoDepFalha = "passo-dep-falha-" + sufixo;
+        BandejaOperacoesContexto bandejaDepFalha = agente.obterBandeja(sessaoDepFalha);
+        bandejaDepFalha.adicionarOuAtualizar(
+                RotaSistema.PRODUTO_FISICO_CADASTRAR,
+                Map.of("nome", "ProdUmInvalida " + sufixo, "siglaUm", "XXXX", "precoVenda", "10.00"),
+                "Cadastrar produto com UM invalida"
+        );
+        bandejaDepFalha.adicionarOuAtualizar(
+                RotaSistema.PRODUTO_KIT_ADICIONAR_COMPONENTE,
+                Map.of("idProdutoKit", "OP-1", "nomeComponente", nmCompReg, "quantidade", "1"),
+                "Vincular componente em OP-1 que falhara"
+        );
+        String respDepFalha = agente.processarMensagem(sessaoDepFalha, "sim");
+        afirmar(!respDepFalha.contains("For input string")
+                        && (respDepFalha.contains("Dependência OP-1") || respDepFalha.contains("OP-1")),
+                "Dependencia OP-1 falha nao gerou NumberFormatException.");
+
+        String sessaoNomeLote = "passo-nome-lote-" + sufixo;
+        BandejaOperacoesContexto bandejaNomeLote = agente.obterBandeja(sessaoNomeLote);
+        String nmForn = "FornNome " + sufixo;
+        String nmCompNome = "CompNome " + sufixo;
+        String nmKitNome = "KitNome " + sufixo;
+        bandejaNomeLote.adicionarOuAtualizar(
+                RotaSistema.PESSOA_SIMPLES_CADASTRAR,
+                Map.of("nome", nmForn, "papel", "FORNECEDOR"),
+                "Cadastrar fornecedor '" + nmForn + "'"
+        );
+        bandejaNomeLote.adicionarOuAtualizar(
+                RotaSistema.PRODUTO_FISICO_CADASTRAR,
+                Map.of("nome", nmCompNome, "siglaUm", "UN", "precoVenda", "3.50"),
+                "Cadastrar componente '" + nmCompNome + "'"
+        );
+        bandejaNomeLote.adicionarOuAtualizar(
+                RotaSistema.PRODUTO_FISICO_CADASTRAR,
+                Map.of("nome", nmKitNome, "siglaUm", "CX", "precoVenda", "50.00"),
+                "Cadastrar kit '" + nmKitNome + "'"
+        );
+        bandejaNomeLote.adicionarOuAtualizar(
+                RotaSistema.PRODUTO_KIT_ADICIONAR_COMPONENTE,
+                Map.of("nomeKit", nmKitNome, "nomeComponente", nmCompNome, "quantidade", "4"),
+                "Vincular componente por nome ao kit"
+        );
+        bandejaNomeLote.adicionarOuAtualizar(
+                RotaSistema.NOTA_COMPRA_EMITIR,
+                Map.of(
+                        "idFornecedor", "OP-1",
+                        "descricao", "Compra lote por nomeProduto",
+                        "itens", List.of(Map.of("nomeProduto", nmCompNome, "quantidade", "10", "valorUnitario", "2.00"))
+                ),
+                "Emitir nota de compra usando nomeProduto no mesmo lote"
+        );
+        String respNomeLote = agente.processarMensagem(sessaoNomeLote, "sim");
+        afirmar(respNomeLote.contains("BANDEJA DE OPERAÇÕES EXECUTADA COM SUCESSO (5 de 5 concluídas)"),
+                "Lote resolveu kit, componente e nota de compra por nome no mesmo lote (5 de 5).");
     }
 
     private static Acao acao(String texto) {

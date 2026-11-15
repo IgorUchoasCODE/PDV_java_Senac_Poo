@@ -295,6 +295,26 @@ public class BandejaOperacoesContexto {
             // Resolve referências a sub-instruções já executadas no mesmo lote (ex.: idProdutoKit = "OP-1", idCliente = "OP-2")
             resolverReferenciasDinamicas(item, idsCriadosPorItem);
 
+            // Se ainda houver referência "OP-N" não resolvida (porque a operação anterior falhou ou não existe), aborta com erro legível.
+            Set<String> refsPendentes = new LinkedHashSet<>();
+            coletarReferenciasOp(item.getParametros(), refsPendentes);
+            if (!refsPendentes.isEmpty()) {
+                String refFalha = refsPendentes.iterator().next();
+                ItemBandeja dep = mapaValidados.get(refFalha);
+                String detalheDep = (dep != null && dep.getMensagemErro() != null && !dep.getMensagemErro().isBlank())
+                        ? dep.getMensagemErro()
+                        : (dep != null ? "não gerou identificador para " + dep.getDescricaoAmigavel() : "operação não encontrada no lote");
+                String msgErro = "Dependência " + refFalha + " não concluída: " + detalheDep;
+                item.setMensagemErro(msgErro);
+                detalhes.add(new RelatorioExecucaoBandeja.ItemExecutado(
+                        item.getIdItem(), item.getRota().name(), item.getDescricaoAmigavel(),
+                        false, msgErro, null, item.getParametros()));
+                return;
+            }
+
+            // Se produtos/unidades referenciados por nome nesta operação estão na mesma bandeja, garante criação prévia.
+            executarCadastrosPreviosDoLoteSeNecessario(item, mapaValidados, idsCriadosPorItem, jaExecutados, emExecucao, roteador, detalhes);
+
             // Se uma venda/compra foi enfileirada no mesmo lote que um cadastro de pessoa sem idCliente/idFornecedor explícito,
             // vincula automaticamente a pessoa recém-cadastrada no lote (evita cair em CONSUMIDOR FINAL por omissão da IA).
             vincularPessoaDoMesmoLoteSeOmitida(item, mapaValidados, idsCriadosPorItem, jaExecutados, emExecucao, roteador, detalhes);
@@ -529,6 +549,37 @@ public class BandejaOperacoesContexto {
     private void resolverReferenciasDinamicas(ItemBandeja item, Map<String, Long> idsCriados) {
         if (idsCriados == null || idsCriados.isEmpty()) return;
         resolverReferenciasEmMapa(item.getParametrosModificaveis(), idsCriados::get);
+    }
+
+    private void executarCadastrosPreviosDoLoteSeNecessario(
+            ItemBandeja item,
+            Map<String, ItemBandeja> mapaValidados,
+            Map<String, Long> idsCriadosPorItem,
+            java.util.Set<String> jaExecutados,
+            java.util.Set<String> emExecucao,
+            RoteadorController roteador,
+            List<RelatorioExecucaoBandeja.ItemExecutado> detalhes) {
+        if (item.getRota() == null || mapaValidados.isEmpty()) return;
+        String idAtual = item.getIdItem().toUpperCase(Locale.ROOT);
+        boolean precisaUnidade = item.getRota() == RotaSistema.PRODUTO_FISICO_CADASTRAR
+                || item.getRota() == RotaSistema.PRODUTO_DIGITAL_CADASTRAR;
+        boolean precisaProdutos = item.getRota() == RotaSistema.PRODUTO_KIT_ADICIONAR_COMPONENTE
+                || item.getRota() == RotaSistema.NOTA_COMPRA_EMITIR
+                || item.getRota().name().startsWith("NOTA_VENDA_EMITIR_");
+        if (!precisaUnidade && !precisaProdutos) return;
+
+        for (ItemBandeja candidato : mapaValidados.values()) {
+            String depId = candidato.getIdItem().toUpperCase(Locale.ROOT);
+            if (depId.equals(idAtual) || jaExecutados.contains(depId) || emExecucao.contains(depId)) continue;
+            RotaSistema r = candidato.getRota();
+            boolean ehDep = (precisaUnidade && r == RotaSistema.PRODUTO_UNIDADE_CADASTRAR)
+                    || (precisaProdutos && (r == RotaSistema.PRODUTO_UNIDADE_CADASTRAR
+                    || r == RotaSistema.PRODUTO_FISICO_CADASTRAR
+                    || r == RotaSistema.PRODUTO_DIGITAL_CADASTRAR));
+            if (ehDep) {
+                executarItemComDependencias(candidato, roteador, mapaValidados, idsCriadosPorItem, jaExecutados, emExecucao, detalhes);
+            }
+        }
     }
 
     /**

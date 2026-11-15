@@ -385,7 +385,9 @@ public class AbaCadastrosOperacoesContainer extends VBox {
         c4.setCellValueFactory(c -> new SimpleStringProperty(FormatadorDadosUI.moeda(c.getValue().getPrecoVenda())));
         TableColumn<Produto, String> c5 = new TableColumn<>("Tipo");
         c5.setCellValueFactory(c -> new SimpleStringProperty(
-                c.getValue().isDigital() ? "Digital" : (c.getValue().isConjunto() ? "Composto / Kit" : "Físico")));
+                c.getValue().isDigital()
+                        ? (c.getValue().isConjunto() ? "Digital / Kit" : "Digital")
+                        : (c.getValue().isConjunto() ? "Composto / Kit" : "Físico")));
         tabelaProdutos.getColumns().setAll(List.of(c1, c2, c3, c4, c5));
         tabelaProdutos.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
     }

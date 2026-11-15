@@ -165,10 +165,12 @@ public class GeminiToolRegistry {
                 required.add("nome");
             }
             case PRODUTO_KIT_ADICIONAR_COMPONENTE -> {
-                props.put("idProdutoKit", prop("STRING", "ID numérico do produto kit/conjunto (ou 'OP-1', 'OP-2', etc. se o kit foi agendado para criação no mesmo lote)"));
-                props.put("idProdutoComponente", prop("STRING", "ID numérico do produto componente (ou 'OP-2', 'OP-3', etc. se o componente também foi agendado para criação no mesmo lote)"));
+                props.put("nomeKit", prop("STRING", "Nome exato do kit/conjunto — físico ou digital (PREFERÍVEL para itens criados no mesmo lote — evita erro de contagem 'OP-N')"));
+                props.put("nomeComponente", prop("STRING", "Nome exato do produto componente (PREFERÍVEL quando criado no mesmo lote)"));
+                props.put("idProdutoKit", prop("STRING", "ID numérico do produto kit/conjunto ou 'OP-N' exato do lote (opcional se informar nomeKit)"));
+                props.put("idProdutoComponente", prop("STRING", "ID numérico do produto componente ou 'OP-N' exato do lote (opcional se informar nomeComponente)"));
                 props.put("quantidade", prop("STRING", "Quantidade fracionada do componente"));
-                required.addAll(Arrays.asList("idProdutoKit", "idProdutoComponente", "quantidade"));
+                required.add("quantidade");
             }
             case PRODUTO_CATALOGO_LISTAR -> {
                 props.put("apenasEstoqueValido", prop("BOOLEAN", "Se true, lista apenas produtos que possuem estoque válido (saldo FIFO > 0 e dentro da validade)"));
@@ -488,7 +490,8 @@ public class GeminiToolRegistry {
         itemSchema.put("type", "OBJECT");
 
         Map<String, Object> itemProps = new LinkedHashMap<>();
-        itemProps.put("idProduto", prop("STRING", "ID numérico do produto no catálogo (ou 'OP-1', 'OP-2', etc. se o produto foi agendado para cadastro no mesmo lote)"));
+        itemProps.put("nomeProduto", prop("STRING", "Nome exato do produto (PREFERÍVEL ao criar produtos e emitir nota no mesmo lote — evita erro de contagem 'OP-N' ou ID inventado)"));
+        itemProps.put("idProduto", prop("STRING", "ID numérico real retornado por consulta no catálogo (NUNCA invente IDs!) ou 'OP-N' exato do lote (opcional se informar nomeProduto)"));
         itemProps.put("quantidade", prop("STRING", "Quantidade fracionada ou inteira (ex: '1.000000')"));
         itemProps.put("valorUnitario", prop("STRING", "Preço unitário em R$"));
         if (incluirDesconto) {
@@ -499,7 +502,7 @@ public class GeminiToolRegistry {
         }
 
         itemSchema.put("properties", itemProps);
-        itemSchema.put("required", Arrays.asList("idProduto", "quantidade"));
+        itemSchema.put("required", Collections.singletonList("quantidade"));
 
         p.put("items", itemSchema);
         return p;

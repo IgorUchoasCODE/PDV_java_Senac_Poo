@@ -161,12 +161,20 @@ public class RoteadorController {
                         (List<LinkProdutoDigital>) p.getOrDefault("links", Collections.emptyList())
                 );
                 case PRODUTO_KIT_ADICIONAR_COMPONENTE -> {
+                    Produto kit = resolverProdutoPorCampos(p, "idProdutoKit", "nomeKit");
+                    Produto comp = resolverProdutoPorCampos(p, "idProdutoComponente", "nomeComponente");
+                    if (kit == null || comp == null) {
+                        throw new IllegalArgumentException("Kit ou componente não encontrado ("
+                                + (kit == null ? "kit=" + descreverChaveOuNome(p, "idProdutoKit", "nomeKit")
+                                               : "componente=" + descreverChaveOuNome(p, "idProdutoComponente", "nomeComponente"))
+                                + ").");
+                    }
                     produtoController.adicionarComponenteAoKit(
-                            lng(p, "idProdutoKit"),
-                            lng(p, "idProdutoComponente"),
+                            kit.getId(),
+                            comp.getId(),
                             bd(p, "quantidade", "1.000000")
                     );
-                    yield produtoController.buscarPorId(lng(p, "idProdutoKit"));
+                    yield produtoController.buscarPorId(kit.getId());
                 }
                 case PRODUTO_CATALOGO_LISTAR -> {
                     if (bool(p, "apenasEstoqueValido", false) || bool(p, "comEstoqueValido", false)) {
@@ -1067,7 +1075,15 @@ public class RoteadorController {
         Object v = p.get(chave);
         if (v instanceof Long l) return l;
         if (v instanceof Number n) return n.longValue();
-        if (v != null) return Long.parseLong(v.toString());
+        if (v != null) {
+            String s = v.toString().trim();
+            if (s.isEmpty()) return null;
+            if (br.com.senac.integracao.ia.BandejaOperacoesContexto.ehReferenciaOp(s)) {
+                throw new IllegalArgumentException("Referência " + s.toUpperCase(Locale.ROOT)
+                        + " não pôde ser resolvida porque a operação dependente não foi concluída.");
+            }
+            return Long.parseLong(s);
+        }
         return null;
     }
 
@@ -1121,7 +1137,8 @@ public class RoteadorController {
                     Map<String, Object> map = (Map<String, Object>) itemMap;
                     Produto prod = resolverProduto(map);
                     if (prod == null) {
-                        throw new IllegalArgumentException("Produto não encontrado no item da compra: " + map);
+                        throw new IllegalArgumentException("Produto não encontrado no item da compra ("
+                                + descreverChaveOuNome(map, "idProduto", "nomeProduto", "nome") + ").");
                     }
                     BigDecimal qtd = bd(map, "quantidade", "1.000000");
                     BigDecimal valor = resolverValorItem(map, prod);
@@ -1279,7 +1296,8 @@ public class RoteadorController {
                     Map<String, Object> map = (Map<String, Object>) itemMap;
                     Produto prod = resolverProduto(map);
                     if (prod == null) {
-                        throw new IllegalArgumentException("Produto não encontrado no item de venda: " + map);
+                        throw new IllegalArgumentException("Produto não encontrado no item de venda ("
+                                + descreverChaveOuNome(map, "idProduto", "nomeProduto", "nome") + ").");
                     }
                     BigDecimal qtd = bd(map, "quantidade", "1.000000");
                     res.put(prod, res.getOrDefault(prod, BigDecimal.ZERO).add(qtd));
@@ -1321,14 +1339,22 @@ public class RoteadorController {
 
     private Produto resolverProduto(Map<String, Object> map) {
         if (map.get("produto") instanceof Produto pr) return pr;
-        Long id = lng(map, "idProduto");
-        if (id == null) id = lng(map, "id");
+        return resolverProdutoPorCampos(map, "idProduto", "nomeProduto", "id", "nome");
+    }
+
+    private Produto resolverProdutoPorCampos(Map<String, Object> map, String chaveId, String chaveNome, String... chavesFallback) {
+        Long id = lng(map, chaveId);
+        if (id == null && chavesFallback.length > 0) {
+            id = lng(map, chavesFallback[0]);
+        }
         if (id != null) {
             Produto p = produtoController.buscarPorId(id);
             if (p != null) return p;
         }
-        String nome = str(map, "nomeProduto", null);
-        if (nome == null) nome = str(map, "nome", null);
+        String nome = str(map, chaveNome, null);
+        if (nome == null && chavesFallback.length > 1) {
+            nome = str(map, chavesFallback[1], null);
+        }
         if (nome != null && !nome.isBlank()) {
             try {
                 String limpo = nome.trim().replace("#", "");
@@ -1342,6 +1368,17 @@ public class RoteadorController {
             if (!porTermo.isEmpty()) return porTermo.get(0);
         }
         return null;
+    }
+
+    private String descreverChaveOuNome(Map<String, Object> map, String... chaves) {
+        if (map == null) return "não informado";
+        for (String c : chaves) {
+            Object v = map.get(c);
+            if (v != null && !v.toString().isBlank()) {
+                return c + "=" + v;
+            }
+        }
+        return "não informado";
     }
 
     private BigDecimal resolverValorItem(Map<String, Object> map, Produto prod) {

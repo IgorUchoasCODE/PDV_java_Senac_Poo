@@ -865,8 +865,12 @@ public class GeminiAgenteOperacional {
             case PRODUTO_FISICO_ATUALIZAR_DIMENSOES -> "Atualizar dimensões/peso do produto #" + params.get("idProduto")
                     + " (" + params.get("alturaCm") + "x" + params.get("larguraCm") + "x" + params.get("comprimentoCm") + " cm)";
             case PRODUTO_KIT_ADICIONAR_COMPONENTE -> {
-                String kitRef = formatarRefOp(params.get("idProdutoKit"));
-                String compRef = formatarRefOp(params.get("idProdutoComponente"));
+                String kitRef = params.get("nomeKit") != null && !params.get("nomeKit").toString().isBlank()
+                        ? "'" + params.get("nomeKit") + "'"
+                        : formatarRefOp(params.get("idProdutoKit"));
+                String compRef = params.get("nomeComponente") != null && !params.get("nomeComponente").toString().isBlank()
+                        ? "'" + params.get("nomeComponente") + "'"
+                        : formatarRefOp(params.get("idProdutoComponente"));
                 Object qtd = params.get("quantidade");
                 yield "Vincular " + (qtd != null ? qtd : "1") + "x do item " + compRef + " dentro do kit/conjunto " + kitRef;
             }

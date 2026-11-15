@@ -280,9 +280,11 @@ public class AnalisadorTextoTerminal {
     /** Identifica nomes reais de Produtos, Fornecedores, Clientes e Formas de Pagamento no texto normal. */
     static final class IdentificadorCatalogoReal implements IdentificadorEntidadeTerminal {
         private static final Set<String> STOPWORDS_ESSENCIAIS = Set.of(
-                "a", "ao", "as", "com", "como", "da", "das", "de", "do", "dos",
-                "e", "em", "eu", "me", "na", "no", "o", "os", "ou", "para",
-                "por", "pra", "pro", "qual", "que", "quero", "se", "sem", "um", "uma"
+                "a", "ai", "algo", "ao", "as", "com", "como", "confirma", "confirmar", "da", "das", "de",
+                "digital", "do", "dos", "e", "em", "essa", "esse", "esta", "este", "eu", "falta", "faltando",
+                "fisico", "instrucao", "instrucoes", "isso", "isto", "me", "na", "nada", "nao", "no", "o",
+                "os", "ou", "para", "por", "pra", "pro", "qual", "que", "quero", "se", "sem", "sim", "simples",
+                "ta", "todas", "todos", "tudo", "um", "uma"
         );
 
         @Override
@@ -357,13 +359,26 @@ public class AnalisadorTextoTerminal {
         private static ProdutoResumo buscarProduto(List<ProdutoResumo> lista, String termoNorm) {
             ProdutoResumo melhor = null;
             int melhorScore = 0;
+            boolean multiPalavra = termoNorm.contains(" ");
             for (ProdutoResumo p : lista) {
-                if (p.nomeNormalizado().equals(termoNorm)) return p;
-                if (termoNorm.length() >= 3 && p.nomeNormalizado().contains(termoNorm)) {
-                    int score = p.nomeNormalizado().startsWith(termoNorm) ? 900 : 800;
+                String nomeNorm = p.nomeNormalizado();
+                if (nomeNorm.equals(termoNorm)) return p;
+                if (multiPalavra && termoNorm.length() >= 5 && nomeNorm.contains(termoNorm)) {
+                    int score = nomeNorm.startsWith(termoNorm) ? 900 : 800;
                     if (score > melhorScore) {
                         melhorScore = score;
                         melhor = p;
+                    }
+                } else if (!multiPalavra && termoNorm.length() >= 4) {
+                    for (String parte : nomeNorm.split("\\s+")) {
+                        if (parte.equals(termoNorm)) {
+                            int score = nomeNorm.startsWith(termoNorm) ? 750 : 700;
+                            if (score > melhorScore) {
+                                melhorScore = score;
+                                melhor = p;
+                            }
+                            break;
+                        }
                     }
                 }
             }

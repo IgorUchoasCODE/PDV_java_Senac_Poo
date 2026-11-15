@@ -223,6 +223,17 @@ public final class ManualInstrucoesIA {
             if (!temIdentificador) {
                 faltando.add("numeroRegistro");
             }
+        } else if (r == RotaSistema.PRODUTO_KIT_ADICIONAR_COMPONENTE) {
+            boolean temKit = params != null && ((params.get("idProdutoKit") != null && !params.get("idProdutoKit").toString().isBlank())
+                    || (params.get("nomeKit") != null && !params.get("nomeKit").toString().isBlank()));
+            boolean temComp = params != null && ((params.get("idProdutoComponente") != null && !params.get("idProdutoComponente").toString().isBlank())
+                    || (params.get("nomeComponente") != null && !params.get("nomeComponente").toString().isBlank()));
+            if (!temKit) {
+                faltando.add("idProdutoKit");
+            }
+            if (!temComp) {
+                faltando.add("idProdutoComponente");
+            }
         } else if (r == RotaSistema.NOTA_BUSCAR_UNICA) {
             boolean temIdentificador = params != null && (params.get("idNota") != null || params.get("id") != null);
             if (!temIdentificador) {

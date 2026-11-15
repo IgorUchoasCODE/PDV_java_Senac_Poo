@@ -94,9 +94,9 @@ public class PreProcessadorMensagem {
     private static final Pattern PADRAO_CNPJ = Pattern.compile("\\b(\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}|\\d{14})\\b");
     private static final Pattern PADRAO_SIGLA = Pattern.compile(">([a-zA-Z0-9_]{2,8})\\b");
     private static final Pattern PADRAO_PRODUTO_ASPAS = Pattern.compile(
-            "(?i)\\b(?:produto|kit|conjunto|item)\\b\\s*[\":]?\\s*([^\"\\n,;]+?)(?=\\s+(?:foi|em|de|com|que|tem|tenha|contenha|pode|na|no|para|como|onde|e\\s+(?:por|colocar|transformar|mudar|atualizar|adicionar|criar)|por\\s+ele|um>|vv>|vc>|q>|vl>|val>|dim>)\\b|[,\";\\n]|$)");
+            "(?i)\\b(?:produto(?:\\s+(?:f[ií]sico|digital))?|kit|conjunto|item)\\b(?:\\s+chamado)?\\s*[\":]?\\s*([^\"\\n,;()]+?)(?=\\s+(?:foi|em|de|com|que|tem|tenha|contenha|pode|na|no|para|como|onde|comprando|vendendo|pagando|custando|e\\s+(?:por|colocar|transformar|mudar|atualizar|adicionar|criar)|por\\s+ele|um>|vv>|vc>|q>|vl>|val>|dim>)\\b|[,\"();\\n]|$)");
     private static final Pattern PADRAO_PESSOA_ASPAS = Pattern.compile(
-            "(?i)\\b(?:cliente|fornecedor|pessoa)\\b\\s*[\":]?\\s*([^\"\\n,;]+?)(?=\\s+(?:foi|em|de|com|que|tem|na|no|para|como|onde)\\b|[,\";\\n]|$)");
+            "(?i)\\b(?:cliente|fornecedor|pessoa)\\b\\s*[\":]?\\s*([^\"\\n,;()]+?)(?=\\s+(?:foi|em|de|com|que|tem|na|no|para|como|onde|comprando|vendendo|pagando)\\b|[,\"();\\n]|$)");
 
     /**
      * Analisa o texto e extrai entidades semânticas, anotando o texto com tags XML estruturadas.

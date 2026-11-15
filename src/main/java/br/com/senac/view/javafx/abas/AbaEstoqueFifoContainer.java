@@ -176,7 +176,9 @@ public class AbaEstoqueFifoContainer extends ScrollPane {
 
         TableColumn<Produto, String> cTipo = new TableColumn<>("Tipo");
         cTipo.setCellValueFactory(c -> new SimpleStringProperty(
-                c.getValue().isDigital() ? "Digital" : (c.getValue().isConjunto() ? "Composto / Kit" : "Físico")));
+                c.getValue().isDigital()
+                        ? (c.getValue().isConjunto() ? "Digital / Kit" : "Digital")
+                        : (c.getValue().isConjunto() ? "Composto / Kit" : "Físico")));
         cTipo.setPrefWidth(120);
 
         TableColumn<Produto, String> cVenda = new TableColumn<>("Preço Venda");
