@@ -1,0 +1,8 @@
+.build/
+*.class
+*.jar
+*.log
+*secret*
+*.mv.db
+*.trace.db
+*.lock.db

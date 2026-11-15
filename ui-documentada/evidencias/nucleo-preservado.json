@@ -1,0 +1,850 @@
+[
+  {
+    "sha256": "A3B86838FBE66E2C06606EF4148A560ECB2290B746DD5EC0374E74A3C26CCBAD",
+    "arquivo": "executar_integracao_18m.ps1"
+  },
+  {
+    "sha256": "C90CD5A863BD43F23DD025272BF37E4845B23CECD6BA07F7BB4254D6BDCEE30A",
+    "arquivo": "executar_testes.ps1"
+  },
+  {
+    "sha256": "ABDD46845D38B2616274D3E6F08B1A5B361F7BABC62617ADD0997CFF8A1AB326",
+    "arquivo": "iniciar_interface_javafx.ps1"
+  },
+  {
+    "sha256": "DF2F836D3B1B894C6540DD85DA5DAE16D04F329632D22B53A451235CA555D2EE",
+    "arquivo": "iniciar_mcp.ps1"
+  },
+  {
+    "sha256": "21496E703F6BC553CE0F1CC28E20CFA2E7A8B5166EC8432A57E38D0D448E86B4",
+    "arquivo": "iniciar_terminal.ps1"
+  },
+  {
+    "sha256": "4453307BD1740A459ABBA7BA4FD537E0BA12A9BE37CDC25EFB9B666D5DA1746D",
+    "arquivo": "pom.xml"
+  },
+  {
+    "sha256": "57D22FDAB0675025FA7474AE5937D0FBB997956490C52E57FDAB8B011B063199",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\application\\ChatBotTerminal.java"
+  },
+  {
+    "sha256": "5E6D1CEA644DDCA13D87F93351D0FC19AFCAA00B4A54D70C72FEFF7205009EE5",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\application\\ConsoleResetEIntegracao.java"
+  },
+  {
+    "sha256": "C7095DF825FA12C3200B3E87ACAAD3670CF0D118C5725CAA176A2B4FF8355600",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\application\\ConsultaSql.java"
+  },
+  {
+    "sha256": "06277D9FE1FAF33ED2D48906DEF681EE4A648E0DCBA6B957EDEF208AE7B81A61",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\application\\IntegrarDadosReais18M.java"
+  },
+  {
+    "sha256": "DD776FE8B7AB58708E3858B73ADCFA6E19875851FD8228DDEEA818D297C8D143",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\application\\Main.java"
+  },
+  {
+    "sha256": "4B83E3ECFDC0284F4D2191EE246B059A96B00504E37E344551B8F7C2AC4F6A7A",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\application\\SazonaliseiApp.java"
+  },
+  {
+    "sha256": "DF0286D5273B874EF398ABDD51861BC788594D2DB0619C8FE47D1EB92D3C169B",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\application\\SazonaliseiJavaFXLauncher.java"
+  },
+  {
+    "sha256": "C1F00957A748550397D5A06C5FF0D041BA296BE55393B2DB5B5C33DFDC92281D",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\application\\terminal\\AnalisadorTextoTerminal.java"
+  },
+  {
+    "sha256": "12A3C3ABFB1A3A82A0AB9C5CBF6C0EAC6BBD66308E65EDE270F6ACC81233C0B9",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\application\\terminal\\CatalogoControladoresTerminal.java"
+  },
+  {
+    "sha256": "F5D89749188C2D3C020338B14C0F51554F347814BC8EB3595DEB830798040506",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\application\\terminal\\EditorTerminalInterativo.java"
+  },
+  {
+    "sha256": "6225BCB48B4800DCC9C38B3B5561A91B60414D4433141B438E7828D1BBCBED0A",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\application\\terminal\\FonteEntidadesTerminal.java"
+  },
+  {
+    "sha256": "ABC4434C6024270684BD8D11D10610AD95747EC7AAB854FE9270FDF90291A22A",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\application\\terminal\\FormatadorEntradaTerminal.java"
+  },
+  {
+    "sha256": "BCCB766E27B70A050841FCE148C8D02715D11D56F44621534D899F3D48498477",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\application\\terminal\\GeradorDicasTerminal.java"
+  },
+  {
+    "sha256": "099BEB9E1AD799554882FE113BAE334E5D9AE27947B6FDF9F897F7377CCEF801",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\application\\terminal\\IdentificadorEntidadeTerminal.java"
+  },
+  {
+    "sha256": "CB807D4D6ADE428132D594D827F2EED0EB7F44DD1DBAF5632BEF2F4A712D67A6",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\application\\terminal\\LeitorConsole.java"
+  },
+  {
+    "sha256": "98EE4CEDA29EAF6C8ABFE5193F0D480143685F47059ED773D234438C9D9FDABD",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\application\\terminal\\LeitorConsoleFallback.java"
+  },
+  {
+    "sha256": "3FB299413A3513826B83A2B72E7841B1E04F68045A4207EE77668F788D6CE5DE",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\application\\terminal\\LeitorConsoleTempoReal.java"
+  },
+  {
+    "sha256": "3CED2F7138C2229ED8258838014808E055A7FDC60D4B178DF6B83EEAEA6BB0D7",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\application\\terminal\\ModelosAnaliseTerminal.java"
+  },
+  {
+    "sha256": "2706FAF6C7D823B277CFB8776621521A27C00536E3D1B6C7943FD6D7A27499B7",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\controller\\EstatisticaController.java"
+  },
+  {
+    "sha256": "513DC8ACF3F962F10A400C4FEFCBF3319F3B600A45ACD29521AF11CAB3B578AC",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\controller\\EstoqueController.java"
+  },
+  {
+    "sha256": "F56286F81DA901C27F1B11D5690AEB3B576193EFBD08355532CD128D39A34B1D",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\controller\\ImagemProdutoController.java"
+  },
+  {
+    "sha256": "77E24F10BBA627DE8B00DBF6D6218F9BB7E602741BCE3AA23875310E0401B60E",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\controller\\NotaController.java"
+  },
+  {
+    "sha256": "3DAA9167162561086D25BB515DD490EF58A47DE4FAA67BB615967E05BCF71E5E",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\controller\\PagamentoController.java"
+  },
+  {
+    "sha256": "70EBEDE754F7E6B18B327ADCD640BFBF081ADF2213A898C7179D3E978DB9D373",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\controller\\PessoaController.java"
+  },
+  {
+    "sha256": "B9E6B9A4274086F0ADE1D1C084EDA8486B554527C0A80FA6685A92DB9885E728",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\controller\\ProdutoController.java"
+  },
+  {
+    "sha256": "D4A3380A5FCACA8D86F7F9D86D3279F547AAA45B70EB9677068FD6D9893B7BB1",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\controller\\RespostaEndpoint.java"
+  },
+  {
+    "sha256": "16893377DF59DF941C54AE9CB7A94C86E9552F61EC9678576529280E00AAA66A",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\controller\\RotaSistema.java"
+  },
+  {
+    "sha256": "7DF6470873A36217CFACC3B8FB6CAED8B0E9358FA7BDB9428A879D588B5AC261",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\controller\\RoteadorController.java"
+  },
+  {
+    "sha256": "59D5F79900DCCEE3566B1CB27C394AF34C8C68C154012C5F5B899F4CD9D63E76",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\cache\\CacheEntry.java"
+  },
+  {
+    "sha256": "49EC2BDC9EA9EB3FAB04A2CBD774DD0B7790F550CED8A202297B1D1B307EBB30",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\calendario\\CalendarioService.java"
+  },
+  {
+    "sha256": "B2197C55DC23079A10DFF7021FC537D61AE0E8FE4FCFDA267964FE2126AE2206",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\calendario\\DiaNaoUtil.java"
+  },
+  {
+    "sha256": "D580025EDD78E3CC36B5FEEB22CF475A3CB5D9FC537A73D4B4F4D3DA6BFA24CC",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\clima\\ClimaDiario.java"
+  },
+  {
+    "sha256": "8FA901631515545D0B5AB1DD831D44D29D30845AC0BAAF9BAE49A70347786605",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\clima\\ClimaService.java"
+  },
+  {
+    "sha256": "02C1C2461D4BCF18891D1FDF05AD6D68AA6A0B7F11C82F66929A38A405B479F4",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\csv\\ImportadorCsvService.java"
+  },
+  {
+    "sha256": "4748B969A1210A61D5358DEB0B82CF2B8EF0740C0C67EF4A8B41210694F1A0AE",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\csv\\LeitorCsv.java"
+  },
+  {
+    "sha256": "69295A7D4C75F1EC300B144B3D486478E6D2D8607315FC9ECAB0BBD0351BF82E",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\csv\\ResultadoImportacaoCsv.java"
+  },
+  {
+    "sha256": "FF9FDD4E613B31F5D7608D60F2813C489C5A28D56825B29CB283F2A51E3C0301",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\csv\\TipoImportacaoCsv.java"
+  },
+  {
+    "sha256": "C7968860B45A418E77197070CE15F52B542E6F8EBF4A7A0434F322D8AA8AD584",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\eventos\\EventoSympla.java"
+  },
+  {
+    "sha256": "B4D2F53B9B10A2D7941FEB336E800FB903E44D356A0A2576BF5D8EB8371A4E85",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\eventos\\MinisterioCulturaService.java"
+  },
+  {
+    "sha256": "086FD62B7E45878454E18BA73B639D1125B6D9DB53394DE859E292506BBB1685",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\eventos\\ProjetoCulturalMinC.java"
+  },
+  {
+    "sha256": "7F851A455AE28A6F5D84C608FF82B0192899D0F708545971BE3717DE2A54AFDE",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\eventos\\SymplaService.java"
+  },
+  {
+    "sha256": "C6A9DDC8F0D6E8C4A6BAE565F2280285FC2D8EFE2D75B9E7C353419FA3FEBB46",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\facade\\ConsultaIntegracaoFacade.java"
+  },
+  {
+    "sha256": "2D6470A0251A5E28DF843364288B20BC6DDD520BB742A28A8D1546B1743E1DFC",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\gemini\\ConcorrenciaSeguraEngine.java"
+  },
+  {
+    "sha256": "5EA74F0CA46363E3AFDB46F33A0F69CEE2ECE16AF5834CF3EDBC2F1B96C87111",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\gemini\\ConfirmacaoAcaoGatekeeper.java"
+  },
+  {
+    "sha256": "64A1222BB9AB1C577A90575BC6AA2FBEDF4ACFB9B83436966BDD5EACFD8EBEDE",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\gemini\\GeminiAgenteOperacional.java"
+  },
+  {
+    "sha256": "CE4CECDB1E5CF3F30F6A793C384316EFBF3EF5BD7BB205879C7ABE32027BD6F3",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\gemini\\GeminiClientService.java"
+  },
+  {
+    "sha256": "8A885DDD23E9BBD6DD5D5792D94FDC7A2E4E249ADF26257962012D360B9D4416",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\gemini\\GeminiConfig.java"
+  },
+  {
+    "sha256": "CB29E31CE39CD75ADE9D25627262BE404E53D125FAA5A08F6AF445A3F327D4DA",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\gemini\\GeminiMobileServer.java"
+  },
+  {
+    "sha256": "FE4AAAE6FE76C68A21D12AFE60D0C03C549158BB9539365D3C704501831BD410",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\gemini\\GeminiToolRegistry.java"
+  },
+  {
+    "sha256": "79BF903E7D12A2B791FCDD866C27A905717712C06B0119B84F32B7103BB3F11E",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\geolocalizacao\\Coordenada.java"
+  },
+  {
+    "sha256": "11F3B638A12AF375234C9AD5A4C2AAB7F74C2D7ECE5B496A907B818A609BEF2D",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\geolocalizacao\\GeolocalizacaoService.java"
+  },
+  {
+    "sha256": "E03557FDB7AC2CFFCE1EBE7BCA18FBBBA09FADBE1B2C861D0CA5442ADCBB0BC3",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\bandeja\\ComandoBandeja.java"
+  },
+  {
+    "sha256": "6D7EADD55FCCB906E9E195438A4E88A00F2A6575E94A7E6AFB7FEB76FB7B3389",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\bandeja\\ExecutorBandeja.java"
+  },
+  {
+    "sha256": "4D4C1F9107496D5437346E4DF71EEFB15BA850CB4085FE039227CA3AE76509D6",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\bandeja\\PassoExecutado.java"
+  },
+  {
+    "sha256": "69BF4A38BF18230F400E77E11F8C8A047789CF3604A5FAE32963A2C5D7F939DE",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\bandeja\\SimuladorBandejaService.java"
+  },
+  {
+    "sha256": "C34DD5E2BDC0E7779D2CCF9709510B1011F7361E8FA2D07905C1AB5FD5D3804D",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\BandejaOperacoesContexto.java"
+  },
+  {
+    "sha256": "A5A241606AC9D14A4D4578979610270D02D95CD3F2D307785290AEA071D3A78A",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\CatalogoMensagens.java"
+  },
+  {
+    "sha256": "7EB3BDCB887988193967183AF8C53D243B208E05616F8591BEA314E8C0592C22",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\CompiladorInstrucoesCurtaService.java"
+  },
+  {
+    "sha256": "086EC4323CD0C8DAE7706BAC9A729D390C6BCD8AAE1AA079E9B8D3A8ED6BFDAB",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\ConfigIA.java"
+  },
+  {
+    "sha256": "68C74A25BAEBF0DC58CEEA2C9B4C0E331131F00189FDBF02092FBDB07730C223",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\ContextoIABuilder.java"
+  },
+  {
+    "sha256": "346E88C8084CD8627978CF790E2D5C2A3CA41AEB395CA890176C0DF067883319",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\DecisaoConfirmacao.java"
+  },
+  {
+    "sha256": "C679F59679B89ED3FAEC2AF5843827154C58C48C1ED9D9B118269569B7296DFC",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\DetectorPerfilHardware.java"
+  },
+  {
+    "sha256": "5BAEBBB0DA40D4847385D597C4D991B1A4DC78B7FB5A794A1CAAA162407A2566",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\estrategia\\ContextoCompilacao.java"
+  },
+  {
+    "sha256": "07FC4C171B1C83C84425CF5FF7BDD5753DA2E209AB83CD05F75855B554FAE069",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\estrategia\\EstrategiaConjunto.java"
+  },
+  {
+    "sha256": "04A68F4C13A7493F5C6E9560C49B800CDE6271A7C914F95D0AFED4E6CC9C1666",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\estrategia\\EstrategiaEstatistica.java"
+  },
+  {
+    "sha256": "D2F584F9DF16FDC3A1F521F457A6DCB946A74E02890A0CF369AE52D0E779CDBA",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\estrategia\\EstrategiaEstoque.java"
+  },
+  {
+    "sha256": "BAC1065ABD70875FF1EB4D23BC9A009A15A8BC06F5109099955BB648A047A916",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\estrategia\\EstrategiaInstrucao.java"
+  },
+  {
+    "sha256": "74BE09CF176604C78E6BBE53FB357B761C221932C0CD45A2F080A70CFA913235",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\estrategia\\EstrategiaNota.java"
+  },
+  {
+    "sha256": "78CDE0BBFE1A27684F6E292CFDB010020C9EE693804B9BE20E3A627F7AF1D4DA",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\estrategia\\EstrategiaPagamento.java"
+  },
+  {
+    "sha256": "F190F79B5DB2240521D7552AE3D3F308BFEE1638787E4C585A92F1AA98D183DF",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\estrategia\\EstrategiaPessoa.java"
+  },
+  {
+    "sha256": "A475DA2850399B2BC34A8DFFA7BAA553B0FD24124601F402E626AB8C78D3C4B7",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\estrategia\\EstrategiaProduto.java"
+  },
+  {
+    "sha256": "98BDFB13E1ECCCE07880D7BE79754D9F0D7324247B7E0DCDADE70ABF37E46A22",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\ferramentas\\ConversorData.java"
+  },
+  {
+    "sha256": "2549B102A1011F0E4BBDE76092666E714343167B54C827151DE96291DA552A56",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\ferramentas\\ExtratorAtributos.java"
+  },
+  {
+    "sha256": "8D53DBB0E3CD78F9C5E532B44C6594CB9D16251C9F38EF0E3A46701B1790C422",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\ferramentas\\FormatadorMoeda.java"
+  },
+  {
+    "sha256": "BA94CBF8692D6439C98C05E8E374E93E4157E12BD48D2069C91D9BE4F5C264CA",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\ferramentas\\ResolvedorPagamento.java"
+  },
+  {
+    "sha256": "64C3F6BF1C4FF05BB715C361818171B1E2215CE6915F3AAE9D888A0ADBFA52B5",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\ferramentas\\ResolvedorPessoa.java"
+  },
+  {
+    "sha256": "19438A02E15C6B85AA40E7F26FFECCFE3E92316A635D719D31B7E87CDC2D41A0",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\ferramentas\\ResolvedorProduto.java"
+  },
+  {
+    "sha256": "A913C1A1D51BD068ED14FEBBB1A2EF0BF6ECD9C33178DC0767D1A5308D90EA09",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\FormatadorSaidaIA.java"
+  },
+  {
+    "sha256": "73470EAA62CA3C9BD4E5731CDEDCC9E184115AD1FB80806FED0729D55CD9AA79",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\GeminiApiProvedor.java"
+  },
+  {
+    "sha256": "B48B15EEB5E1EF66CA8AA4853F4A74890291DF68938FB9E919F948CE8404BBAC",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\InterpretadorRespostaIA.java"
+  },
+  {
+    "sha256": "7A466430C1740DA64B237D0D100A8F7E51B179EF50E53DBFDFEAEFA3D3F784F7",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\ItemBandeja.java"
+  },
+  {
+    "sha256": "2A24B04F7D8E52B0297B6D6DDB03149C1F6198BD6C7A3701C9BDF13E502E8410",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\LogFluxoIAContexto.java"
+  },
+  {
+    "sha256": "A9FAFE2030A42206B43C1B143EF7EE0DD4BCA0A4E72BB5A2E08AA279927C833F",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\ManualInstrucoesIA.java"
+  },
+  {
+    "sha256": "635ADE4545EC94272DFA4867F29FAD2FDFC1D149349DAAD5B782DF20D14BC8DE",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\nota\\MontadorNota.java"
+  },
+  {
+    "sha256": "7C283EABC7A520729C91491AA73B6DA4D947CFFE615CC0E1098A78F1253D277B",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\nota\\ResultadoValidacaoNota.java"
+  },
+  {
+    "sha256": "538CC3ECF04C3FA3644E2B9E1A11E0F8367E4DBCF1B5A0E0C4C5AEF8287C31CF",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\nota\\ValidadorRegrasNota.java"
+  },
+  {
+    "sha256": "E0E76DECABE3E6657EE631FEE67F87BB2F394975B37BBC1A72C62F5F1A27AEAB",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\OpenAiCompativelProvedor.java"
+  },
+  {
+    "sha256": "9384750EF060065D51E00051188DCF6F2C6F667E079191A069026403E09776B0",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\parser\\ErroSintaxe.java"
+  },
+  {
+    "sha256": "9AED23E9FA8B28B567528A1974FD93694657FEB49AAC5A45702BAB5D4A72DC26",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\parser\\NoInstrucao.java"
+  },
+  {
+    "sha256": "2009AC7F20DE0466191F330FE4EBE5C96E69C08E1030887168B96677E1EC1F28",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\parser\\ParserInstrucao.java"
+  },
+  {
+    "sha256": "2761B786563D0B3AE68E322CFFF977A382FD1A679ACA9541E223E418D173066F",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\parser\\PreProcessadorMensagem.java"
+  },
+  {
+    "sha256": "723B44D56719F35EFE323A8A156231048B0A34AEA30AFFF1319BFDA5BC55AF75",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\parser\\TipoOperacao.java"
+  },
+  {
+    "sha256": "104475B6F67E869C9071E0387CE76EE9CF1F1707D9B51D39D6E9816E62A9B2D3",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\ProvedorIA.java"
+  },
+  {
+    "sha256": "C5F36817733CBEE7F7E5E4D0A104D61F3F134E79673F2998EE86006A84EBFF8E",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\ProvedorIAComFailover.java"
+  },
+  {
+    "sha256": "A9C90CBFF843D265B16D1D1261C32BF1196B22E1CDCCCAFA3361FA9B5D620EA6",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\ProvedorIAFactory.java"
+  },
+  {
+    "sha256": "52634A4A91CE2F0B5F11B3FA252C83DAD57F9BEE99834590C9C26FEC6CB0EBFB",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\registro\\RegistroEstrategias.java"
+  },
+  {
+    "sha256": "D39A76300485EA00A681EA4BA3C00283DF58380D6C0AC9010504A966D6C47537",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\RelatorioExecucaoBandeja.java"
+  },
+  {
+    "sha256": "13A616A20DADE6E003B7B9F164363BF126AC5290CA2D0DE6F8C09BEB24143578",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\RetornoChatBotUI.java"
+  },
+  {
+    "sha256": "C2437FB5E7C0DAD442EB3054F50148FB468B991FE9B77117F57853E77DEB719C",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\validacao\\LeitorParametros.java"
+  },
+  {
+    "sha256": "D264B98B75A2A5DCC5B74406A6A5C76D93FE91CD7DB3F052E6437288C3E68E58",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\validacao\\RegistroValidadores.java"
+  },
+  {
+    "sha256": "5583A783DC97AF3F24B883F985B3934273CEF5A9B7492EA3996005FDD2917D0D",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\validacao\\ResultadoValidacao.java"
+  },
+  {
+    "sha256": "7B3E58057F5EFF943AEA97E357345F1E5E0B60F4CE50909E9DF0EA4E693B98AD",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\validacao\\ValidadorExecucao.java"
+  },
+  {
+    "sha256": "9D438B13FB504592B9D1FD53BE65B78C37CF2D5842D7414DB13A2550D4109FD9",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\validacao\\ValidadorPessoa.java"
+  },
+  {
+    "sha256": "C15D6FC7B60BF8E1860292C7FADF1D437CC77A5695132553F2278115A4508385",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\ia\\validacao\\ValidadorProduto.java"
+  },
+  {
+    "sha256": "DF6C3951B66745BB3DF22E316F64D31578F6D6B18F0A832198D4D4CB2816BCA8",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\IntegradorRelatorioFatorExternoService.java"
+  },
+  {
+    "sha256": "E87EE0FCFF90CD382CFEA2DD5DBEAEB1A9E35E89A1BCC7E2088574F971089D9E",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\mcp\\McpServidorSazonalisei.java"
+  },
+  {
+    "sha256": "56B85582D4F471A88EB0672BDCBF4B9C35E4ED146693045C1E359346D6AEEB5D",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\RelatorioIntegradoFatorExterno.java"
+  },
+  {
+    "sha256": "FA174BA774450E29448DD2EF2BCEAF74746B95075978F2B757C7248BEC71E5A0",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\rios\\NivelRioDiario.java"
+  },
+  {
+    "sha256": "9BE633EAB26B7DE87472BA4A27A2D3F5FFDD402E677E9C0110C1A0CB1C3D52E9",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\integracao\\rios\\NivelRioService.java"
+  },
+  {
+    "sha256": "D166AA4A5A0E18B53BE88482FBE4DC10300FA6694ABD6407D827F07201F84705",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\interfaces\\Mensuravel.java"
+  },
+  {
+    "sha256": "1B931EA0B0F59D0B14A5DDCFED2EC810B766CCBDD8FBC0DE4B9327A6DCCB554A",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\interfaces\\MetodoPagamento.java"
+  },
+  {
+    "sha256": "81325F2E65BD654DA3B06F134CE89DE14379978C429BEEA37DEF60F922495922",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\interfaces\\MoedaContabilBacen.java"
+  },
+  {
+    "sha256": "2C1C9F01A2183A2A4D8E9E9CB56DED799435BD3A2167A48519DF6B90F36844BC",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\interfaces\\OperacaoComDesconto.java"
+  },
+  {
+    "sha256": "59D53C61F80A2E36774D6C807CB14B9A445491BC3AFBDC855A16EE8D8ED38ACE",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\interfaces\\ProvedorFatorExterno.java"
+  },
+  {
+    "sha256": "519BCBEE1C4BD49B601BC4642706BF6B3F82FDF8A07C5DAAF4C77D4C1D2D170E",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\interfaces\\RegraPagamento.java"
+  },
+  {
+    "sha256": "8776285DEB82DDAAEAA8E9072CE40DA2BEA66CD62D6E50DC9FEB7B6F4AB9E12C",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\interfaces\\TituloVencivel.java"
+  },
+  {
+    "sha256": "748CE394904859E77B62B5A23D4DC096960DF2343582463B7AA4AB611F50C94D",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\dao\\BuscaPalavrasParciaisUtil.java"
+  },
+  {
+    "sha256": "C58899F47900AECD836C8DD7FEB9CDE3282852207B16A333FE8FCF4252D4D2E7",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\dao\\JPAUtil.java"
+  },
+  {
+    "sha256": "627391F56544A4D8703E73DA4602244FD16C4682F9238EA9773DB94172D11A96",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\dao\\MigracaoUnicidadeProduto.java"
+  },
+  {
+    "sha256": "11657269F5EEE43AD034DF35E1B306ACC343B3ED93ACAEB60C8827325E90C3C2",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\dao\\nota\\EstatisticaDAO.java"
+  },
+  {
+    "sha256": "0CB056473D3BFEB9821827A9C44F6A2BBC5C4EBF3157266FB8CC08711F98FCDE",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\dao\\nota\\FatorExternoPersistenciaDAO.java"
+  },
+  {
+    "sha256": "AAAC94E17BAEB66B3931534A4D8283D1BC2D3F0032A3C75EB66FFC917B961C95",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\dao\\nota\\NotaDAO.java"
+  },
+  {
+    "sha256": "C0FC9872CD02859142126874932833B160147A3151A53DD0AC197FF544F87DD8",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\dao\\nota\\VinculoFatorExternoDAO.java"
+  },
+  {
+    "sha256": "CB672B2321FF5E921DF8F015DCF580936330DEFB60C315E4C787543B0FBC34AE",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\dao\\PadraoDAO.java"
+  },
+  {
+    "sha256": "B5BD453DD686EE43980B1D1B80B74D38BCBD5919C49A60C57560E7E2D1BF5CBE",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\dao\\pagamento\\FormaPagamentoDAO.java"
+  },
+  {
+    "sha256": "0C740ABBF5381DF5B8C6CA3E0457CC712A53CA9C3EFF00295AFA71D00A0E65D0",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\dao\\pessoa\\PessoaDAO.java"
+  },
+  {
+    "sha256": "BD5E0B90A9D9AFBC8789B570ACE87849E963289FC31D0A7FA53E164DBF9FDA06",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\dao\\produto\\ConjuntoProdutoDAO.java"
+  },
+  {
+    "sha256": "FE78BBE75DC41ADBF1112F4A91F8B9CE0FDF92FFC57DDC1640C32C47D371A5D9",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\dao\\produto\\LinkProdutoDigitalDAO.java"
+  },
+  {
+    "sha256": "9F9D66394F0E16469662C15ACEE4746152F285186D721D06AF08F2508D37BC29",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\dao\\produto\\ProdutoDAO.java"
+  },
+  {
+    "sha256": "398EC7C1FC2431B362F04B1BF7D771F3079247F5ACF803FD5F7796B41CA5BCDC",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\dao\\produto\\ProdutoImagemDAO.java"
+  },
+  {
+    "sha256": "9BAA39FA085CD720CACD75A3F7C2E250DAB563D87BD91F8279A5CC514DE03C04",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\dao\\produto\\UmDAO.java"
+  },
+  {
+    "sha256": "1CE467575488D517FA261D9B4D7664B0132B687D833E293996D35FD677CB4A52",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\dao\\SqlScriptRunner.java"
+  },
+  {
+    "sha256": "A829CCBB70B377A736CBC16D2C9CAF4E47A0ABF21E9CE7926ED282418543F290",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\nota\\Item.java"
+  },
+  {
+    "sha256": "B4C94C9F2F063EB0EDD5A3D12D7FE1BA00E596DCDFF82BDF0A6FC863B987109B",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\nota\\Nota.java"
+  },
+  {
+    "sha256": "4B8B69A7305C26EF37BDEB0D6768E0D1FF6E40F30CCE3476D9C9ED4A57BE0238",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\nota\\NotaCompra.java"
+  },
+  {
+    "sha256": "5D3C052E4DE2598E8BC337DE367F612494C7894087C29AEC3AA2D9A44DEE809D",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\nota\\NotaDevolucao.java"
+  },
+  {
+    "sha256": "93C7BBB200C8829143B058063D54B3F6F97FE2A166CCB36456460C02D5FA819C",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\nota\\NotaPerda.java"
+  },
+  {
+    "sha256": "3D9CCF888327ED4D93935233C72346CD3826B2FF03E28445D326FD4BF2C9A844",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\nota\\NotaVenda.java"
+  },
+  {
+    "sha256": "0CE102243E9F0A555496FF01897FF6FEFEABAF280810D630032664C78DCCD5F9",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\nota\\VinculoFatorExternoNota.java"
+  },
+  {
+    "sha256": "DCBEBE5771E5282E4C2DD632EAD3C8AF56034856C76CBB342CFB166A3F168726",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\pagamento\\FormaPagamento.java"
+  },
+  {
+    "sha256": "D48750845ECD79AB5EC394DCD67269ED49CCDBC32C4C07C312D0A56049BC4B50",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\pagamento\\NotaPagamento.java"
+  },
+  {
+    "sha256": "A6C7B3AA65139386D90FF7F98068C0B29BD25898969C3954F9A8AFF12164AC6B",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\pagamento\\PagamentoAPrazo.java"
+  },
+  {
+    "sha256": "D8A65A82BB082FB9B811CF712E500392D962A2849AB4F19932646155413FDCEA",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\pagamento\\PagamentoAVista.java"
+  },
+  {
+    "sha256": "239ABA0A001A8A5005EB5B160B280BEB5075D7A342405700D80FA42B73EDF733",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\pagamento\\PagamentoParcelado.java"
+  },
+  {
+    "sha256": "C5F6C0D336D1061E58239FF733DFF6B7C718E25124820767F624EE598D567023",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\pagamento\\ParcelaPagamento.java"
+  },
+  {
+    "sha256": "92736B9E2B7F9D8F5440C040597991A6CEF5C8916688BD026DF64510EAAA7B65",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\pessoa\\Pessoa.java"
+  },
+  {
+    "sha256": "FE38B37D29FC80839107501CF0CE1B1856F16552D47CFBAB5006D72B03E8D9AA",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\pessoa\\PessoaFisica.java"
+  },
+  {
+    "sha256": "DA249B4C5D892F3ADF2C372E7BDC2B16D0509A86802DC204A928CB6DE7D7CD20",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\pessoa\\PessoaJuridica.java"
+  },
+  {
+    "sha256": "C86FB2A46DCB2F216AEF4AF0660CD7D5CC54CE2ECB6908BDEC803F1C6412F724",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\pessoa\\Registro.java"
+  },
+  {
+    "sha256": "E224980AFB478B8B8AB16E7B3DC04DF91B97DCDB3DF4EBA333A3BC31F92C2AE4",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\produto\\ConjuntoProduto.java"
+  },
+  {
+    "sha256": "E0A4C186E00B780571F4D76388ABE60024BCFF40B952787067F1143FB34E702A",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\produto\\ConjuntoProdutoId.java"
+  },
+  {
+    "sha256": "ACCFA0BE2FE289FB0D40FE6130D6BDB1485638C15E9E8F74A853DA60B1F70077",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\produto\\LinkProdutoDigital.java"
+  },
+  {
+    "sha256": "94D6002CD883CDBDE7296147E0DA7D29AAD58B412444D43B295FAE7495CD8F9D",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\produto\\Produto.java"
+  },
+  {
+    "sha256": "B294B0FBC8C22EADDA930CBE8111193D4A71C7206C810236E955B2F4668D9FEB",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\produto\\ProdutoDigital.java"
+  },
+  {
+    "sha256": "F0F46630C31A597A7B23D6F250106D34A7A2828DF0EE8A4FA08319EA7815BBDC",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\produto\\ProdutoFisico.java"
+  },
+  {
+    "sha256": "E13F04EE26A1AB99F7B331FDD6F81298DED0B5381D7E43F89E05D6ABD02E0A25",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\produto\\ProdutoImagem.java"
+  },
+  {
+    "sha256": "D86716FCE1B745B8FD909BB081D75130ACE5B34A99B41D16FFE98419C5F80C00",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\repository\\modal\\produto\\Um.java"
+  },
+  {
+    "sha256": "A61DC383367572A2DEAF5CE105C1D7C266365B7A6519911FBF25A5979388CA5D",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\service\\AnaliseImpactoExternoService.java"
+  },
+  {
+    "sha256": "7AA7495A5847DA94C518E9BB2F1B3DA454CFCFEB342FC4D50CB2F68A43A852FD",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\service\\EstoqueManage.java"
+  },
+  {
+    "sha256": "F56B009FCE3CFE10F24C55001C6830779039FC8487CB368D8DD8290846AD33E3",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\service\\ImagemProdutoService.java"
+  },
+  {
+    "sha256": "9D714D131DBC7AD564B482F0C4F3628F151532016330EF4925D10EF63BA38AB4",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\service\\InicializadorSistemaService.java"
+  },
+  {
+    "sha256": "9CE231479B59B727BCCD17206085EA91FEE1F34227F9A3CD609F71B370805E44",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\service\\ManageNotas.java"
+  },
+  {
+    "sha256": "F2B242888CA89808C270C1AE9025C2E0691C2FD78ACC5D5CA46253F90836C6CC",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\view\\javafx\\abas\\AbaCadastrosOperacoesContainer.java"
+  },
+  {
+    "sha256": "4F1AA1C3A8686907E4CFCD620655C74EC973526317F89340E67DA8ACD345F015",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\view\\javafx\\abas\\AbaConfiguracaoAmbienteContainer.java"
+  },
+  {
+    "sha256": "D25343E2C01C66AACD244E7DB5BD4F72A25CED85339BEE3952F340088F68C4F9",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\view\\javafx\\abas\\AbaEstatisticaFinanceiroContainer.java"
+  },
+  {
+    "sha256": "2F5757701A06AD94AC8541FF8CDEEA42E8A9870EDB70710AA0A0818DFEF8FF65",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\view\\javafx\\abas\\AbaEstatisticasAvancadasContainer.java"
+  },
+  {
+    "sha256": "EB8917862F7D064EEB7598207F07B914DB04B67A3A6938840B44A67CE2837114",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\view\\javafx\\abas\\AbaEstoqueFifoContainer.java"
+  },
+  {
+    "sha256": "AD3A4D0EFCA7037058D61CC9B5C36B448BB9321DC414EEBE6CAD536F5C288774",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\view\\javafx\\abas\\AbaGraficosAnaliticosContainer.java"
+  },
+  {
+    "sha256": "3632DBE9EFFB68ABCF0D092AC3CB35651852C130C3DD41EB180866A7E7DB1540",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\view\\javafx\\abas\\AbaGrafoObsidianContainer.java"
+  },
+  {
+    "sha256": "BFF844A7CC93F28378FAA714017C34937947979D1279F7BDFB1F27E59C34165E",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\view\\javafx\\abas\\AbaMapaEventosContainer.java"
+  },
+  {
+    "sha256": "E7ABE6C69E35FC8DB2D50FCFF882EFE4AE0CD7E93C7D3D07802790378962ED79",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\view\\javafx\\componentes\\AssistenteFlutuantePopupContainer.java"
+  },
+  {
+    "sha256": "56B2F7151547E32F14CFF4A5E906D2F70E8F9E3539D271FEBC4154FFF9D9494A",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\view\\javafx\\componentes\\CabecalhoNavegacaoContainer.java"
+  },
+  {
+    "sha256": "73DBAF8A74E8A30DFC40E28C9FABF775068CC1F3A76FD079F81E56F5B8174B50",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\view\\javafx\\componentes\\CapturadorVozMicrofone.java"
+  },
+  {
+    "sha256": "591304BF78F2CA16E6270B32760E8EE918CE472C5A99FE443EF9DE46117550A0",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\view\\javafx\\componentes\\CardKpiContainer.java"
+  },
+  {
+    "sha256": "8169F0AAA9D30E3EC91CB0A02A83A241A3B29EC4596DE15A8F941933F689ADF9",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\view\\javafx\\componentes\\FormatadorBalaoChatUI.java"
+  },
+  {
+    "sha256": "2130637DD6B993D0F6A0CBDE43ABFF09E6C2EA3B70410E68B00C90C625C6F9E8",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\view\\javafx\\componentes\\FormatadorDadosUI.java"
+  },
+  {
+    "sha256": "D9DA4B40427D6685AABF2F1686FE51F5512DF878018FE56AA7278A857C51F23A",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\view\\javafx\\componentes\\PainelChatPesquisaContainer.java"
+  },
+  {
+    "sha256": "05B1E5F797A7570E966064A5FC71CB5A878BD2A90E08372985E2B193385CD179",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\view\\javafx\\componentes\\PainelGraficoHidrologicoClimaContainer.java"
+  },
+  {
+    "sha256": "DE83C831BCE4EA0A73B3D5F48309F0FE5BA9A9CA9DDA4BE267E2029F2C1C9FC9",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\view\\javafx\\componentes\\PainelLeitorCsvContainer.java"
+  },
+  {
+    "sha256": "07EF5FCA2DBEFFC9C6C7B90437086C7BB4605FE9A6C54C59EF4F36D2745775B8",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\view\\javafx\\componentes\\PersonagemIaAvatarContainer.java"
+  },
+  {
+    "sha256": "653FD3434513F24505A1D7CA93FA5BEC3ED29B3BEFB24706B95948C83DAC2439",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\view\\javafx\\componentes\\SidebarNavegacaoContainer.java"
+  },
+  {
+    "sha256": "AA41ED870D5D0D66098707AC8D0BF8F89601DC6A7C570BEF24D63B9CE5F1DF6B",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\view\\javafx\\gateway\\RoteadorSistemaGateway.java"
+  },
+  {
+    "sha256": "C3D670D679B36DD02AFB3137C464C778FED10E8C01469ED4620AD284A0FF42AC",
+    "arquivo": "src\\main\\java\\br\\com\\senac\\view\\javafx\\gateway\\SistemaGateway.java"
+  },
+  {
+    "sha256": "0797AF7B2ABB46E1ABCD548FA5AF1526286AD0753B6BC18746638C0892B44FB1",
+    "arquivo": "src\\main\\resources\\css\\sazonalisei-theme.css"
+  },
+  {
+    "sha256": "6C3194E8E7242513811BBDE46E7AEB283AC4E47213A82081AC78FD61BFD4B9B8",
+    "arquivo": "src\\main\\resources\\ia-contexto.properties"
+  },
+  {
+    "sha256": "A067AF906DC43A85292C82110935502E9189B5908A16996151CFEAA5239310AF",
+    "arquivo": "src\\main\\resources\\META-INF\\persistence-embarcado.xml"
+  },
+  {
+    "sha256": "03F8192789F3B7B1C0EDCF3CEDCC2D9FF36047738CC9F21F6F80B0E361CA516D",
+    "arquivo": "src\\main\\resources\\sql\\script_estatisticas_inteligencia_sazonal.sql"
+  },
+  {
+    "sha256": "D8774B07390B80726CBD0B92BCFF99223D747A93E86FB31110DB41C2AF96D0EE",
+    "arquivo": "src\\main\\resources\\sql\\script_fatores_externos_gatilhos.sql"
+  },
+  {
+    "sha256": "AE3242C15202309EF9320C932430C1BD6D163334C36F01C46C060242687940DE",
+    "arquivo": "src\\main\\resources\\sql\\script_inicializacao_sistema.sql"
+  },
+  {
+    "sha256": "A6A59EC0E6D90EBDD584FD16151B1E6F94D92C9A3420F8BB340D57C96A7CD790",
+    "arquivo": "src\\main\\resources\\sympla-default.properties"
+  },
+  {
+    "sha256": "F1BFDA4677950258F42CD7D9B2535A3426E0C074EE9941FCF68D7F3B881389DD",
+    "arquivo": "src\\test\\java\\br\\com\\senac\\application\\TesteBandejaContexto.java"
+  },
+  {
+    "sha256": "EA81EF39C9A9F8E43DE4DB1E470D994C535C05E9E98455A9887D5A33AA8CF9C8",
+    "arquivo": "src\\test\\java\\br\\com\\senac\\application\\TesteBandejaPassoAPasso.java"
+  },
+  {
+    "sha256": "155F40D54FBAD3BE573C02E85A9625DB856624E44486582936DBA5F3F84D6498",
+    "arquivo": "src\\test\\java\\br\\com\\senac\\application\\TesteEndpointsControllers.java"
+  },
+  {
+    "sha256": "0CADCE1C4B4D446E7D7822DB006460BF4254A001D9863A0113E79289008F5620",
+    "arquivo": "src\\test\\java\\br\\com\\senac\\application\\TesteEstatisticasInteligencia.java"
+  },
+  {
+    "sha256": "A670250A6057863722C7E234A444461E8374F725721FDC74550AC4BCACA9A7BC",
+    "arquivo": "src\\test\\java\\br\\com\\senac\\application\\TesteFatoresExternosGatilho.java"
+  },
+  {
+    "sha256": "7E57C43B029FF7DEE84C4B75BC0817AB94A55C7F6AD8922F2AAB085F7B282B9B",
+    "arquivo": "src\\test\\java\\br\\com\\senac\\application\\TesteFormatadorSaidaIA.java"
+  },
+  {
+    "sha256": "7CA7E97ACB9CC8AC79929F00B05F1F18AA9C272D07002AFCE75F053DF7B9865C",
+    "arquivo": "src\\test\\java\\br\\com\\senac\\application\\TesteGeminiIntegracao.java"
+  },
+  {
+    "sha256": "6D8CD52A8CC3EC379740524749073E410A9E4D7D77334035C8D79ED43943410B",
+    "arquivo": "src\\test\\java\\br\\com\\senac\\application\\TesteImagensProduto.java"
+  },
+  {
+    "sha256": "45A20541BE3E28E33D07290F3F7CAD9126F77492A504BF6DAAB83EECA56E3282",
+    "arquivo": "src\\test\\java\\br\\com\\senac\\application\\TesteImportadorCsvEReset.java"
+  },
+  {
+    "sha256": "C20B31D15B9B1EC83F06FF995392A3032B3C66E86EE8DD27E1B8CA442480A6B2",
+    "arquivo": "src\\test\\java\\br\\com\\senac\\application\\TesteIntegracaoIA.java"
+  },
+  {
+    "sha256": "6B0497302CE1FD53A2A8AD9DD88AD5138BB44ABF7C98F53818995AF1FD0D923C",
+    "arquivo": "src\\test\\java\\br\\com\\senac\\application\\TesteMatematicaContabilBacen.java"
+  },
+  {
+    "sha256": "C2F5A6D0200460D83B37CC3F5EFD5E0F5F93C690255F10AB3ABCF9C2226899AB",
+    "arquivo": "src\\test\\java\\br\\com\\senac\\application\\TesteMcpServidor.java"
+  },
+  {
+    "sha256": "91298C33B3F1772999740BC6CF68C367BD18B80A216F1173A543D1CE18913102",
+    "arquivo": "src\\test\\java\\br\\com\\senac\\application\\TesteParserEPreProcessador.java"
+  },
+  {
+    "sha256": "E91BD1E9EEE709EE132A537F666EBDF375A1B97022F5B6E83981924B28077268",
+    "arquivo": "src\\test\\java\\br\\com\\senac\\application\\TesteProduto3NiveisContabil.java"
+  },
+  {
+    "sha256": "54A7093EB2DC77B624CA12C488EE97AC44B2174916054A9F62411742D4D091CB",
+    "arquivo": "src\\test\\java\\br\\com\\senac\\application\\TesteSimulacaoBandeja.java"
+  },
+  {
+    "sha256": "DA937E2B129BC9C7B3BA7D3A9EFBFAC320DA48C06ED34FCD2A7D18222A4B4A3A",
+    "arquivo": "src\\test\\java\\br\\com\\senac\\application\\TesteTerminalInterativoHelper.java"
+  }
+]

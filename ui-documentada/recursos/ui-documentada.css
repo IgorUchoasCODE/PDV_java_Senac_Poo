@@ -1,0 +1,36 @@
+.root { -fx-font-family:'Segoe UI'; -fx-font-size:13px; -fx-background-color:#0d1524; }
+.label { -fx-text-fill:#c9d9ed; }
+.cabecalho { -fx-padding:16 22; -fx-background-color:#121e31; -fx-border-color:transparent transparent #26354c transparent; }
+.marca { -fx-font-size:22px; -fx-font-weight:bold; -fx-text-fill:#f2f7ff; }
+.menu-lateral { -fx-padding:20 14; -fx-background-color:#101b2d; }
+.menu-lateral .button { -fx-background-color:transparent; -fx-text-fill:#b8c8de; -fx-alignment:center-left; -fx-padding:9 10; -fx-font-size:12px; }
+.menu-lateral .button:hover { -fx-background-color:#1d304c; }
+.menu-lateral .button.ativo { -fx-background-color:#123f59; -fx-text-fill:#58caff; }
+.secao-menu { -fx-text-fill:#7289a5; -fx-font-size:9px; -fx-font-weight:bold; -fx-padding:13 0 3 8; }
+.rodape-menu { -fx-text-fill:#7189a7; -fx-font-size:10px; -fx-padding:16 8 0 8; }
+.conteudo { -fx-padding:22; -fx-spacing:16; }
+.titulo-pagina { -fx-font-size:26px; -fx-font-weight:bold; -fx-text-fill:#f0f6ff; }
+.titulo-card { -fx-text-fill:#e0efff; -fx-font-size:17px; -fx-font-weight:bold; }
+.cartao { -fx-padding:18; -fx-background-color:#19283c; -fx-background-radius:10; -fx-border-color:#2b3c54; -fx-border-radius:10; -fx-spacing:12; }
+.texto-introducao { -fx-text-fill:#b8cce5; -fx-font-size:15px; -fx-line-spacing:5; }
+.ajuda { -fx-text-fill:#91a8c6; -fx-font-size:12px; }
+.rotulo { -fx-text-fill:#b9cce4; -fx-font-size:12px; -fx-font-weight:bold; }
+.sobrelinha { -fx-text-fill:#43c3f6; -fx-font-size:11px; }
+.estado { -fx-background-color:#16263e; -fx-text-fill:#a7c4e4; -fx-padding:10 20; -fx-font-size:11px; }
+.aviso { -fx-text-fill:#f0c57a; -fx-font-size:12px; }
+.valor-total { -fx-text-fill:#3fc7ff; -fx-font-size:32px; -fx-font-weight:bold; }
+.button { -fx-background-color:#2a405c; -fx-text-fill:#e7f2ff; -fx-background-radius:6; -fx-padding:9 13; -fx-cursor:hand; -fx-font-weight:bold; }
+.button:hover { -fx-background-color:#38567a; }
+.button.primario { -fx-background-color:#078cce; -fx-text-fill:white; }
+.split-pane { -fx-background-color:transparent; -fx-padding:0; }
+.split-pane-divider { -fx-background-color:#26384f; -fx-padding:0 2; }
+.tab-pane .tab-header-area .tab-header-background { -fx-background-color:#17253b; }
+.tab-pane .tab { -fx-background-color:#24374f; -fx-padding:8 13; }
+.tab-pane .tab:selected { -fx-background-color:#11628c; }
+.tab-pane .tab .tab-label { -fx-text-fill:#e1eeff; }
+.tab-pane .tab-content-area { -fx-padding:14 0 0 0; }
+.scroll-pane,.scroll-pane>.viewport { -fx-background-color:transparent; }
+.text-field,.combo-box,.text-area .content { -fx-background-color:#101d30; -fx-text-fill:#e5f0ff; -fx-prompt-text-fill:#687e9b; }
+.combo-box .list-cell { -fx-text-fill:#d8e9ff; }
+.text-field { -fx-padding:8 10; }
+.text-area { -fx-text-fill:#deedff; -fx-font-size:12px; }

@@ -1,0 +1,6 @@
+Sazonalisei - UI JavaFX documentada
+Abra LEIA-ME.html para instrucoes, evidencias e limites.
+Execute iniciar.bat ou iniciar_ui_documentada.ps1 com -Nucleo apontando para o repositorio original.
+Este pacote adicional nao inclui o nucleo e nao modifica os arquivos existentes.
+210 verificacoes passaram; nao equivale a validar integralmente todas as 85 rotas.
+Nenhuma publicacao no GitHub foi realizada.

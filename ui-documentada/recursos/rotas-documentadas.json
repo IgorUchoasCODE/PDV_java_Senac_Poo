@@ -1,0 +1,1515 @@
+[
+  {
+    "id": "SISTEMA_INICIALIZAR_DADOS_PADRAO",
+    "metodo": "POST",
+    "caminho": "/sistema/inicializar",
+    "descricao": "Executa a carga inicial idempotente do sistema: 10 Unidades de Medida padrão, 8 Formas de Pagamento e o Cliente Balcão Padrão (CONSUMIDOR FINAL).",
+    "parametros": "Nenhum parâmetro obrigatório.",
+    "campos": []
+  },
+  {
+    "id": "SISTEMA_RESETAR_BANCO_RESTRITO",
+    "metodo": "DELETE",
+    "caminho": "/sistema/reset-restrito",
+    "descricao": "Funcionalidade restrita: reseta o banco de dados mantendo apenas Cliente Padrão, Formas de Pagamento e Unidades de Medida (exige token de confirmação explícito).",
+    "parametros": "tokenConfirmacao: String (obrigatório)",
+    "campos": [
+      {
+        "nome": "tokenConfirmacao",
+        "tipo": "String"
+      }
+    ]
+  },
+  {
+    "id": "BUSCA_PADRAO_IA",
+    "metodo": "POST",
+    "caminho": "/ia/busca-padrao",
+    "descricao": "Executa busca padrão estruturada para leitura da IA em qualquer DAO (produto, pessoa, registro, estoque_valido, lote_valido, nota, unidade_medida, forma_pagamento, fator_externo).",
+    "parametros": "entidade: String (obrigatório: 'PRODUTO', 'PESSOA', 'NOTA', etc.), id: Long (opcional), termo: String (opcional), unico: Boolean (opcional)",
+    "campos": [
+      {
+        "nome": "entidade",
+        "tipo": "String"
+      },
+      {
+        "nome": "id",
+        "tipo": "Long"
+      },
+      {
+        "nome": "termo",
+        "tipo": "String"
+      },
+      {
+        "nome": "unico",
+        "tipo": "Boolean"
+      }
+    ]
+  },
+  {
+    "id": "PRODUTO_UNIDADE_LISTAR",
+    "metodo": "GET",
+    "caminho": "/produtos/unidades/listar",
+    "descricao": "Lista todas as Unidades de Medida cadastradas no sistema com suas bases de fracionamento.",
+    "parametros": "Nenhum parâmetro.",
+    "campos": []
+  },
+  {
+    "id": "PRODUTO_UNIDADE_CADASTRAR",
+    "metodo": "POST",
+    "caminho": "/produtos/unidades/cadastrar",
+    "descricao": "Cadastra uma nova Unidade de Medida com fator multiplicador de fracionamento.",
+    "parametros": "sigla (String), nome (String), descricao (String), base (BigDecimal)",
+    "campos": [
+      {
+        "nome": "sigla",
+        "tipo": "String"
+      },
+      {
+        "nome": "nome",
+        "tipo": "String"
+      },
+      {
+        "nome": "descricao",
+        "tipo": "String"
+      },
+      {
+        "nome": "base",
+        "tipo": "BigDecimal"
+      }
+    ]
+  },
+  {
+    "id": "PRODUTO_UNIDADE_ATUALIZAR",
+    "metodo": "PUT",
+    "caminho": "/produtos/unidades/atualizar",
+    "descricao": "Atualiza os dados cadastrais (nome, descrição, base de fracionamento) de uma Unidade de Medida existente pela sigla.",
+    "parametros": "sigla: String (obrigatório), nome: String (opcional), descricao: String (opcional), base: BigDecimal (opcional, padrão 1.000000)",
+    "campos": [
+      {
+        "nome": "sigla",
+        "tipo": "String"
+      },
+      {
+        "nome": "nome",
+        "tipo": "String"
+      },
+      {
+        "nome": "descricao",
+        "tipo": "String"
+      },
+      {
+        "nome": "base",
+        "tipo": "BigDecimal"
+      }
+    ]
+  },
+  {
+    "id": "PRODUTO_UNIDADE_EXCLUIR",
+    "metodo": "DELETE",
+    "caminho": "/produtos/unidades/excluir",
+    "descricao": "Exclui definitivamente uma Unidade de Medida cadastrada pela sigla caso não possua produtos vinculados.",
+    "parametros": "sigla: String (obrigatório)",
+    "campos": [
+      {
+        "nome": "sigla",
+        "tipo": "String"
+      }
+    ]
+  },
+  {
+    "id": "PRODUTO_FISICO_CADASTRAR",
+    "metodo": "POST",
+    "caminho": "/produtos/fisico/cadastrar",
+    "descricao": "Cadastra Produto Físico com cálculo automático de cubagem, volume em cm³/m³ e peso taxável de frete.",
+    "parametros": "nome (String), precoVenda (BigDecimal), siglaUm (String), alturaCm, larguraCm, comprimentoCm, pesoBrutoKg, pesoLiquidoKg (BigDecimal)",
+    "campos": [
+      {
+        "nome": "nome",
+        "tipo": "String"
+      },
+      {
+        "nome": "precoVenda",
+        "tipo": "BigDecimal"
+      },
+      {
+        "nome": "siglaUm",
+        "tipo": "String"
+      },
+      {
+        "nome": "pesoLiquidoKg",
+        "tipo": "BigDecimal"
+      },
+      {
+        "nome": "alturaCm",
+        "tipo": "BigDecimal"
+      },
+      {
+        "nome": "larguraCm",
+        "tipo": "BigDecimal"
+      },
+      {
+        "nome": "comprimentoCm",
+        "tipo": "BigDecimal"
+      },
+      {
+        "nome": "pesoBrutoKg",
+        "tipo": "BigDecimal"
+      }
+    ]
+  },
+  {
+    "id": "PRODUTO_FISICO_ATUALIZAR_DIMENSOES",
+    "metodo": "PUT",
+    "caminho": "/produtos/fisico/dimensoes",
+    "descricao": "Atualiza dimensões lineares e pesos de um produto físico existente, recalculando métricas de frete.",
+    "parametros": "idProduto (Long), alturaCm, larguraCm, comprimentoCm, pesoBrutoKg, pesoLiquidoKg (BigDecimal)",
+    "campos": [
+      {
+        "nome": "idProduto",
+        "tipo": "Long"
+      },
+      {
+        "nome": "pesoLiquidoKg",
+        "tipo": "BigDecimal"
+      },
+      {
+        "nome": "alturaCm",
+        "tipo": "BigDecimal"
+      },
+      {
+        "nome": "larguraCm",
+        "tipo": "BigDecimal"
+      },
+      {
+        "nome": "comprimentoCm",
+        "tipo": "BigDecimal"
+      },
+      {
+        "nome": "pesoBrutoKg",
+        "tipo": "BigDecimal"
+      }
+    ]
+  },
+  {
+    "id": "PRODUTO_DIGITAL_CADASTRAR",
+    "metodo": "POST",
+    "caminho": "/produtos/digital/cadastrar",
+    "descricao": "Cadastra infoproduto digital com entrega via URLs de download e links externos.",
+    "parametros": "nome (String), precoVenda (BigDecimal), links (List )",
+    "campos": [
+      {
+        "nome": "nome",
+        "tipo": "String"
+      },
+      {
+        "nome": "precoVenda",
+        "tipo": "BigDecimal"
+      },
+      {
+        "nome": "links",
+        "tipo": "List"
+      }
+    ]
+  },
+  {
+    "id": "PRODUTO_KIT_ADICIONAR_COMPONENTE",
+    "metodo": "POST",
+    "caminho": "/produtos/kit/componente",
+    "descricao": "Adiciona subitem componente e quantidade proporcional a um Kit ou Conjunto.",
+    "parametros": "idProdutoKit (Long), idProdutoComponente (Long), quantidade (BigDecimal)",
+    "campos": [
+      {
+        "nome": "idProdutoKit",
+        "tipo": "Long"
+      },
+      {
+        "nome": "idProdutoComponente",
+        "tipo": "Long"
+      },
+      {
+        "nome": "quantidade",
+        "tipo": "BigDecimal"
+      }
+    ]
+  },
+  {
+    "id": "PRODUTO_CATALOGO_LISTAR",
+    "metodo": "GET",
+    "caminho": "/produtos/catalogo/listar",
+    "descricao": "Lista todos os produtos cadastrados no catálogo (físicos, digitais e kits).",
+    "parametros": "Nenhum parâmetro.",
+    "campos": []
+  },
+  {
+    "id": "PRODUTO_CATALOGO_BUSCAR",
+    "metodo": "GET",
+    "caminho": "/produtos/catalogo/buscar",
+    "descricao": "Busca produto por ID numérico ou por nome parcial.",
+    "parametros": "id (Long) OU nome (String)",
+    "campos": [
+      {
+        "nome": "id",
+        "tipo": "Long"
+      },
+      {
+        "nome": "nome",
+        "tipo": "String"
+      }
+    ]
+  },
+  {
+    "id": "PRODUTO_BUSCAR_UNICO",
+    "metodo": "GET",
+    "caminho": "/produtos/buscar-unico",
+    "descricao": "Busca padrão de um único produto por ID ou Nome indexado para leitura da IA (compatível com siglas e busca parcial).",
+    "parametros": "id: Long (opcional), idProduto: Long (opcional), nome: String (opcional), termo: String (opcional)",
+    "campos": [
+      {
+        "nome": "id",
+        "tipo": "Long"
+      },
+      {
+        "nome": "idProduto",
+        "tipo": "Long"
+      },
+      {
+        "nome": "nome",
+        "tipo": "String"
+      },
+      {
+        "nome": "termo",
+        "tipo": "String"
+      }
+    ]
+  },
+  {
+    "id": "PRODUTO_ESTOQUE_VALIDO_BUSCAR_UNICO",
+    "metodo": "GET",
+    "caminho": "/produtos/estoque-valido/buscar-unico",
+    "descricao": "Busca um único produto que possua estoque válido disponível (saldo FIFO > 0 e dentro do prazo de validade).",
+    "parametros": "id: Long (opcional), idProduto: Long (opcional), nome: String (opcional), termo: String (opcional)",
+    "campos": [
+      {
+        "nome": "id",
+        "tipo": "Long"
+      },
+      {
+        "nome": "idProduto",
+        "tipo": "Long"
+      },
+      {
+        "nome": "nome",
+        "tipo": "String"
+      },
+      {
+        "nome": "termo",
+        "tipo": "String"
+      }
+    ]
+  },
+  {
+    "id": "PRODUTO_ESTOQUE_VALIDO_LISTAR",
+    "metodo": "GET",
+    "caminho": "/produtos/estoque-valido/listar",
+    "descricao": "Lista todos os produtos do catálogo que possuem saldo de estoque válido (lotes FIFO disponíveis e não vencidos).",
+    "parametros": "Nenhum parâmetro obrigatório.",
+    "campos": []
+  },
+  {
+    "id": "PRODUTO_CATALOGO_ATUALIZAR",
+    "metodo": "PUT",
+    "caminho": "/produtos/catalogo/atualizar",
+    "descricao": "Atualiza o nome e descrição cadastrais de um produto no catálogo por ID ou Nome Atual.",
+    "parametros": "idProduto: Long (opcional se nomeAtual), nomeAtual: String (opcional), novoNome: String (obrigatório), descricao: String (opcional)",
+    "campos": [
+      {
+        "nome": "idProduto",
+        "tipo": "Long"
+      },
+      {
+        "nome": "nomeAtual",
+        "tipo": "String"
+      },
+      {
+        "nome": "novoNome",
+        "tipo": "String"
+      },
+      {
+        "nome": "descricao",
+        "tipo": "String"
+      }
+    ]
+  },
+  {
+    "id": "PRODUTO_CATALOGO_ATUALIZAR_PRECO",
+    "metodo": "PUT",
+    "caminho": "/produtos/catalogo/atualizar-preco",
+    "descricao": "Atualiza o preço de venda de um produto no catálogo por ID ou Nome, com histórico e recálculo de margem.",
+    "parametros": "idProduto: Long (ou nomeProduto: String), novoPreco: BigDecimal (obrigatório)",
+    "campos": [
+      {
+        "nome": "idProduto",
+        "tipo": "Long"
+      },
+      {
+        "nome": "nomeProduto",
+        "tipo": "String"
+      },
+      {
+        "nome": "novoPreco",
+        "tipo": "BigDecimal"
+      }
+    ]
+  },
+  {
+    "id": "PRODUTO_CATALOGO_EXCLUIR",
+    "metodo": "DELETE",
+    "caminho": "/produtos/catalogo/excluir",
+    "descricao": "Exclui definitivamente um produto do catálogo pelo ID ou Nome caso não possua movimentações fiscais atreladas.",
+    "parametros": "idProduto: Long (ou nomeProduto: String)",
+    "campos": [
+      {
+        "nome": "idProduto",
+        "tipo": "Long"
+      },
+      {
+        "nome": "nomeProduto",
+        "tipo": "String"
+      }
+    ]
+  },
+  {
+    "id": "PRODUTO_IMAGEM_ADICIONAR",
+    "metodo": "POST",
+    "caminho": "/produtos/imagens/adicionar",
+    "descricao": "Adiciona uma nova imagem ao produto a partir de arquivo em disco ou payload Base64, gerando nome 100% único (UUID + Timestamp), validando formatos (PNG, JPG, JPEG, WEBP, GIF, SVG, BMP) e persistindo metadados no banco e disco.",
+    "parametros": "idProduto (Long), caminhoArquivo (String) OU base64 (String), nomeOriginal (String, opcional), isPrincipal (Boolean, opcional)",
+    "campos": [
+      {
+        "nome": "idProduto",
+        "tipo": "Long"
+      },
+      {
+        "nome": "caminhoArquivo",
+        "tipo": "String"
+      },
+      {
+        "nome": "base64",
+        "tipo": "String"
+      },
+      {
+        "nome": "nomeOriginal",
+        "tipo": "String"
+      },
+      {
+        "nome": "isPrincipal",
+        "tipo": "Boolean"
+      }
+    ]
+  },
+  {
+    "id": "PRODUTO_IMAGEM_LISTAR",
+    "metodo": "GET",
+    "caminho": "/produtos/imagens/listar",
+    "descricao": "Lista todas as imagens e URLs vinculadas a um produto, ordenadas pela imagem principal em primeiro lugar, seguida da sequência de ordem definida para a galeria do JavaFX.",
+    "parametros": "idProduto (Long)",
+    "campos": [
+      {
+        "nome": "idProduto",
+        "tipo": "Long"
+      }
+    ]
+  },
+  {
+    "id": "PRODUTO_IMAGEM_PRINCIPAL_OBTER",
+    "metodo": "GET",
+    "caminho": "/produtos/imagens/principal",
+    "descricao": "Retorna a imagem de capa (principal) do produto para exibição rápida em tabelas, cards de catálogo e miniaturas da interface JavaFX.",
+    "parametros": "idProduto (Long)",
+    "campos": [
+      {
+        "nome": "idProduto",
+        "tipo": "Long"
+      }
+    ]
+  },
+  {
+    "id": "PRODUTO_IMAGEM_DEFINIR_PRINCIPAL",
+    "metodo": "PUT",
+    "caminho": "/produtos/imagens/definir-principal",
+    "descricao": "Define atômica e exclusivamente uma imagem existente como a principal do produto, desmarcando qualquer imagem que estivesse anteriormente como principal.",
+    "parametros": "idProduto (Long), idImagem (Long)",
+    "campos": [
+      {
+        "nome": "idProduto",
+        "tipo": "Long"
+      },
+      {
+        "nome": "idImagem",
+        "tipo": "Long"
+      }
+    ]
+  },
+  {
+    "id": "PRODUTO_IMAGEM_REMOVER",
+    "metodo": "DELETE",
+    "caminho": "/produtos/imagens/remover",
+    "descricao": "Exclui o registro da imagem no banco de dados e remove sincronizadamente o arquivo físico da pasta storage no disco. Se a imagem removida era a principal, elege automaticamente a próxima disponível.",
+    "parametros": "idImagem (Long), removerArquivoFisico (Boolean, padrão: true)",
+    "campos": [
+      {
+        "nome": "idImagem",
+        "tipo": "Long"
+      },
+      {
+        "nome": "removerArquivoFisico",
+        "tipo": "Boolean"
+      }
+    ]
+  },
+  {
+    "id": "PESSOA_CLIENTE_PADRAO_OBTER",
+    "metodo": "GET",
+    "caminho": "/pessoas/clientes/padrao",
+    "descricao": "Obtém ou instancia o consumidor balcão padrão (CONSUMIDOR FINAL - CPF 000.000.000-00).",
+    "parametros": "Nenhum parâmetro.",
+    "campos": []
+  },
+  {
+    "id": "PESSOA_SIMPLES_CADASTRAR",
+    "metodo": "POST",
+    "caminho": "/pessoas/cadastrar",
+    "descricao": "Cadastra pessoa com o nome e definição de papéis (cliente, fornecedor ou ambos), tornando o documento opcional.",
+    "parametros": "nome: String (obrigatório), isCliente: Boolean, isFornecedor: Boolean, documento: String (opcional), limite: BigDecimal (opcional)",
+    "campos": [
+      {
+        "nome": "nome",
+        "tipo": "String"
+      },
+      {
+        "nome": "isCliente",
+        "tipo": "Boolean"
+      },
+      {
+        "nome": "isFornecedor",
+        "tipo": "Boolean"
+      },
+      {
+        "nome": "documento",
+        "tipo": "String"
+      },
+      {
+        "nome": "limite",
+        "tipo": "BigDecimal"
+      }
+    ]
+  },
+  {
+    "id": "PESSOA_CLIENTE_PF_CADASTRAR",
+    "metodo": "POST",
+    "caminho": "/pessoas/clientes/pf/cadastrar",
+    "descricao": "Cadastra cliente Pessoa Física com validação de CPF e limite de crédito.",
+    "parametros": "nome (String), cpf (String), limite (BigDecimal)",
+    "campos": [
+      {
+        "nome": "nome",
+        "tipo": "String"
+      },
+      {
+        "nome": "cpf",
+        "tipo": "String"
+      },
+      {
+        "nome": "limite",
+        "tipo": "BigDecimal"
+      }
+    ]
+  },
+  {
+    "id": "PESSOA_CLIENTE_PJ_CADASTRAR",
+    "metodo": "POST",
+    "caminho": "/pessoas/clientes/pj/cadastrar",
+    "descricao": "Cadastra cliente corporativo Pessoa Jurídica com CNPJ e limite de crédito.",
+    "parametros": "razaoSocial (String), cnpj (String), limite (BigDecimal)",
+    "campos": [
+      {
+        "nome": "razaoSocial",
+        "tipo": "String"
+      },
+      {
+        "nome": "cnpj",
+        "tipo": "String"
+      },
+      {
+        "nome": "limite",
+        "tipo": "BigDecimal"
+      }
+    ]
+  },
+  {
+    "id": "PESSOA_CLIENTE_ATUALIZAR_LIMITE",
+    "metodo": "PUT",
+    "caminho": "/pessoas/clientes/limite",
+    "descricao": "Atualiza o limite de crédito do cliente no padrão contábil BACEN.",
+    "parametros": "idPessoa (Long), novoLimite (BigDecimal)",
+    "campos": [
+      {
+        "nome": "idPessoa",
+        "tipo": "Long"
+      },
+      {
+        "nome": "novoLimite",
+        "tipo": "BigDecimal"
+      }
+    ]
+  },
+  {
+    "id": "PESSOA_DADOS_ATUALIZAR",
+    "metodo": "PUT",
+    "caminho": "/pessoas/atualizar",
+    "descricao": "Atualiza os dados cadastrais (nome ou razão social) de uma pessoa pelo ID.",
+    "parametros": "idPessoa: Long (obrigatório), novoNome: String (obrigatório)",
+    "campos": [
+      {
+        "nome": "idPessoa",
+        "tipo": "Long"
+      },
+      {
+        "nome": "novoNome",
+        "tipo": "String"
+      }
+    ]
+  },
+  {
+    "id": "PESSOA_FORNECEDOR_PJ_CADASTRAR",
+    "metodo": "POST",
+    "caminho": "/pessoas/fornecedores/pj/cadastrar",
+    "descricao": "Cadastra Fornecedor Pessoa Jurídica (CNPJ) para emissão de notas de compra e ressarcimento de perdas.",
+    "parametros": "razaoSocial (String), cnpj (String)",
+    "campos": [
+      {
+        "nome": "razaoSocial",
+        "tipo": "String"
+      },
+      {
+        "nome": "cnpj",
+        "tipo": "String"
+      }
+    ]
+  },
+  {
+    "id": "PESSOA_FORNECEDOR_PF_CADASTRAR",
+    "metodo": "POST",
+    "caminho": "/pessoas/fornecedores/pf/cadastrar",
+    "descricao": "Cadastra Fornecedor Produtor Rural / Pessoa Física (CPF).",
+    "parametros": "nome (String), cpf (String)",
+    "campos": [
+      {
+        "nome": "nome",
+        "tipo": "String"
+      },
+      {
+        "nome": "cpf",
+        "tipo": "String"
+      }
+    ]
+  },
+  {
+    "id": "PESSOA_REGISTRO_ADICIONAR",
+    "metodo": "POST",
+    "caminho": "/pessoas/registros/adicionar",
+    "descricao": "Adiciona documentos auxiliares (IE, IM, RG, CNH) ao cadastro da Pessoa.",
+    "parametros": "idPessoa (Long), tipoDocumento (String), numeroRegistro (String)",
+    "campos": [
+      {
+        "nome": "idPessoa",
+        "tipo": "Long"
+      },
+      {
+        "nome": "tipoDocumento",
+        "tipo": "String"
+      },
+      {
+        "nome": "numeroRegistro",
+        "tipo": "String"
+      }
+    ]
+  },
+  {
+    "id": "PESSOA_LISTAR_CLIENTES",
+    "metodo": "GET",
+    "caminho": "/pessoas/clientes/listar",
+    "descricao": "Lista todos os clientes registrados no sistema.",
+    "parametros": "Nenhum parâmetro.",
+    "campos": []
+  },
+  {
+    "id": "PESSOA_LISTAR_FORNECEDORES",
+    "metodo": "GET",
+    "caminho": "/pessoas/fornecedores/listar",
+    "descricao": "Lista todos os fornecedores homologados.",
+    "parametros": "Nenhum parâmetro.",
+    "campos": []
+  },
+  {
+    "id": "PESSOA_BUSCAR",
+    "metodo": "GET",
+    "caminho": "/pessoas/buscar",
+    "descricao": "Busca clientes e/ou fornecedores por termo livre (nome, CPF, CNPJ ou razão social).",
+    "parametros": "termo: String (obrigatório, ex: 'Roberto' ou '12.345')",
+    "campos": [
+      {
+        "nome": "termo",
+        "tipo": "String"
+      }
+    ]
+  },
+  {
+    "id": "PESSOA_BUSCAR_UNICA",
+    "metodo": "GET",
+    "caminho": "/pessoas/buscar-unica",
+    "descricao": "Busca padrão de uma única pessoa por ID, documento/registro único ou Nome indexado para leitura da IA.",
+    "parametros": "idPessoa: Long (opcional), termo: String (opcional), nome: String (opcional), documento: String (opcional)",
+    "campos": [
+      {
+        "nome": "idPessoa",
+        "tipo": "Long"
+      },
+      {
+        "nome": "termo",
+        "tipo": "String"
+      },
+      {
+        "nome": "nome",
+        "tipo": "String"
+      },
+      {
+        "nome": "documento",
+        "tipo": "String"
+      }
+    ]
+  },
+  {
+    "id": "PESSOA_REGISTRO_BUSCAR_UNICO",
+    "metodo": "GET",
+    "caminho": "/pessoas/registros/buscar-unico",
+    "descricao": "Busca uma única pessoa pelo documento/registro único (CPF, CNPJ, RG, CNH, IE, Título Eleitoral).",
+    "parametros": "tipoDocumento: String (opcional, ex: 'CNH', 'RG', 'CNPJ'), numeroRegistro: String (obrigatório)",
+    "campos": [
+      {
+        "nome": "tipoDocumento",
+        "tipo": "String"
+      },
+      {
+        "nome": "numeroRegistro",
+        "tipo": "String"
+      }
+    ]
+  },
+  {
+    "id": "PESSOA_HISTORICO_COMPLETO",
+    "metodo": "GET",
+    "caminho": "/pessoas/historico-completo",
+    "descricao": "Consulta histórico 360º de cliente/fornecedor: cadastro, notas vinculadas, itens de produtos e pagamentos.",
+    "parametros": "idPessoa: Long (ou termo: String, papel: String)",
+    "campos": [
+      {
+        "nome": "idPessoa",
+        "tipo": "Long"
+      },
+      {
+        "nome": "termo",
+        "tipo": "String"
+      },
+      {
+        "nome": "papel",
+        "tipo": "String"
+      }
+    ]
+  },
+  {
+    "id": "PESSOA_CLIENTE_EXCLUIR",
+    "metodo": "DELETE",
+    "caminho": "/pessoas/clientes/excluir",
+    "descricao": "Exclui cliente/pessoa do sistema pelo ID caso não possua movimentações fiscais ou notas emitidas.",
+    "parametros": "idPessoa: Long (obrigatório)",
+    "campos": [
+      {
+        "nome": "idPessoa",
+        "tipo": "Long"
+      }
+    ]
+  },
+  {
+    "id": "PAGAMENTO_FORMA_LISTAR_ATIVAS",
+    "metodo": "GET",
+    "caminho": "/pagamentos/formas/ativas",
+    "descricao": "Lista todas as formas de pagamento ativas no caixa.",
+    "parametros": "Nenhum parâmetro.",
+    "campos": []
+  },
+  {
+    "id": "PAGAMENTO_FORMA_CADASTRAR",
+    "metodo": "POST",
+    "caminho": "/pagamentos/formas/cadastrar",
+    "descricao": "Cadastra nova Forma de Pagamento no sistema com parâmetros contábeis, taxas MDR operadora e regras de parcelamento.",
+    "parametros": "codigo: String (obrigatório), nome: String, permiteAVista: Boolean, permiteParcelado: Boolean, taxaOperadoraPercentual: BigDecimal",
+    "campos": [
+      {
+        "nome": "codigo",
+        "tipo": "String"
+      },
+      {
+        "nome": "nome",
+        "tipo": "String"
+      },
+      {
+        "nome": "permiteAVista",
+        "tipo": "Boolean"
+      },
+      {
+        "nome": "permiteParcelado",
+        "tipo": "Boolean"
+      },
+      {
+        "nome": "taxaOperadoraPercentual",
+        "tipo": "BigDecimal"
+      }
+    ]
+  },
+  {
+    "id": "PAGAMENTO_FORMA_CUSTOMIZAR_REGRAS",
+    "metodo": "PUT",
+    "caminho": "/pagamentos/formas/customizar",
+    "descricao": "Customiza taxas MDR, descontos à vista, limites de parcelas e juros de uma forma de pagamento.",
+    "parametros": "codigo (String), taxaOperadoraPercentual, tarifaFixaOperadora, descontoAVistaPercentual, maxParcelas, maxParcelasSemJuros, taxaJurosMensal",
+    "campos": [
+      {
+        "nome": "codigo",
+        "tipo": "String"
+      },
+      {
+        "nome": "taxaOperadoraPercentual",
+        "tipo": "BigDecimal"
+      },
+      {
+        "nome": "tarifaFixaOperadora",
+        "tipo": "BigDecimal"
+      },
+      {
+        "nome": "descontoAVistaPercentual",
+        "tipo": "BigDecimal"
+      },
+      {
+        "nome": "maxParcelas",
+        "tipo": "Integer"
+      },
+      {
+        "nome": "maxParcelasSemJuros",
+        "tipo": "Integer"
+      },
+      {
+        "nome": "taxaJurosMensal",
+        "tipo": "BigDecimal"
+      }
+    ]
+  },
+  {
+    "id": "PAGAMENTO_FORMA_ALTERAR_STATUS",
+    "metodo": "PUT",
+    "caminho": "/pagamentos/formas/status",
+    "descricao": "Ativa ou inativa uma forma de pagamento.",
+    "parametros": "codigo (String), ativo (Boolean)",
+    "campos": [
+      {
+        "nome": "codigo",
+        "tipo": "String"
+      },
+      {
+        "nome": "ativo",
+        "tipo": "Boolean"
+      }
+    ]
+  },
+  {
+    "id": "PAGAMENTO_FORMA_EXCLUIR",
+    "metodo": "DELETE",
+    "caminho": "/pagamentos/formas/excluir",
+    "descricao": "Exclui uma Forma de Pagamento cadastrada pelo código caso não esteja atrelada a títulos já lançados.",
+    "parametros": "codigo: String (obrigatório, ex: 'PAG_TESTE')",
+    "campos": [
+      {
+        "nome": "codigo",
+        "tipo": "String"
+      }
+    ]
+  },
+  {
+    "id": "PAGAMENTO_CRIAR_A_VISTA",
+    "metodo": "POST",
+    "caminho": "/pagamentos/criar/a-vista",
+    "descricao": "Cria pagamento à vista aplicando desconto parametrizado da forma e apurando troco BACEN.",
+    "parametros": "codigoForma (String), valor (BigDecimal), valorRecebido (BigDecimal), descontoCustomizado (BigDecimal)",
+    "campos": [
+      {
+        "nome": "codigoForma",
+        "tipo": "String"
+      },
+      {
+        "nome": "valor",
+        "tipo": "BigDecimal"
+      },
+      {
+        "nome": "valorRecebido",
+        "tipo": "BigDecimal"
+      },
+      {
+        "nome": "descontoCustomizado",
+        "tipo": "BigDecimal"
+      }
+    ]
+  },
+  {
+    "id": "PAGAMENTO_CRIAR_A_PRAZO",
+    "metodo": "POST",
+    "caminho": "/pagamentos/criar/a-prazo",
+    "descricao": "Cria título financeiro a prazo com data de vencimento e juros de mora.",
+    "parametros": "codigoForma (String), valor (BigDecimal), dataVencimento (LocalDate)",
+    "campos": [
+      {
+        "nome": "codigoForma",
+        "tipo": "String"
+      },
+      {
+        "nome": "valor",
+        "tipo": "BigDecimal"
+      },
+      {
+        "nome": "dataVencimento",
+        "tipo": "LocalDate"
+      }
+    ]
+  },
+  {
+    "id": "PAGAMENTO_CRIAR_PARCELADO",
+    "metodo": "POST",
+    "caminho": "/pagamentos/criar/parcelado",
+    "descricao": "Gera parcelamento dividindo o valor nominal pelo algoritmo HALF_EVEN e aplicando juros BACEN.",
+    "parametros": "codigoForma (String), valor (BigDecimal), quantidadeParcelas (Integer)",
+    "campos": [
+      {
+        "nome": "codigoForma",
+        "tipo": "String"
+      },
+      {
+        "nome": "valor",
+        "tipo": "BigDecimal"
+      },
+      {
+        "nome": "quantidadeParcelas",
+        "tipo": "Integer"
+      }
+    ]
+  },
+  {
+    "id": "PAGAMENTO_QUITAR_TITULO_OU_PARCELA",
+    "metodo": "PUT",
+    "caminho": "/pagamentos/quitar",
+    "descricao": "Registra a quitação e liquidação financeira de um título a prazo ou parcela específica.",
+    "parametros": "pagamento (NotaPagamento), numeroParcela (Integer opcional)",
+    "campos": [
+      {
+        "nome": "pagamento",
+        "tipo": "NotaPagamento"
+      },
+      {
+        "nome": "numeroParcela",
+        "tipo": "Integer"
+      }
+    ]
+  },
+  {
+    "id": "ESTOQUE_SALDO_CONSOLIDADO",
+    "metodo": "GET",
+    "caminho": "/estoque/saldo-consolidado",
+    "descricao": "Consulta saldo total disponível de um produto através da View vw_saldo_consolidado_estoque.",
+    "parametros": "idProduto (Long)",
+    "campos": [
+      {
+        "nome": "idProduto",
+        "tipo": "Long"
+      }
+    ]
+  },
+  {
+    "id": "ESTOQUE_FILA_LOTES_FIFO",
+    "metodo": "GET",
+    "caminho": "/estoque/lotes-fifo",
+    "descricao": "Lista a fila de lotes FIFO disponíveis com data de entrada, validade e custo unitário.",
+    "parametros": "idProduto (Long)",
+    "campos": [
+      {
+        "nome": "idProduto",
+        "tipo": "Long"
+      }
+    ]
+  },
+  {
+    "id": "ESTOQUE_LOTES_VALIDOS_LISTAR",
+    "metodo": "GET",
+    "caminho": "/estoque/lotes-validos/listar",
+    "descricao": "Lista todos os lotes de estoque válidos (saldo disponível > 0 e dentro do prazo de validade) para venda ou remanejamento.",
+    "parametros": "idProduto: Long (opcional, para filtrar lotes de um produto específico)",
+    "campos": [
+      {
+        "nome": "idProduto",
+        "tipo": "Long"
+      }
+    ]
+  },
+  {
+    "id": "ESTOQUE_LOTE_VALIDO_BUSCAR_UNICO",
+    "metodo": "GET",
+    "caminho": "/estoque/lotes-validos/buscar-unico",
+    "descricao": "Busca o primeiro lote único com estoque válido (FIFO) de um produto ou lote específico para despacho.",
+    "parametros": "idProduto: Long (ou idLote: Long)",
+    "campos": [
+      {
+        "nome": "idProduto",
+        "tipo": "Long"
+      },
+      {
+        "nome": "idLote",
+        "tipo": "Long"
+      }
+    ]
+  },
+  {
+    "id": "ESTOQUE_BUSCAR_LOTE_ESPECIFICO",
+    "metodo": "GET",
+    "caminho": "/estoque/lote/buscar",
+    "descricao": "Busca detalhes de um lote específico pelo ID para venda dirigida ou conferência.",
+    "parametros": "idLote (Long)",
+    "campos": [
+      {
+        "nome": "idLote",
+        "tipo": "Long"
+      }
+    ]
+  },
+  {
+    "id": "ESTOQUE_LOTES_PROXIMOS_VALIDADE",
+    "metodo": "GET",
+    "caminho": "/estoque/lotes/validade",
+    "descricao": "Lista lotes ativos em risco de perecimento até a data corte informada.",
+    "parametros": "dataLimite (LocalDate opcional, padrão: hoje + 90 dias)",
+    "campos": [
+      {
+        "nome": "dataLimite",
+        "tipo": "LocalDate"
+      }
+    ]
+  },
+  {
+    "id": "ESTOQUE_BAIXAR_PERDA_DIRETA",
+    "metodo": "POST",
+    "caminho": "/estoque/perda/baixar",
+    "descricao": "Baixa perda física de estoque por avaria, quebra ou vencimento diretamente no almoxarifado.",
+    "parametros": "idLote (Long), quantidade (BigDecimal), motivo (String)",
+    "campos": [
+      {
+        "nome": "idLote",
+        "tipo": "Long"
+      },
+      {
+        "nome": "quantidade",
+        "tipo": "BigDecimal"
+      },
+      {
+        "nome": "motivo",
+        "tipo": "String"
+      }
+    ]
+  },
+  {
+    "id": "NOTA_COMPRA_EMITIR",
+    "metodo": "POST",
+    "caminho": "/notas/compra/emitir",
+    "descricao": "Emite Nota de Compra dando entrada em novos lotes na fila FIFO e anexando snapshot sazonal.",
+    "parametros": "notaCompra (NotaCompra), pagamentos (List )",
+    "campos": [
+      {
+        "nome": "notaCompra",
+        "tipo": "NotaCompra"
+      },
+      {
+        "nome": "pagamentos",
+        "tipo": "List"
+      }
+    ]
+  },
+  {
+    "id": "NOTA_COMPRA_ABATER_PERDAS_FORNECEDOR",
+    "metodo": "POST",
+    "caminho": "/notas/compra/abater-perdas",
+    "descricao": "Abate perdas pós-venda dentro da validade do mesmo fornecedor como crédito na nova compra.",
+    "parametros": "novaCompra (NotaCompra), produto (Produto opcional)",
+    "campos": [
+      {
+        "nome": "novaCompra",
+        "tipo": "NotaCompra"
+      },
+      {
+        "nome": "produto",
+        "tipo": "Produto"
+      }
+    ]
+  },
+  {
+    "id": "NOTA_COMPRA_SUGERIR_PRECO_VENDA",
+    "metodo": "GET",
+    "caminho": "/notas/compra/sugerir-preco",
+    "descricao": "Calcula sugestão de preço de venda sobre o custo de aquisição dos lotes comprados.",
+    "parametros": "notaCompra (NotaCompra), margemDesejada (BigDecimal)",
+    "campos": [
+      {
+        "nome": "notaCompra",
+        "tipo": "NotaCompra"
+      },
+      {
+        "nome": "margemDesejada",
+        "tipo": "BigDecimal"
+      }
+    ]
+  },
+  {
+    "id": "NOTA_VENDA_EMITIR_FIFO",
+    "metodo": "POST",
+    "caminho": "/notas/venda/emitir-fifo",
+    "descricao": "Emite Nota de Venda executando baixa automática pelo algoritmo FIFO com bloqueio pessimista PESSIMISTIC_WRITE.",
+    "parametros": "cliente (Pessoa), descricao (String), itens (Map ), pagamentos (List), cupom, descontoCupom",
+    "campos": [
+      {
+        "nome": "descricao",
+        "tipo": "String"
+      },
+      {
+        "nome": "itens",
+        "tipo": "Map"
+      },
+      {
+        "nome": "pagamentos",
+        "tipo": "List"
+      },
+      {
+        "nome": "cliente",
+        "tipo": "Pessoa"
+      },
+      {
+        "nome": "cupom",
+        "tipo": "String"
+      },
+      {
+        "nome": "descontoCupom",
+        "tipo": "BigDecimal"
+      }
+    ]
+  },
+  {
+    "id": "NOTA_VENDA_EMITIR_BALCAO_CLIENTE_PADRAO",
+    "metodo": "POST",
+    "caminho": "/notas/venda/emitir-balcao-padrao",
+    "descricao": "Emite venda rápida de balcão atribuindo automaticamente o Consumidor Final não registrado.",
+    "parametros": "itens (Map ), pagamentos (List )",
+    "campos": [
+      {
+        "nome": "itens",
+        "tipo": "Map"
+      },
+      {
+        "nome": "pagamentos",
+        "tipo": "List"
+      }
+    ]
+  },
+  {
+    "id": "NOTA_VENDA_EMITIR_LOTE_DESEJAVEL",
+    "metodo": "POST",
+    "caminho": "/notas/venda/emitir-lote-desejavel",
+    "descricao": "Emite venda escolhendo manualmente o lote específico para baixa.",
+    "parametros": "cliente (Pessoa), lotesEQuantidades (Map ), pagamentos (List)",
+    "campos": [
+      {
+        "nome": "lotesEQuantidades",
+        "tipo": "Map"
+      },
+      {
+        "nome": "pagamentos",
+        "tipo": "List"
+      },
+      {
+        "nome": "cliente",
+        "tipo": "Pessoa"
+      }
+    ]
+  },
+  {
+    "id": "NOTA_VENDA_PROCEDURE_MYSQL_FIFO",
+    "metodo": "POST",
+    "caminho": "/notas/venda/procedure-fifo",
+    "descricao": "Executa baixa de estoque via Stored Procedure MySQL sp_consumir_estoque_fifo com cursor FOR UPDATE.",
+    "parametros": "idNotaVenda (Long), idProduto (Long), quantidade (BigDecimal), precoVenda (BigDecimal)",
+    "campos": [
+      {
+        "nome": "idNotaVenda",
+        "tipo": "Long"
+      },
+      {
+        "nome": "idProduto",
+        "tipo": "Long"
+      },
+      {
+        "nome": "quantidade",
+        "tipo": "BigDecimal"
+      },
+      {
+        "nome": "precoVenda",
+        "tipo": "BigDecimal"
+      }
+    ]
+  },
+  {
+    "id": "NOTA_VENDA_PROCEDURE_MYSQL_LOTE",
+    "metodo": "POST",
+    "caminho": "/notas/venda/procedure-lote",
+    "descricao": "Executa baixa de lote específico via Stored Procedure MySQL sp_consumir_lote_especifico.",
+    "parametros": "idNotaVenda (Long), idLoteDesejado (Long), quantidade (BigDecimal), precoVenda (BigDecimal)",
+    "campos": [
+      {
+        "nome": "idNotaVenda",
+        "tipo": "Long"
+      },
+      {
+        "nome": "idLoteDesejado",
+        "tipo": "Long"
+      },
+      {
+        "nome": "quantidade",
+        "tipo": "BigDecimal"
+      },
+      {
+        "nome": "precoVenda",
+        "tipo": "BigDecimal"
+      }
+    ]
+  },
+  {
+    "id": "NOTA_DEVOLUCAO_REGISTRAR",
+    "metodo": "POST",
+    "caminho": "/notas/devolucao/registrar",
+    "descricao": "Registra Nota de Devolução reintegrando lote válido ou gerando perda pós-venda elegível a abatimento com fornecedor.",
+    "parametros": "notaVenda (NotaVenda), itensDevolvidos (Map), motivo (String), geraPerdaFornecedor (Boolean)",
+    "campos": [
+      {
+        "nome": "notaVenda",
+        "tipo": "NotaVenda"
+      },
+      {
+        "nome": "itensDevolvidos",
+        "tipo": "Map"
+      },
+      {
+        "nome": "motivo",
+        "tipo": "String"
+      },
+      {
+        "nome": "geraPerdaFornecedor",
+        "tipo": "Boolean"
+      }
+    ]
+  },
+  {
+    "id": "NOTA_BUSCAR_UNICA",
+    "metodo": "GET",
+    "caminho": "/notas/buscar-unica",
+    "descricao": "Busca padrão de uma única nota operacional pelo ID com itens, lotes e pagamentos detalhados para leitura da IA.",
+    "parametros": "idNota: Long (obrigatório)",
+    "campos": [
+      {
+        "nome": "idNota",
+        "tipo": "Long"
+      }
+    ]
+  },
+  {
+    "id": "NOTA_LISTAR_PADRAO",
+    "metodo": "GET",
+    "caminho": "/notas/listar",
+    "descricao": "Lista notas operacionais emitidas (todas ou filtradas por pessoa ou tipo específico: VENDA, COMPRA, DEVOLUÇÃO, PERDA).",
+    "parametros": "tipoNota: String (opcional: 'COMPRA', 'VENDA', 'DEVOLUCAO', 'PERDA'), idPessoa: Long (opcional)",
+    "campos": [
+      {
+        "nome": "tipoNota",
+        "tipo": "String"
+      },
+      {
+        "nome": "idPessoa",
+        "tipo": "Long"
+      }
+    ]
+  },
+  {
+    "id": "NOTA_DEFINIR_DATA",
+    "metodo": "PUT",
+    "caminho": "/notas/definir-data",
+    "descricao": "Define ou altera a data e hora de emissão (dataGerada) de uma nota operacional para auditoria ou ajustes temporais.",
+    "parametros": "idNota: Long (obrigatório), data: String / LocalDateTime (obrigatório, ex: '2026-11-12T10:00:00')",
+    "campos": [
+      {
+        "nome": "idNota",
+        "tipo": "Long"
+      },
+      {
+        "nome": "data",
+        "tipo": "String"
+      }
+    ]
+  },
+  {
+    "id": "RELATORIO_LUCRO_CONTABIL_BACEN",
+    "metodo": "GET",
+    "caminho": "/relatorios/lucro-contabil-bacen",
+    "descricao": "Auditoria de CMV, receita líquida, lucro líquido e margem % BACEN (HALF_EVEN) via vw_apuracao_lucro_contabil.",
+    "parametros": "idNotaVenda (Long opcional)",
+    "campos": [
+      {
+        "nome": "idNotaVenda",
+        "tipo": "Long"
+      }
+    ]
+  },
+  {
+    "id": "RELATORIO_PERDAS_POR_FORNECEDOR",
+    "metodo": "GET",
+    "caminho": "/relatorios/perdas-fornecedor",
+    "descricao": "Consulta perdas pós-venda dentro da validade por fornecedor e produto via vw_perdas_por_fornecedor.",
+    "parametros": "fornecedor (Pessoa), produto (Produto opcional), apenasPosVendaDentroValidade (Boolean)",
+    "campos": [
+      {
+        "nome": "apenasPosVendaDentroValidade",
+        "tipo": "Boolean"
+      },
+      {
+        "nome": "fornecedor",
+        "tipo": "Pessoa"
+      },
+      {
+        "nome": "produto",
+        "tipo": "Produto"
+      }
+    ]
+  },
+  {
+    "id": "ESTATISTICA_DEMANDA_MENSAL_CLIENTE",
+    "metodo": "GET",
+    "caminho": "/estatisticas/demanda-mensal-cliente",
+    "descricao": "Previsão de demanda mensal do cliente por produto (média histórica 40%, recente 35%, sazonal 25%, desvio-padrão e pico de segurança).",
+    "parametros": "idCliente (Long opcional), idProduto (Long opcional), mes (Integer opcional)",
+    "campos": [
+      {
+        "nome": "idCliente",
+        "tipo": "Long"
+      },
+      {
+        "nome": "idProduto",
+        "tipo": "Long"
+      },
+      {
+        "nome": "mes",
+        "tipo": "Integer"
+      }
+    ]
+  },
+  {
+    "id": "ESTATISTICA_PERFIL_CLIENTE",
+    "metodo": "GET",
+    "caminho": "/estatisticas/perfil-cliente",
+    "descricao": "Perfil de consumo do cliente: produto favorito, turno, gastos em calor, chuva, eventos, rios e 5º dia útil.",
+    "parametros": "idCliente (Long opcional)",
+    "campos": [
+      {
+        "nome": "idCliente",
+        "tipo": "Long"
+      }
+    ]
+  },
+  {
+    "id": "ESTATISTICA_IMPACTO_EXTERNO_PRODUTOS",
+    "metodo": "GET",
+    "caminho": "/estatisticas/impacto-externo",
+    "descricao": "Custo logístico conforme seca/cheia relativa dos rios ( < 0.85 ou >1.15) e sensibilidade de giro a calor, chuva e eventos.",
+    "parametros": "idProduto (Long opcional)",
+    "campos": [
+      {
+        "nome": "idProduto",
+        "tipo": "Long"
+      }
+    ]
+  },
+  {
+    "id": "ESTATISTICA_RANKING_FORNECEDORES",
+    "metodo": "GET",
+    "caminho": "/estatisticas/ranking-fornecedores",
+    "descricao": "Ranking de fornecedores do mesmo produto por custo, taxa de perdas antes da validade, reposição e score (0 a 100).",
+    "parametros": "idProduto (Long opcional), clima (String), regimeRio (String)",
+    "campos": [
+      {
+        "nome": "idProduto",
+        "tipo": "Long"
+      },
+      {
+        "nome": "clima",
+        "tipo": "String"
+      },
+      {
+        "nome": "regimeRio",
+        "tipo": "String"
+      }
+    ]
+  },
+  {
+    "id": "ESTATISTICA_MOTIVOS_PERDA_PREMATURA",
+    "metodo": "GET",
+    "caminho": "/estatisticas/motivos-perda",
+    "descricao": "Diagnóstico probabilístico do motivo de produtos estragarem antes da validade e ação preventiva recomendada.",
+    "parametros": "idProduto (Long opcional), idFornecedor (Long opcional)",
+    "campos": [
+      {
+        "nome": "idProduto",
+        "tipo": "Long"
+      },
+      {
+        "nome": "idFornecedor",
+        "tipo": "Long"
+      }
+    ]
+  },
+  {
+    "id": "ESTATISTICA_DESTAQUES_SAZONAIS",
+    "metodo": "GET",
+    "caminho": "/estatisticas/destaques-sazonais",
+    "descricao": "Identifica produtos que mais se destacam em calor, chuva, eventos, rios, fim de semana e 5º dia útil.",
+    "parametros": "limite (Integer opcional, padrão: 25)",
+    "campos": [
+      {
+        "nome": "limite",
+        "tipo": "Integer"
+      }
+    ]
+  },
+  {
+    "id": "ESTATISTICA_PICOS_DIAS_EVENTOS",
+    "metodo": "GET",
+    "caminho": "/estatisticas/picos-dias",
+    "descricao": "Análise comparativa de picos de venda: 5º dia útil vs eventos vs fins de semana vs dias úteis comuns.",
+    "parametros": "Nenhum parâmetro.",
+    "campos": []
+  },
+  {
+    "id": "ESTATISTICA_PLANO_ESTRATEGICO_COMPRAS",
+    "metodo": "GET",
+    "caminho": "/estatisticas/plano-estrategico",
+    "descricao": "Plano estratégico integrado: datas ótimas de compra anti-perda prematura, fornecedor campeão e preço de venda BACEN.",
+    "parametros": "dataReferencia (LocalDate opcional), horizonteDias (Integer opcional)",
+    "campos": [
+      {
+        "nome": "dataReferencia",
+        "tipo": "LocalDate"
+      },
+      {
+        "nome": "horizonteDias",
+        "tipo": "Integer"
+      }
+    ]
+  },
+  {
+    "id": "ESTATISTICA_CAUSAS_EXTERNAS_NOTA",
+    "metodo": "GET",
+    "caminho": "/estatisticas/causas-externas-nota",
+    "descricao": "Retorna em 4 result sets: fatores ativos com teste z de Welch, eventos reais, notas e produtos relacionados.",
+    "parametros": "idNota (Long), idProduto (Long opcional)",
+    "campos": [
+      {
+        "nome": "idNota",
+        "tipo": "Long"
+      },
+      {
+        "nome": "idProduto",
+        "tipo": "Long"
+      }
+    ]
+  },
+  {
+    "id": "ESTATISTICA_RECALCULAR_FATORES",
+    "metodo": "POST",
+    "caminho": "/estatisticas/recalcular-fatores",
+    "descricao": "Recalcula no banco o efeito estatístico (lift % e teste de Welch) de cada fator externo sobre cada produto.",
+    "parametros": "Nenhum parâmetro.",
+    "campos": []
+  },
+  {
+    "id": "ESTATISTICA_FATORES_PRODUTO",
+    "metodo": "GET",
+    "caminho": "/estatisticas/fatores-produto",
+    "descricao": "Lista o efeito estatístico dos fatores externos sobre a demanda dos produtos.",
+    "parametros": "idProduto (Long opcional)",
+    "campos": [
+      {
+        "nome": "idProduto",
+        "tipo": "Long"
+      }
+    ]
+  },
+  {
+    "id": "FATOR_EXTERNO_EVENTOS_LISTAR",
+    "metodo": "GET",
+    "caminho": "/fatores-externos/eventos",
+    "descricao": "Lista os eventos reais do Sympla e MinC gravados no banco e a quantidade de snapshots vinculados.",
+    "parametros": "limite (Integer opcional, padrão: 100)",
+    "campos": [
+      {
+        "nome": "limite",
+        "tipo": "Integer"
+      }
+    ]
+  },
+  {
+    "id": "FATOR_EXTERNO_RESOLVER_PENDENCIAS",
+    "metodo": "POST",
+    "caminho": "/fatores-externos/resolver-pendencias",
+    "descricao": "Resolve a fila de notas sem snapshot sazonal realizando 1 única chamada externa por janela de 6h.",
+    "parametros": "Nenhum parâmetro.",
+    "campos": []
+  },
+  {
+    "id": "FATOR_EXTERNO_RELATORIO_INTEGRADO_NOTAS",
+    "metodo": "GET",
+    "caminho": "/fatores-externos/relatorio-integrado-notas",
+    "descricao": "Gera relatório padronizado e integrado de fatores externos (Rios, Clima, Calendário e Eventos) citando cada Nota operacional.",
+    "parametros": "idNota: Long (opcional, para focar em uma nota específica)",
+    "campos": [
+      {
+        "nome": "idNota",
+        "tipo": "Long"
+      }
+    ]
+  },
+  {
+    "id": "RELATORIO_ANALISE_SAZONAL_VENDAS",
+    "metodo": "GET",
+    "caminho": "/relatorios/analise-sazonal",
+    "descricao": "Consolidação de vendas x clima 6h, nível dos rios, dia útil, 5º dia útil e eventos ativos via vw_analise_sazonal_vendas.",
+    "parametros": "Nenhum parâmetro.",
+    "campos": []
+  }
+]
