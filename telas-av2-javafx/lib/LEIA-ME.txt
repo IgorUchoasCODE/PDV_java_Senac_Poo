@@ -1,0 +1,12 @@
+Bibliotecas oficiais OpenJFX 21.0.6 para Windows x64:
+- javafx-base-21.0.6-win.jar
+- javafx-graphics-21.0.6-win.jar
+- javafx-controls-21.0.6-win.jar
+
+Origem: https://repo.maven.apache.org/maven2/org/openjfx/
+Licencas e avisos do OpenJFX estao na pasta ../licencas.
+Fonte correspondente: https://github.com/openjdk/jfx21u/tree/21.0.6%2B3
+
+Os JARs acompanham o ZIP para execucao offline, mas sao ignorados no Git.
+Ao clonar do GitHub, preparar-javafx.ps1 baixa os arquivos se faltarem.
+Para Linux/macOS, utilize Maven e as bibliotecas da sua plataforma.
