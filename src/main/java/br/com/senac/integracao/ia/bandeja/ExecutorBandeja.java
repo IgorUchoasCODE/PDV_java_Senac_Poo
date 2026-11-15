@@ -165,19 +165,13 @@ public class ExecutorBandeja {
     }
 
     private void resolverReferenciasDinamicas(BandejaOperacoesContexto bandeja, ItemBandeja item) {
-        Map<String, Object> p = item.getParametrosModificaveis();
-        for (Map.Entry<String, Object> entry : new ArrayList<>(p.entrySet())) {
-            Object valor = entry.getValue();
-            if (valor instanceof String str && str.trim().toUpperCase(Locale.ROOT).startsWith("OP-")) {
-                ItemBandeja ref = bandeja.buscarItemPorIdOuIndice(str.trim());
-                if (ref != null && ref.getResultadoExecucao() != null) {
-                    Long idResolvido = extrairIdResultado(ref.getResultadoExecucao());
-                    if (idResolvido != null) {
-                        entry.setValue(idResolvido);
-                    }
-                }
+        BandejaOperacoesContexto.resolverReferenciasEmMapa(item.getParametrosModificaveis(), refOp -> {
+            ItemBandeja ref = bandeja.buscarItemPorIdOuIndice(refOp);
+            if (ref != null && ref.getResultadoExecucao() != null) {
+                return extrairIdResultado(ref.getResultadoExecucao());
             }
-        }
+            return null;
+        });
     }
 
     private static Long extrairIdResultado(Object res) {

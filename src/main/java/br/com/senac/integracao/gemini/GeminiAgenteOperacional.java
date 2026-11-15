@@ -1335,7 +1335,8 @@ public class GeminiAgenteOperacional {
 
         for (int i = 0; i < rel.detalhes().size(); i++) {
             var d = rel.detalhes().get(i);
-            sb.append(String.format("  %d. %s\n", (i + 1), d.descricao()));
+            String prefixoStatus = d.sucesso() ? "" : "[FALHOU - NÃO EXECUTADA] ";
+            sb.append(String.format("  %d. %s%s\n", (i + 1), prefixoStatus, d.descricao()));
             if (d.sucesso()) {
                 if (d.dados() != null) {
                     RotaSistema r = roteadorController.resolverRota(d.rota());
@@ -1345,7 +1346,7 @@ public class GeminiAgenteOperacional {
                     sb.append("     ").append(d.mensagem()).append("\n");
                 }
             } else {
-                sb.append("     Motivo: ").append(d.mensagem()).append("\n");
+                sb.append("     Motivo da falha: ").append(d.mensagem()).append("\n");
             }
         }
         return sb.toString().trim();

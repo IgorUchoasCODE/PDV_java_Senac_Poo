@@ -395,7 +395,7 @@ public class GeminiToolRegistry {
                 required.addAll(Arrays.asList("idItemLote", "quantidadePerda", "motivoPerda"));
             }
             case NOTA_COMPRA_EMITIR -> {
-                props.put("idFornecedor", prop("INTEGER", "ID do fornecedor"));
+                props.put("idFornecedor", prop("STRING", "ID numérico do fornecedor (ou 'OP-1', 'OP-2', etc. se o fornecedor foi agendado para cadastro no mesmo lote)"));
                 props.put("descricao", prop("STRING", "Descrição da nota de compra"));
                 props.put("itens", propArrayItens("Lista de itens comprados contendo idProduto, valorUnitario, quantidade e validade", true, false));
                 required.addAll(Arrays.asList("idFornecedor", "itens"));
@@ -488,7 +488,7 @@ public class GeminiToolRegistry {
         itemSchema.put("type", "OBJECT");
 
         Map<String, Object> itemProps = new LinkedHashMap<>();
-        itemProps.put("idProduto", prop("INTEGER", "ID do produto no catálogo"));
+        itemProps.put("idProduto", prop("STRING", "ID numérico do produto no catálogo (ou 'OP-1', 'OP-2', etc. se o produto foi agendado para cadastro no mesmo lote)"));
         itemProps.put("quantidade", prop("STRING", "Quantidade fracionada ou inteira (ex: '1.000000')"));
         itemProps.put("valorUnitario", prop("STRING", "Preço unitário em R$"));
         if (incluirDesconto) {

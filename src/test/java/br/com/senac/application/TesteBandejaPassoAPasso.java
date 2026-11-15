@@ -155,6 +155,9 @@ public class TesteBandejaPassoAPasso {
             // ---------- Fase 6: Unicidade Composta (nome + unidade + conjunto) ----------
             testarUnicidadeComposta(roteador, sufixo);
 
+            // ---------- Regressão: Referências OP-N aninhadas em listas/mapas + formato de falha ----------
+            testarReferenciasAninhadasEmLoteEPasso(roteador, agente, sufixo);
+
             // ---------- Limpeza (tambem valida D= com conferencia antes e depois) ----------
             BandejaOperacoesContexto bl = new BandejaOperacoesContexto("passo-limpeza-" + sufixo);
             for (String nome : new String[]{nomeA, nomeB, nomeC, nomeE, nomeF}) {
@@ -249,6 +252,99 @@ public class TesteBandejaPassoAPasso {
         roteador.produtos().excluirProduto(pCx.getId());
         afirmar(roteador.produtos().buscarPorChaveUnica(nomeBase, "UN", false) == null,
                 "Unicidade composta: limpeza de registros concluida.");
+    }
+
+    private static void testarReferenciasAninhadasEmLoteEPasso(
+            RoteadorController roteador,
+            GeminiAgenteOperacional agente,
+            String sufixo) {
+        String sessaoLote = "passo-lote-op-aninhado-" + sufixo;
+        BandejaOperacoesContexto bandejaLote = agente.obterBandeja(sessaoLote);
+        String nmForn = "Casa Surpresas " + sufixo;
+        String nmComp = "Surpresinha " + sufixo;
+        String nmKit = "Caixa Surpresas " + sufixo;
+
+        bandejaLote.adicionarOuAtualizar(
+                RotaSistema.PESSOA_SIMPLES_CADASTRAR,
+                Map.of("nome", nmForn, "papel", "FORNECEDOR"),
+                "Cadastrar fornecedor '" + nmForn + "'"
+        );
+        bandejaLote.adicionarOuAtualizar(
+                RotaSistema.PRODUTO_FISICO_CADASTRAR,
+                Map.of("nome", nmComp, "siglaUm", "UN", "precoVenda", "0.00"),
+                "Cadastrar produto físico '" + nmComp + "'"
+        );
+        bandejaLote.adicionarOuAtualizar(
+                RotaSistema.PRODUTO_FISICO_CADASTRAR,
+                Map.of("nome", nmKit, "siglaUm", "CX", "precoVenda", "0.00"),
+                "Cadastrar produto físico '" + nmKit + "'"
+        );
+        bandejaLote.adicionarOuAtualizar(
+                RotaSistema.PRODUTO_KIT_ADICIONAR_COMPONENTE,
+                Map.of("idProdutoKit", "OP-3", "idProdutoComponente", "OP-2", "quantidade", "12"),
+                "Vincular 12x de OP-2 em OP-3"
+        );
+        bandejaLote.adicionarOuAtualizar(
+                RotaSistema.NOTA_COMPRA_EMITIR,
+                Map.of(
+                        "idFornecedor", "OP-1",
+                        "descricao", "Compra lote kit surpresas",
+                        "itens", List.of(Map.of(
+                                "idProduto", "OP-3",
+                                "quantidade", "20",
+                                "valorUnitario", "40.00",
+                                "dataValidade", "30 dias"
+                        ))
+                ),
+                "Emitir nota fiscal de compra do fornecedor OP-1 (1 item(ns))"
+        );
+
+        String respLote = agente.processarMensagem(sessaoLote, "sim");
+        afirmar(respLote.contains("BANDEJA DE OPERAÇÕES EXECUTADA COM SUCESSO (5 de 5 concluídas)"),
+                "Lote completo com OP-3 aninhado em itens executou 5 de 5 com sucesso.");
+        Produto kitSalvo = roteador.produtos().buscarPorNome(nmKit);
+        afirmar(kitSalvo != null && roteador.estoque().consultarSaldoTotalProduto(kitSalvo.getId()).compareTo(new BigDecimal("20")) == 0,
+                "Estoque do kit recem-criado recebeu 20 caixas via NOTA_COMPRA_EMITIR.");
+
+        BandejaOperacoesContexto bandejaPassoOp = new BandejaOperacoesContexto("passo-op-aninhado-" + sufixo);
+        bandejaPassoOp.adicionarOuAtualizar(
+                RotaSistema.PESSOA_SIMPLES_CADASTRAR,
+                Map.of("nome", "Forn Passo " + sufixo, "papel", "FORNECEDOR"),
+                "Cadastrar fornecedor passo"
+        );
+        bandejaPassoOp.adicionarOuAtualizar(
+                RotaSistema.PRODUTO_FISICO_CADASTRAR,
+                Map.of("nome", "Prod Passo " + sufixo, "siglaUm", "UN", "precoVenda", "10.00"),
+                "Cadastrar produto passo"
+        );
+        bandejaPassoOp.adicionarOuAtualizar(
+                RotaSistema.NOTA_COMPRA_EMITIR,
+                Map.of(
+                        "idFornecedor", "OP-1",
+                        "itens", List.of(Map.of("idProduto", "OP-2", "quantidade", "5", "valorUnitario", "6.00"))
+                ),
+                "Compra passo com OP-2 em itens"
+        );
+        ExecutorBandeja executorPasso = new ExecutorBandeja(roteador);
+        List<PassoExecutado> passosExec = executorPasso.executarTodos(bandejaPassoOp);
+        afirmar(passosExec.size() == 3 && passosExec.stream().allMatch(PassoExecutado::executou),
+                "ExecutorBandeja passo a passo resolveu OP-2 aninhado dentro de itens.");
+
+        String sessaoFalha = "passo-falha-fmt-" + sufixo;
+        BandejaOperacoesContexto bandejaFalha = agente.obterBandeja(sessaoFalha);
+        bandejaFalha.adicionarOuAtualizar(
+                RotaSistema.PRODUTO_FISICO_CADASTRAR,
+                Map.of("nome", "Prod Sucesso " + sufixo, "siglaUm", "UN", "precoVenda", "5.00"),
+                "Cadastrar produto valido"
+        );
+        bandejaFalha.adicionarOuAtualizar(
+                RotaSistema.NOTA_COMPRA_EMITIR,
+                Map.of("idFornecedor", "99999999", "itens", List.of(Map.of("idProduto", "99999999", "quantidade", "1"))),
+                "Emitir nota com produto inexistente"
+        );
+        String respFalhaFmt = agente.processarMensagem(sessaoFalha, "sim");
+        afirmar(respFalhaFmt.contains("[FALHOU - NÃO EXECUTADA]") && respFalhaFmt.contains("Motivo da falha:"),
+                "Relatorio parcial exibe marcador [FALHOU - NÃO EXECUTADA] e Motivo da falha.");
     }
 
     private static Acao acao(String texto) {

@@ -280,15 +280,14 @@ public class BandejaOperacoesContexto {
             return;
         }
         try {
-            // Executa antes eventuais sub-instruções referenciadas por "OP-N" (ex: idCliente="OP-2")
-            for (Object valor : item.getParametros().values()) {
-                if (valor instanceof String s) {
-                    String ref = s.trim().toUpperCase(Locale.ROOT);
-                    if (ref.startsWith("OP-") && !ref.equals(idUpper)) {
-                        ItemBandeja dep = mapaValidados.get(ref);
-                        if (dep != null && !jaExecutados.contains(ref)) {
-                            executarItemComDependencias(dep, roteador, mapaValidados, idsCriadosPorItem, jaExecutados, emExecucao, detalhes);
-                        }
+            // Executa antes eventuais sub-instruções referenciadas por "OP-N" (inclusive aninhadas em listas/mapas como itens)
+            Set<String> refsDependentes = new LinkedHashSet<>();
+            coletarReferenciasOp(item.getParametros(), refsDependentes);
+            for (String ref : refsDependentes) {
+                if (!ref.equals(idUpper)) {
+                    ItemBandeja dep = mapaValidados.get(ref);
+                    if (dep != null && !jaExecutados.contains(ref)) {
+                        executarItemComDependencias(dep, roteador, mapaValidados, idsCriadosPorItem, jaExecutados, emExecucao, detalhes);
                     }
                 }
             }
@@ -529,16 +528,97 @@ public class BandejaOperacoesContexto {
 
     private void resolverReferenciasDinamicas(ItemBandeja item, Map<String, Long> idsCriados) {
         if (idsCriados == null || idsCriados.isEmpty()) return;
-        Map<String, Object> p = item.getParametrosModificaveis();
-        for (Map.Entry<String, Object> entry : new ArrayList<>(p.entrySet())) {
-            Object valor = entry.getValue();
-            if (valor instanceof String str) {
-                String chave = str.trim().toUpperCase(Locale.ROOT);
-                if (idsCriados.containsKey(chave)) {
-                    entry.setValue(idsCriados.get(chave));
-                }
+        resolverReferenciasEmMapa(item.getParametrosModificaveis(), idsCriados::get);
+    }
+
+    /**
+     * Verifica se um texto representa uma referência simbólica de lote ({@code OP-N}).
+     */
+    public static boolean ehReferenciaOp(String texto) {
+        if (texto == null) return false;
+        String normalizado = texto.trim().toUpperCase(Locale.ROOT);
+        if (!normalizado.startsWith("OP-") || normalizado.length() <= 3) return false;
+        for (int i = 3; i < normalizado.length(); i++) {
+            if (!Character.isDigit(normalizado.charAt(i))) return false;
+        }
+        return true;
+    }
+
+    /**
+     * Coleta recursivamente referências {@code OP-N} em valores simples, mapas e listas de parâmetros.
+     */
+    public static void coletarReferenciasOp(Object valor, Set<String> destino) {
+        if (valor == null || destino == null) return;
+        if (valor instanceof String s) {
+            if (ehReferenciaOp(s)) {
+                destino.add(s.trim().toUpperCase(Locale.ROOT));
+            }
+        } else if (valor instanceof Map<?, ?> map) {
+            for (Object v : map.values()) {
+                coletarReferenciasOp(v, destino);
+            }
+        } else if (valor instanceof Iterable<?> it) {
+            for (Object el : it) {
+                coletarReferenciasOp(el, destino);
             }
         }
+    }
+
+    /**
+     * Substitui recursivamente referências {@code OP-N} pelos IDs gerados, incluindo listas e mapas aninhados
+     * (ex.: {@code itens: [{idProduto: "OP-3"}]}), copiando estruturas imutáveis quando necessário.
+     */
+    public static void resolverReferenciasEmMapa(
+            Map<String, Object> mapa,
+            java.util.function.Function<String, Long> resolvedor) {
+        if (mapa == null || mapa.isEmpty() || resolvedor == null) return;
+        for (Map.Entry<String, Object> entry : new ArrayList<>(mapa.entrySet())) {
+            Object original = entry.getValue();
+            Object resolvido = resolverValorRecursivo(original, resolvedor);
+            if (resolvido != original) {
+                entry.setValue(resolvido);
+            }
+        }
+    }
+
+    private static Object resolverValorRecursivo(
+            Object valor,
+            java.util.function.Function<String, Long> resolvedor) {
+        if (valor instanceof String str) {
+            if (ehReferenciaOp(str)) {
+                Long id = resolvedor.apply(str.trim().toUpperCase(Locale.ROOT));
+                if (id != null) {
+                    return id;
+                }
+            }
+            return valor;
+        }
+        if (valor instanceof Map<?, ?> map) {
+            boolean alterado = false;
+            Map<Object, Object> copia = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> e : map.entrySet()) {
+                Object origVal = e.getValue();
+                Object novoVal = resolverValorRecursivo(origVal, resolvedor);
+                if (novoVal != origVal) {
+                    alterado = true;
+                }
+                copia.put(e.getKey(), novoVal);
+            }
+            return alterado ? copia : valor;
+        }
+        if (valor instanceof List<?> list) {
+            boolean alterado = false;
+            List<Object> copia = new ArrayList<>(list.size());
+            for (Object el : list) {
+                Object novoEl = resolverValorRecursivo(el, resolvedor);
+                if (novoEl != el) {
+                    alterado = true;
+                }
+                copia.add(novoEl);
+            }
+            return alterado ? copia : valor;
+        }
+        return valor;
     }
 
     private static Long extrairIdResultado(Object res) {
