@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$Nucleo,
     [ValidateSet('UI','Oficial','Terminal')][string]$Modo='UI',
     [switch]$Validar,
@@ -7,15 +7,31 @@ param(
 $ErrorActionPreference='Stop'
 $modulo=$PSScriptRoot
 if (-not (Test-Path (Join-Path $modulo 'evidencias'))) { New-Item -ItemType Directory -Path (Join-Path $modulo 'evidencias') | Out-Null }
-if (-not $Nucleo) {
-    $pai=Split-Path $modulo
-    if (Test-Path (Join-Path $pai 'pom.xml')) { $Nucleo=$pai }
-    elseif (Test-Path "$env:USERPROFILE/Documents/PDV-javafx-av2/pom.xml") { $Nucleo="$env:USERPROFILE/Documents/PDV-javafx-av2" }
-    else { throw 'Informe -Nucleo com a pasta original do projeto, que contem pom.xml.' }
+function TestarNucleoAtual([string]$Pasta) {
+    return ($Pasta -and (Test-Path -LiteralPath (Join-Path $Pasta 'pom.xml')) -and (Test-Path -LiteralPath (Join-Path $Pasta 'src/main/java/br/com/senac/view/javafx/SazonaliseiGuiApp.java')))
 }
+$preferencia=Join-Path $modulo '.build/nucleo-local.txt'
+if (-not $Nucleo) {
+    $candidatos=@((Split-Path $modulo))
+    if (Test-Path -LiteralPath $preferencia) { $candidatos+=([IO.File]::ReadAllText($preferencia).Trim()) }
+    $candidatos+="$env:USERPROFILE/Documents/PDV-javafx-av2"
+    foreach ($pasta in $candidatos) { if (TestarNucleoAtual $pasta) { $Nucleo=$pasta;break } }
+    if (-not $Nucleo) {
+        Write-Host ''
+        Write-Host 'Nao foi encontrado um projeto com a NOVA interface JavaFX 2.5 do Igor.' -ForegroundColor Yellow
+        Write-Host 'Informe a pasta do projeto atualizado que contem pom.xml e src.'
+        Write-Host 'A pasta do complemento, sozinha, nao contem o sistema completo.'
+        $Nucleo=Read-Host 'Cole o caminho da pasta do projeto (Enter para cancelar)'
+        $Nucleo=$Nucleo.Trim().Trim('"')
+        if (-not $Nucleo) { throw 'Abertura cancelada. Nenhum arquivo do projeto foi alterado.' }
+    }
+}
+if (-not (TestarNucleoAtual $Nucleo)) { throw "Pasta incompativel: $Nucleo. Selecione o projeto atualizado com pom.xml e a classe SazonaliseiGuiApp; a branch/interface antiga nao funciona com este complemento." }
 $Nucleo=(Resolve-Path -LiteralPath $Nucleo).Path
-if (-not (Test-Path "$Nucleo/pom.xml")) { throw 'Nucleo invalido: pom.xml nao encontrado.' }
-if (-not (Test-Path "$Nucleo/src/main/java/br/com/senac/view/javafx/SazonaliseiGuiApp.java")) { throw 'Este complemento exige a nova interface 2.5 do Igor (SazonaliseiGuiApp). Aponte -Nucleo para o repositorio atualizado; a interface antiga nao e compativel.' }
+New-Item -ItemType Directory -Force (Split-Path $preferencia) | Out-Null
+[IO.File]::WriteAllText($preferencia,$Nucleo,(New-Object Text.UTF8Encoding($false)))
+Write-Host "Projeto selecionado: $Nucleo" -ForegroundColor Cyan
+Write-Host 'Preparando Java, dependencias e compilacao. A primeira abertura pode demorar.'
 $compilador=$null
 $opcoes=@()
 if ($env:JAVA_HOME) { $opcoes+=Join-Path $env:JAVA_HOME 'bin/javac.exe' }
