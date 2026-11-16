@@ -128,22 +128,53 @@ flowchart LR
 
 Inspirado nas premissas funcionais do [`PDV_Sazonal_Python`](file:///C:/workspace/cursoPython/PDV_Sazonal_Python), mas eliminando toda a poluição de tabelas gigantes, a janela principal usa uma **Barra Lateral Esquerda Macia (6 Abas Claras)** + **Área Central com Cards Expansíveis** + **Copiloto IA Retrátil à Direita**:
 
-### Aba 1: 🏠 Início & Painel Climático (com Gráfico de Semana, Mês e Trimestre)
+### Aba 1: 🏠 Início & Dashboard Interativo Sazonal (Fundo Bipartido: Céu/Temperatura no Topo + Rios na Base)
+Inspirado diretamente nas premissas do gráfico orgânico de [`templates/dashboard.html`](file:///C:/workspace/cursoPython/PDV_Sazonal_Python/templates/dashboard.html) do projeto `PDV_Sazonal_Python`, porém redesenhado em estética **Cartoon Sólida, Macia e Despoluída**:
+
 - **Linha Superior (4 Cards Macios Grandes)**:
-  1. **💰 Vendas no Período** (com comparativo simples: *"Subiu 12% na chuva"*).
-  2. **🌱 Lucro Líquido Real** (descontando custo FIFO e perdas).
-  3. **📦 Saúde do Estoque** (quantos itens estão saudáveis vs. atenção de validade).
-  4. **🌤️ Clima & Rio Hoje** (temperatura, chuva, nível do rio e próximo evento local).
-- **Centro: Gráfico Dinâmico Sazonal com Filtro Obrigatório de Semana, Mês e Trimestre**:
-  - **Barra de Filtros em Pílulas Grandes**:
-    - Período: **`[ 📅 Semana (7 Dias) ]`** | **`[ 🗓️ Mês (30 Dias) ]`** | **`[ 📊 Trimestre (90 Dias) ]`**
-    - Recorte Amazônico opcional: **`[ Todos os Climas ]`**, **`[ ☀️ Dias de Sol ]`**, **`[ 🌧️ Dias de Chuva ]`**, **`[ 🌊 Cheia do Rio ]`**, **`[ 🍂 Seca do Rio ]`**.
-  - **Séries Visuais Limpas**:
-    - Linha Verde Macia: **Vendas (R$)**
-    - Linha Azul Escura: **Lucro Líquido (R$)**
-    - Linha Coral: **Perdas / Devoluções (R$)**
-    - Área Sombreada Suave ao Fundo: **Variação Climática / Nível do Rio no período**.
-  - **Interação com a IA**: Clicar em qualquer ponto do gráfico ou no botão **"🤖 O que aconteceu neste período?"** envia os dados da Semana/Mês/Trimestre filtrado para a IA explicar em linguagem simples o motivo dos picos ou quedas!
+  1. **👥 Clientes Cadastrados / Ativos** (com indicador de crescimento mensal).
+  2. **📦 Produtos e Saúde do Estoque** (quantos itens estão saudáveis vs. atenção de validade).
+  3. **💰 Faturamento Total no Período** (com comparativo simples: *"↑ +18% neste período"*).
+  4. **📈 Lucro Líquido Real** (Vendas menos custos de estoque FIFO e baixas).
+
+- **Centro: Gráfico Interativo Sazonal com Fundo Dividido em 2 Camadas Naturais (`GraficoSazonalPeriodoCanvas`)**:
+  1. **Fundo Bipartido (Céu/Temperatura em Cima + Nível dos Rios em Baixo)**:
+     - **Parte Superior (Céu + Temperatura Média do Período)**:
+       - Renderiza um gradiente vertical no topo do canvas + brilho radial (*Sun Flare* ou *Cloud Flare*) conforme a temperatura média (`avgTemp`) dos dias filtrados:
+         - **Bem Quente (`avgTemp > 28,5°C`)**: Céu em gradiente Laranja/Coral Solar suave (`rgba(239, 68, 68, 0.32)` → `rgba(249, 115, 22, 0.18)`) com foco radial de Sol Forte no canto superior direito.
+         - **Ensolarado / Ameno (`26,0°C <= avgTemp <= 28,5°C`)**: Céu em gradiente Amarelo Dourado (`rgba(245, 158, 11, 0.32)` → `rgba(251, 191, 36, 0.16)`) com brilho solar dourado no topo direito.
+         - **Chuvoso / Nuvens Carregadas (`avgTemp < 26,0°C` ou `CHUVOSO`)**: Céu em gradiente Azul Noturno/Ardósia (`rgba(30, 58, 138, 0.42)` → `rgba(71, 85, 105, 0.22)`) com foco radial de nuvens de chuva no canto superior esquerdo.
+     - **Parte Inferior (Rios — Onda Hidrológica Preenchida na Base)**:
+       - Desenha na metade inferior do gráfico (eixo secundário `yRio`, escalado para `max = maiorNivelRio * 2`) uma **curva orgânica preenchida (`fill: true`, `tension: 0.4`)** com gradiente de água azul (`rgba(0, 119, 182, 0.40)` → `rgba(0, 119, 182, 0.65)`), representando visualmente o nível diário do rio em metros (`Cheia`, `Normal` ou `Seca/Vazante`).
+  2. **Linhas Financeiras Sobrepostas ao Cenário (Céu + Rio)**:
+     - **Linha 1 — Faturamento de Vendas (`R$`)**: Linha contínua **Verde Esmeralda (`#10b981`, espessura `3.5px`)** com pontos circulares brancos de borda verde e leve preenchimento translúcido.
+     - **Linha 2 — Lucro Líquido Real (`R$`)**: Linha tracejada **Azul Marinho Escuro (`#0b2545`, `borderDash: [5, 5]`, espessura `3px`)**, refletindo o ganho real descontado o custo FIFO.
+     - **Linha 3 — Perdas de Estoque (`R$`) (Exibida automaticamente quando houver perda no intervalo)**: Linha **Vermelho Coral (`#ef4444`, espessura `2.5px`)**, evidenciando os dias em que houve baixa de perda ou avaria.
+     - **Proteção contra Outliers (`dynamicMax` pelo Percentil 95)**: Se houver um pico isolado maior que `3x` o percentil 95 (`p95`), limita o teto visual do eixo Y financeiro em `p95 * 1.5` para não achatar as linhas dos demais dias.
+     - **Tooltip Flutuante Macio (Fonte `>= 15px`)**: Ao passar o mouse sobre qualquer dia, exibe um balão sólido e legível com: **Data (`dd/MM/yyyy`)**, **Faturamento (`R$`)**, **Lucro Líquido (`R$`)**, **Perdas (`R$`, se houver)**, **Nível do Rio (`m`)** e **Temperatura (`°C`)**.
+
+  3. **Dimensões de Tempo (`7D`, `30D`, `90D`, `Tudo` e `Customizar Intervalo`)**:
+     - Botões em pílula macia no canto superior direito do gráfico:
+       - **`[ 7D (Semana) ]`**
+       - **`[ 30D (Mês) ]`**
+       - **`[ 90D (Trimestre) ]`**
+       - **`[ Tudo ]`**
+       - **`[ 📅 Customizar Intervalo (De: dd/mm/aaaa — Até: dd/mm/aaaa ou Mês Específico) ]`**: Abre dois seletores de data (`DatePicker` amigáveis) ou seletor de Mês/Ano para o comerciante inspecionar qualquer janela personalizada.
+
+  4. **Filtros Combinados e Pílulas de Atalhos Sazonais (Zoom Automático por Epicentro)**:
+     - **Seletores Combinados (Dropdowns Macios)**:
+       - **📅 Mês**: `Todos os Meses` ou mês específico (`Jan/2026..Dez/2026`).
+       - **🌊 Nível do Rio**: `Todos`, `🌊 Época de CHEIA (Nível Alto)`, `🛶 Período NORMAL`, `🍂 Época de SECA (Nível Baixo)`.
+       - **🌧️ Clima / Precipitação**: `Todas`, `🌧️ Semanas Chuvosas`, `🌦️ Chuva Moderada`, `☀️ Tempo Seco / Quente`.
+     - **Barra de Atalhos Sazonais (Centralização Inteligente por Epicentro)**:
+       - Igual à mecânica de epicentro do `PDV_Sazonal_Python`: quando o usuário clica em um atalho sazonal, o gráfico localiza o índice exato (`epicenterIndex`) daquele evento histórico e **centraliza a janela de 7D, 30D ou 90D ao redor daquele dia** (`epicenterIndex - metadeDias` até `epicenterIndex + metadeDias`):
+         - **`🟢 Pico de Faturamento`** *(centraliza no dia/mês de maior venda histórica)*
+         - **`🟡 Baixa no Faturamento`** *(centraliza no período de menor venda para diagnóstico)*
+         - **`🚨 Maior Perda de Estoque`** *(centraliza no dia de maior perda financeira)*
+         - **`🌊 Época de Cheia do Rio`** *(centraliza no pico máximo do nível do rio)*
+         - **`🍂 Época de Seca do Rio`** *(centraliza no nível mais baixo da vazante)*
+         - **`🌧️ Semanas Chuvosas`** *(centraliza nas semanas de maior precipitação e impacto)*
+     - **Integração Direta com a IA**: Ao lado dos filtros fica o botão **`"🤖 Explicar este período com a IA"`**, que envia o recorte visível (faturamento, lucro, perdas, temperatura média e nível do rio) para o `GeminiAgenteOperacional` responder em texto simples o que causou aquele resultado e o que fazer!
 
 ### Aba 2: 📊 Estatística Avançada, Comportamento Sazonal e Estratégias
 Esta aba traduz todo o poder analítico das Stored Procedures ([`EstatisticaController`](file:///C:/workspace/Java/Sistema%20de%20Vendas/src/main/java/br/com/senac/controller/EstatisticaController.java) e [`AnaliseImpactoExternoService`](file:///C:/workspace/Java/Sistema%20de%20Vendas/src/main/java/br/com/senac/service/AnaliseImpactoExternoService.java)) e das premissas do `relatorios_sazonalizei.html` em **4 Blocos Expansíveis e Visuais**:

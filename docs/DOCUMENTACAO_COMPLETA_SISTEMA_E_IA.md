@@ -97,7 +97,11 @@ Toda a especificação para a IA recriar a interface gráfica encontra-se detalh
 - **Estética**: Limpa, simples, sólida e macia (**Cartoon Simples / Cozy Claymorphism**), pensada para iniciantes no ramo comercial.
 - **Telas Expansíveis**: Resumos diretos no primeiro nível com expansão suave ao clicar (inspirado nas premissas do [`PDV_Sazonal_Python`](file:///C:/workspace/cursoPython/PDV_Sazonal_Python), sem poluição visual).
 - **Cores Dinâmicas pelo Clima Amazônico**: Transição automática da paleta conforme o último registro do clima (`Sol Equatorial`, `Chuva Amazônica`, `Brisa da Floresta`, `Friagem`) e estado do rio (`Cheia`, `Normal`, `Seca`).
-- **Gráficos Dinâmicos com Filtro de Semana, Mês e Trimestre**: Visualização clara de Vendas, Lucro, Perdas e Clima/Rio com filtros de `Semana (7D)`, `Mês (30D)` e `Trimestre (90D)`.
+- **Gráfico Interativo com Fundo Bipartido (Céu/Temperatura no Topo + Rios na Base)**:
+  - **Parte Superior do Fundo**: Gradiente dinâmico do Céu segundo a temperatura média e condição climática (Laranja/Vermelho Solar se `> 28,5°C`, Dourado Solar entre `26°C e 28,5°C`, ou Azul Escuro com nuvens carregadas se `< 26°C` / chuvoso).
+  - **Parte Inferior do Fundo**: Onda preenchida em azul representando o **Nível do Rio em metros** (`Cheia`, `Normal`, `Seca`).
+  - **Curvas Financeiras**: Linhas sobrepostas de **Faturamento de Vendas (`R$`)**, **Lucro Líquido Real (`R$`)** e **Perdas de Estoque (`R$`, quando houver)**.
+  - **Dimensões de Tempo e Filtros**: Botões para **`7D (Semana)`**, **`30D (Mês)`**, **`90D (Trimestre)`**, **`Tudo`** e **`Customizar Intervalo (Data Inicial / Final ou Mês)`**, além de filtros combinados por **Rio**, **Clima/Chuva** e **Atalhos Sazonais de Epicentro** (*Pico de Faturamento*, *Baixa no Faturamento*, *Maior Perda de Estoque*, *Época de Cheia do Rio*, *Época de Seca do Rio* e *Semanas Chuvosas*), como no [`PDV_Sazonal_Python`](file:///C:/workspace/cursoPython/PDV_Sazonal_Python/templates/dashboard.html).
 - **Mapa GPS de Eventos**: Radar visual mostrando a distância em `km` entre a loja e os eventos públicos/privados locais.
 - **Tratamento Total de Dados**: Proibido texto cortado (`...`), letras menores que `15px` ou dados técnicos sem tradução; todos os problemas, alertas e gráficos possuem botão direto para conversar com a IA do ChatBot.
 

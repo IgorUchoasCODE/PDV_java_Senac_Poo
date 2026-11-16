@@ -441,8 +441,12 @@ flowchart TB
 ```
 
 ### 6.1. Resumo das 6 Abas Especializadas e Suas Integrações com a IA
-1. **🏠 Início & Clima (com Gráfico de Semana, Mês e Trimestre)**:
-   - Exibe os 4 KPIs principais em cartões macios e o **Gráfico Dinâmico Sazonal** com botões de filtro rápido para **Semana (7D)**, **Mês (30D)** e **Trimestre (90D)** (além de filtro por Sol, Chuva, Cheia e Seca do Rio), conectando qualquer ponto do gráfico ao ChatBot IA.
+1. **🏠 Início & Dashboard Interativo Sazonal (Fundo Bipartido: Céu/Temperatura no Topo + Rios na Base)**:
+   - Exibe os 4 KPIs principais em cartões macios e o **Gráfico Interativo Sazonal** com fundo dividido em 2 camadas:
+     - **Parte Superior (Céu/Temperatura)**: Gradiente e foco radial refletindo a temperatura média do período (Laranja/Vermelho Solar para `> 28,5°C`, Amarelo Dourado para `26°C..28,5°C` e Azul Escuro com nuvens para `< 26°C` / chuvoso).
+     - **Parte Inferior (Rios)**: Área em onda azul preenchida representando o **Nível do Rio em metros**.
+   - **Linhas sobrepostas**: **Faturamento (`R$`)**, **Lucro Líquido (`R$`)** e **Perdas de Estoque (`R$`, quando houver)**.
+   - **Dimensões de tempo e filtros**: Botões **`7D (Semana)`**, **`30D (Mês)`**, **`90D (Trimestre)`**, **`Tudo`** e **`Customizar Intervalo (Datas / Mês)`**, mais filtros combinados de **Rio (`Cheia / Normal / Seca`)**, **Clima (`Chuvoso / Moderado / Seco`)** e **Atalhos Sazonais de Epicentro** (*Pico de Faturamento*, *Baixa no Faturamento*, *Maior Perda de Estoque*, *Época de Cheia*, *Época de Seca*, *Semanas Chuvosas*), conectado em 1 clique ao ChatBot IA.
 2. **📊 Estatística Avançada, Comportamento de Consumo e Estratégias**:
    - **Perguntas Sazonais em 1 Clique**: Responde visualmente e via IA como o clima e eventos sociais (públicos ou privados) mudam o comportamento de consumo dos clientes.
    - **Análise dos 4 Padrões (Venda, Compra, Perda e Devolução)**: Cards expansíveis detalhando os **motivos reais** de perdas e devoluções, melhores épocas de compra/venda e a **estratégia recomendada pela IA** para cada cenário.
