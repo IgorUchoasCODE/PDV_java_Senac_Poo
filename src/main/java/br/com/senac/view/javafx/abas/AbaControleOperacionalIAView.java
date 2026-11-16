@@ -90,7 +90,9 @@ public class AbaControleOperacionalIAView extends VBox {
         this.scrollLog = new ScrollPane(boxLogRespostas);
         scrollLog.setFitToWidth(true);
         scrollLog.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        scrollLog.setPrefHeight(230);
+        scrollLog.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollLog.setPrefHeight(280);
+        scrollLog.setMinHeight(160);
         scrollLog.setStyle("-fx-background-color: #F8FAFC; -fx-border-color: #E2E8F0; -fx-border-radius: 8px; -fx-background-radius: 8px;");
 
         HBox topo = criarCabecalho();
@@ -131,11 +133,11 @@ public class AbaControleOperacionalIAView extends VBox {
         grid.setVgap(10);
 
         ColumnConstraints colEsq = new ColumnConstraints();
-        colEsq.setPercentWidth(56);
+        colEsq.setPercentWidth(65);
         colEsq.setHgrow(Priority.ALWAYS);
         ColumnConstraints colDir = new ColumnConstraints();
-        colDir.setPercentWidth(44);
-        colDir.setHgrow(Priority.ALWAYS);
+        colDir.setPercentWidth(35);
+        colDir.setHgrow(Priority.NEVER);
         grid.getColumnConstraints().addAll(colEsq, colDir);
 
         VBox painelComando = construirPainelComandoEPlaybooks();
@@ -150,7 +152,7 @@ public class AbaControleOperacionalIAView extends VBox {
     }
 
     private VBox construirPainelComandoEPlaybooks() {
-        txtComando.setPrefRowCount(3);
+        txtComando.setPrefRowCount(4);
         chkConfirmarAntes.setSelected(true);
         chkConfirmarAntes.setStyle("-fx-font-size: 12px; -fx-text-fill: #334155;");
 
@@ -170,14 +172,15 @@ public class AbaControleOperacionalIAView extends VBox {
         barraEnvio.setAlignment(Pos.CENTER_LEFT);
 
         VBox cardConsole = new VBox(8,
-                FormatadorSeguroUI.criarLabel("💬 Comando Livre ou por Voz", 13, true, "#0F172A"),
+                FormatadorSeguroUI.criarLabel("💬 Comando Livre ou por Voz (Prompt Copiloto IA)", 13, true, "#0F172A"),
                 txtComando,
                 barraEnvio,
                 boxProgresso,
-                FormatadorSeguroUI.criarLabel("📜 Histórico de Execução (clique no card para expandir)", 12, true, "#334155"),
+                FormatadorSeguroUI.criarLabel("📜 Histórico de Execução & Respostas IA (clique no card para expandir)", 12, true, "#334155"),
                 scrollLog);
         cardConsole.setPadding(new Insets(12));
         cardConsole.setStyle(FormatadorSeguroUI.estiloCardCartoon("#FFFFFF", "#CBD5E1"));
+        VBox.setVgrow(cardConsole, Priority.ALWAYS);
         VBox.setVgrow(scrollLog, Priority.ALWAYS);
 
         // Faixa Executiva: Controle Direto Visual + Navegação em Todos os Setores pelo Hub IA
@@ -294,8 +297,9 @@ public class AbaControleOperacionalIAView extends VBox {
         ScrollPane scrollAtalhos = new ScrollPane(flowAtalhos);
         scrollAtalhos.setFitToWidth(true);
         scrollAtalhos.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        scrollAtalhos.setPrefHeight(220);
-        scrollAtalhos.setMinHeight(175);
+        scrollAtalhos.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollAtalhos.setPrefHeight(135);
+        scrollAtalhos.setMinHeight(100);
         scrollAtalhos.setStyle("-fx-background-color: transparent; -fx-background: transparent; -fx-border-color: transparent;");
 
         VBox cardPlaybooks = new VBox(8,
@@ -320,6 +324,7 @@ public class AbaControleOperacionalIAView extends VBox {
         ScrollPane scrollBandeja = new ScrollPane(boxListaBandeja);
         scrollBandeja.setFitToWidth(true);
         scrollBandeja.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollBandeja.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         scrollBandeja.setPrefHeight(420);
         scrollBandeja.setStyle("-fx-background-color: transparent; -fx-background: transparent; -fx-border-color: #E2E8F0; -fx-border-radius: 6px;");
         VBox.setVgrow(scrollBandeja, Priority.ALWAYS);
@@ -338,6 +343,9 @@ public class AbaControleOperacionalIAView extends VBox {
                 rodapeBandeja);
         box.setPadding(new Insets(12));
         box.setStyle(FormatadorSeguroUI.estiloCardCartoon("#FFFFFF", "#CBD5E1"));
+        box.setMinWidth(300);
+        box.setPrefWidth(350);
+        box.setMaxWidth(380);
         VBox.setVgrow(box, Priority.ALWAYS);
         return box;
     }

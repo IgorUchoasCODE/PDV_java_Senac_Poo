@@ -317,10 +317,10 @@ public class AbaBalcaoNotasView extends VBox {
         layout.setPadding(new Insets(8, 0, 4, 0));
 
         ColumnConstraints colEsq = new ColumnConstraints();
-        colEsq.setPercentWidth(56);
+        colEsq.setPercentWidth(52);
         colEsq.setHgrow(Priority.ALWAYS);
         ColumnConstraints colDir = new ColumnConstraints();
-        colDir.setPercentWidth(44);
+        colDir.setPercentWidth(48);
         colDir.setHgrow(Priority.ALWAYS);
         layout.getColumnConstraints().addAll(colEsq, colDir);
 
@@ -408,29 +408,32 @@ public class AbaBalcaoNotasView extends VBox {
 
         TableColumn<ItemCatalogoPDV, String> colSigla = new TableColumn<>("Sigla/UM");
         colSigla.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().siglaProduto() + " • " + c.getValue().umSigla()));
-        colSigla.setPrefWidth(78);
+        colSigla.setPrefWidth(72);
 
         TableColumn<ItemCatalogoPDV, String> colNome = new TableColumn<>("Produto / Lote");
         colNome.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().codigoExibicao() + " • " + c.getValue().nome()));
-        colNome.setPrefWidth(195);
+        colNome.setPrefWidth(180);
+        colNome.setMinWidth(120);
 
         TableColumn<ItemCatalogoPDV, String> colSaldo = new TableColumn<>("Saldo");
         colSaldo.setCellValueFactory(c -> new SimpleStringProperty(
                 FormatadorSeguroUI.formatarQuantidade(c.getValue().saldo(), c.getValue().umSigla())));
-        colSaldo.setPrefWidth(75);
+        colSaldo.setPrefWidth(68);
 
         TableColumn<ItemCatalogoPDV, String> colVal = new TableColumn<>("Validade");
         colVal.setCellValueFactory(c -> new SimpleStringProperty(
                 c.getValue().validade() != null ? FormatadorSeguroUI.formatarDataAmigavel(c.getValue().validade()) : "Indeterm."));
-        colVal.setPrefWidth(92);
+        colVal.setPrefWidth(88);
 
         TableColumn<ItemCatalogoPDV, String> colPreco = new TableColumn<>("Preço");
         colPreco.setCellValueFactory(c -> new SimpleStringProperty(
                 FormatadorSeguroUI.formatarMoeda(c.getValue().preco())));
-        colPreco.setPrefWidth(78);
+        colPreco.setPrefWidth(72);
 
         TableColumn<ItemCatalogoPDV, Void> colAcao = new TableColumn<>("Ação");
-        colAcao.setPrefWidth(78);
+        colAcao.setPrefWidth(72);
+        colAcao.setMinWidth(68);
+        colAcao.setMaxWidth(78);
         colAcao.setCellFactory(col -> new TableCell<>() {
             private final Button btn = FormatadorSeguroUI.criarBotaoCartoon("+ Add", "#047857", "#065F46", "#FFFFFF");
             {
@@ -493,10 +496,12 @@ public class AbaBalcaoNotasView extends VBox {
         boxCupom.setPadding(new Insets(12));
         boxCupom.setStyle(FormatadorSeguroUI.estiloCardCartoon("#FFFFFF", "#CBD5E1"));
 
-        Button btnEditarRapido = FormatadorSeguroUI.criarBotaoCartoon("✏️ Editar Valor (F3)", "#EFF6FF", "#93C5FD", "#1E40AF");
+        Button btnEditarRapido = FormatadorSeguroUI.criarBotaoCartoon("✏️ Editar (F3)", "#EFF6FF", "#93C5FD", "#1E40AF");
+        btnEditarRapido.setTooltip(new Tooltip("Editar quantidade e preço do último item adicionado (F3)"));
         btnEditarRapido.setOnAction(e -> abrirEdicaoRapidaUltimoItem());
 
         Button btnLimparCarrinho = FormatadorSeguroUI.criarBotaoCartoon("Limpar", "#F1F5F9", "#CBD5E1", "#334155");
+        btnLimparCarrinho.setTooltip(new Tooltip("Limpar todos os itens da nota"));
         btnLimparCarrinho.setOnAction(e -> {
             carrinho.clear();
             pagamentosCupom.clear();
@@ -506,15 +511,16 @@ public class AbaBalcaoNotasView extends VBox {
             lblStatusCaixa.setText("Cupom limpo.");
         });
 
-        Label titCupom = FormatadorSeguroUI.criarLabel("🧾 Resumo da Nota de Venda", 14, true, "#0F172A");
+        Label titCupom = FormatadorSeguroUI.criarLabel("🧾 Resumo da Venda", 13, true, "#0F172A");
+        titCupom.setWrapText(true);
         HBox.setHgrow(titCupom, Priority.ALWAYS);
         HBox topoCupom = new HBox(6, titCupom, btnEditarRapido, btnLimparCarrinho);
         topoCupom.setAlignment(Pos.CENTER_LEFT);
 
         boxListaCarrinho.setPadding(new Insets(6));
         var scrollCarrinho = FormatadorSeguroUI.envolverScrollSuave(boxListaCarrinho);
-        scrollCarrinho.setPrefHeight(220);
-        scrollCarrinho.setMinHeight(160);
+        scrollCarrinho.setPrefHeight(250);
+        scrollCarrinho.setMinHeight(130);
         scrollCarrinho.setStyle("-fx-background-color: #F8FAFC; -fx-border-color: #E2E8F0; -fx-border-radius: 6px; -fx-background-radius: 6px;");
         VBox.setVgrow(scrollCarrinho, Priority.ALWAYS);
 
@@ -540,7 +546,7 @@ public class AbaBalcaoNotasView extends VBox {
         gridAjustes.add(txtCupom, 1, 1);
 
         VBox cardTotal = new VBox(4);
-        cardTotal.setPadding(new Insets(10, 12, 10, 12));
+        cardTotal.setPadding(new Insets(8, 12, 8, 12));
         cardTotal.setStyle(FormatadorSeguroUI.estiloCartaoSuaveInterno("#ECFDF5", "#6EE7B7"));
         HBox linhaTotal = new HBox(10,
                 FormatadorSeguroUI.criarLabel("TOTAL DA NOTA DE VENDA:", 12, true, "#065F46"),
@@ -548,7 +554,7 @@ public class AbaBalcaoNotasView extends VBox {
         linhaTotal.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(linhaTotal.getChildren().get(0), Priority.ALWAYS);
         Label subFluxo = FormatadorSeguroUI.criarLabel(
-                "Fluxo em 2 etapas: revise os itens aqui e avance para registrar o pagamento na janela própria.",
+                "Revise os itens e avance para registrar o pagamento na janela própria.",
                 11, false, "#047857");
         subFluxo.setWrapText(true);
         cardTotal.getChildren().addAll(linhaTotal, subFluxo);
@@ -1316,26 +1322,74 @@ public class AbaBalcaoNotasView extends VBox {
     private void atualizarVisualCarrinho() {
         boxListaCarrinho.getChildren().clear();
         if (carrinho.isEmpty()) {
-            boxListaCarrinho.getChildren().add(FormatadorSeguroUI.criarLabel(
-                    "Cupom vazio. Pressione Enter no item ou clique em '+ Add'.", 12, false, "#64748B"));
+            Label lblVazio = FormatadorSeguroUI.criarLabel(
+                    "Cupom vazio. Selecione um item no catálogo e pressione Enter ou clique em '+ Add'.", 12, false, "#64748B");
+            lblVazio.setWrapText(true);
+            lblVazio.setPadding(new Insets(14, 8, 14, 8));
+            boxListaCarrinho.getChildren().add(lblVazio);
         } else {
             for (int i = 0; i < carrinho.size(); i++) {
-                ItemCarrinho ic = carrinho.get(i);
-                int idx = i;
-                Label lNome = FormatadorSeguroUI.criarLabel(
-                        String.format("%s [%s]", FormatadorSeguroUI.limparNomeProduto(ic.produto.getNome()), ic.rotuloLote),
-                        12, true, "#0F172A");
-                HBox.setHgrow(lNome, Priority.ALWAYS);
+                final ItemCarrinho ic = carrinho.get(i);
+                final int idx = i;
 
-                TextField tfValorUnit = FormatadorSeguroUI.criarCampoTextoCartoon("0,00", "#CBD5E1", "#1D4ED8");
-                tfValorUnit.setText(ic.precoUnitario.toPlainString().replace(".", ","));
-                tfValorUnit.setPrefWidth(72);
-                tfValorUnit.setOnAction(e -> {
-                    ic.precoUnitario = parseDecimalBr(tfValorUnit.getText(), ic.precoUnitario);
+                // --- LINHA 1: Nome do Produto + Badge Lote (à esquerda) | Subtotal + Botão Remover (à direita) ---
+                String nomeLimpo = FormatadorSeguroUI.limparNomeProduto(ic.produto.getNome());
+                Label lNome = FormatadorSeguroUI.criarLabel(nomeLimpo, 12, true, "#0F172A");
+                lNome.setWrapText(true);
+                lNome.setMinWidth(60);
+                lNome.setTooltip(new Tooltip(ic.produto.getNome() + " — " + ic.rotuloLote));
+
+                Label badgeLote = FormatadorSeguroUI.criarBadgeCartoon(ic.rotuloLote, "#F1F5F9", "#CBD5E1", "#475569");
+
+                HBox boxProd = new HBox(6, lNome, badgeLote);
+                boxProd.setAlignment(Pos.CENTER_LEFT);
+                HBox.setHgrow(boxProd, Priority.ALWAYS);
+
+                Label lSub = FormatadorSeguroUI.criarLabel(
+                        FormatadorSeguroUI.formatarMoeda(ic.getSubtotal()), 13, true, "#047857");
+
+                Button btnRem = FormatadorSeguroUI.criarBotaoCartoon("✕", "#FEE2E2", "#FCA5A5", "#991B1B");
+                btnRem.setTooltip(new Tooltip("Remover este item do cupom"));
+                btnRem.setPrefSize(26, 26);
+                btnRem.setMinSize(26, 26);
+                btnRem.setOnAction(e -> {
+                    carrinho.remove(idx);
                     atualizarVisualCarrinho();
                 });
 
-                Button btnMenos = FormatadorSeguroUI.criarBotaoCartoon("-", "#F1F5F9", "#CBD5E1", "#0F172A");
+                HBox boxSubRem = new HBox(8, lSub, btnRem);
+                boxSubRem.setAlignment(Pos.CENTER_RIGHT);
+
+                HBox linhaTopo = new HBox(8, boxProd, boxSubRem);
+                linhaTopo.setAlignment(Pos.CENTER_LEFT);
+
+                // --- LINHA 2: Preço Unitário (à esquerda) | Ajuste de Quantidade (à direita) ---
+                Label lblPrecoTit = FormatadorSeguroUI.criarLabel("Un.: R$", 11, false, "#64748B");
+                TextField tfValorUnit = FormatadorSeguroUI.criarCampoTextoCartoon("0,00", "#CBD5E1", "#1D4ED8");
+                tfValorUnit.setText(ic.precoUnitario.toPlainString().replace(".", ","));
+                tfValorUnit.setPrefWidth(72);
+                tfValorUnit.setMaxWidth(80);
+                tfValorUnit.setAlignment(Pos.CENTER_RIGHT);
+
+                Runnable salvarPreco = () -> {
+                    BigDecimal nv = parseDecimalBr(tfValorUnit.getText(), ic.precoUnitario);
+                    if (nv.compareTo(BigDecimal.ZERO) >= 0 && nv.compareTo(ic.precoUnitario) != 0) {
+                        ic.precoUnitario = nv;
+                        atualizarVisualCarrinho();
+                    }
+                };
+                tfValorUnit.setOnAction(e -> salvarPreco.run());
+                tfValorUnit.focusedProperty().addListener((obs, oldF, newF) -> {
+                    if (!newF) salvarPreco.run();
+                });
+
+                HBox boxPreco = new HBox(4, lblPrecoTit, tfValorUnit);
+                boxPreco.setAlignment(Pos.CENTER_LEFT);
+
+                Label lblQtdTit = FormatadorSeguroUI.criarLabel("Qtd:", 11, false, "#64748B");
+                Button btnMenos = FormatadorSeguroUI.criarBotaoCartoon("−", "#F1F5F9", "#CBD5E1", "#0F172A");
+                btnMenos.setPrefSize(26, 26);
+                btnMenos.setMinSize(26, 26);
                 btnMenos.setOnAction(e -> {
                     if (ic.quantidade.compareTo(BigDecimal.ONE) > 0) {
                         ic.quantidade = ic.quantidade.subtract(BigDecimal.ONE);
@@ -1347,34 +1401,50 @@ public class AbaBalcaoNotasView extends VBox {
 
                 TextField tfQtd = FormatadorSeguroUI.criarCampoTextoCartoon("1", "#CBD5E1", "#0F172A");
                 tfQtd.setText(ic.quantidade.stripTrailingZeros().toPlainString().replace(".", ","));
-                tfQtd.setPrefWidth(46);
-                tfQtd.setOnAction(e -> {
+                tfQtd.setPrefWidth(48);
+                tfQtd.setMaxWidth(56);
+                tfQtd.setAlignment(Pos.CENTER);
+
+                Runnable salvarQtd = () -> {
                     BigDecimal q = parseDecimalBr(tfQtd.getText(), ic.quantidade);
-                    if (q.compareTo(BigDecimal.ZERO) > 0) ic.quantidade = q;
-                    atualizarVisualCarrinho();
+                    if (q.compareTo(BigDecimal.ZERO) > 0 && q.compareTo(ic.quantidade) != 0) {
+                        ic.quantidade = q;
+                        atualizarVisualCarrinho();
+                    }
+                };
+                tfQtd.setOnAction(e -> salvarQtd.run());
+                tfQtd.focusedProperty().addListener((obs, oldF, newF) -> {
+                    if (!newF) salvarQtd.run();
                 });
 
                 Button btnMais = FormatadorSeguroUI.criarBotaoCartoon("+", "#F1F5F9", "#CBD5E1", "#0F172A");
+                btnMais.setPrefSize(26, 26);
+                btnMais.setMinSize(26, 26);
                 btnMais.setOnAction(e -> {
                     ic.quantidade = ic.quantidade.add(BigDecimal.ONE);
                     atualizarVisualCarrinho();
                 });
 
-                Label lSub = FormatadorSeguroUI.criarLabel(FormatadorSeguroUI.formatarMoeda(ic.getSubtotal()), 12, true, "#047857");
+                String siglaUm = (ic.produto.getUm() != null && ic.produto.getUm().getSigla() != null)
+                        ? ic.produto.getUm().getSigla() : "UN";
+                Label lblUm = FormatadorSeguroUI.criarLabel(siglaUm, 11, false, "#64748B");
 
-                Button btnRem = FormatadorSeguroUI.criarBotaoCartoon("✕", "#FEE2E2", "#FCA5A5", "#991B1B");
-                btnRem.setOnAction(e -> {
-                    carrinho.remove(idx);
-                    atualizarVisualCarrinho();
-                });
+                HBox boxQtd = new HBox(4, lblQtdTit, btnMenos, tfQtd, btnMais, lblUm);
+                boxQtd.setAlignment(Pos.CENTER_RIGHT);
 
-                HBox row = new HBox(5, lNome,
-                        FormatadorSeguroUI.criarLabel("R$", 11, false, "#64748B"), tfValorUnit,
-                        btnMenos, tfQtd, btnMais, lSub, btnRem);
-                row.setAlignment(Pos.CENTER_LEFT);
-                row.setPadding(new Insets(4, 6, 4, 6));
-                row.setStyle(FormatadorSeguroUI.estiloCartaoSuaveInterno("#FFFFFF", "#E2E8F0"));
-                boxListaCarrinho.getChildren().add(row);
+                Region spacer = new Region();
+                HBox.setHgrow(spacer, Priority.ALWAYS);
+
+                HBox linhaControles = new HBox(6, boxPreco, spacer, boxQtd);
+                linhaControles.setAlignment(Pos.CENTER_LEFT);
+
+                // --- CARD COMPACTO, SEGURO & ESPAÇOSO ---
+                VBox cardItem = new VBox(6, linhaTopo, linhaControles);
+                cardItem.setPadding(new Insets(8, 10, 8, 10));
+                cardItem.setStyle(FormatadorSeguroUI.estiloCartaoSuaveInterno("#FFFFFF", "#E2E8F0"));
+                cardItem.setMaxWidth(Double.MAX_VALUE);
+
+                boxListaCarrinho.getChildren().add(cardItem);
             }
         }
         recalcularTotalCupom();
