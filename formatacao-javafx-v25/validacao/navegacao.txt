@@ -1,0 +1,120 @@
+nov. 16, 2026 10:41:05 AM com.sun.javafx.application.PlatformImpl startup
+WARNING: Unsupported JavaFX configuration: classes were loaded from 'unnamed module @4d358e82'
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+nov. 16, 2026 10:41:09 AM org.hibernate.jpa.boot.internal.PersistenceXmlParser parsePersistenceXml
+WARN: HHH015018: Encountered multiple persistence-unit stanzas defining same name [sazonalisei-embarcado]; persistence-unit names must be unique
+? [JPAUtil] Persist�ncia MySQL n�o encontrada ou indispon�vel. Iniciando banco embarcado (sazonalisei-embarcado)...
+nov. 16, 2026 10:41:09 AM org.hibernate.jpa.boot.internal.PersistenceXmlParser parsePersistenceXml
+WARN: HHH015018: Encountered multiple persistence-unit stanzas defining same name [sazonalisei-embarcado]; persistence-unit names must be unique
+nov. 16, 2026 10:41:09 AM org.hibernate.jpa.internal.util.LogHelper logPersistenceUnitInformation
+INFO: HHH000204: Processing PersistenceUnitInfo [name: sazonalisei-embarcado]
+nov. 16, 2026 10:41:10 AM org.hibernate.Version logVersion
+INFO: HHH000412: Hibernate ORM core version 6.4.4.Final
+nov. 16, 2026 10:41:10 AM org.hibernate.cache.internal.RegionFactoryInitiator initiateService
+INFO: HHH000026: Second-level cache disabled
+nov. 16, 2026 10:41:11 AM org.hibernate.engine.jdbc.connections.internal.ConnectionProviderInitiator initiateService
+INFO: HHH000130: Instantiating explicit connection provider: org.hibernate.hikaricp.internal.HikariCPConnectionProvider
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+nov. 16, 2026 10:41:21 AM org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
+INFO: HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+Can not create cache at C:\Users\tieng\.openjfx\cache\21.0.6+3\amd64
+UI OK 1: Aplica��o completa abriu pelo lan�ador formatado
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::allocateMemory has been called by com.sun.marlin.OffHeapArray (file:/C:/Users/tieng/Documents/Codex/2026-11-14/ba/work/integracao/m2/org/openjfx/javafx-graphics/21.0.6/javafx-graphics-21.0.6-win.jar)
+WARNING: Please consider reporting this to the maintainers of class com.sun.marlin.OffHeapArray
+WARNING: sun.misc.Unsafe::allocateMemory will be removed in a future release
+UI OK 2: Menu ativo: Home
+UI OK 3: Menu ativo: PDV Balc�o
+UI OK 4: Menu ativo: Estoque & Produtos
+UI OK 5: Menu ativo: Financeiro & Contab.
+nov. 16, 2026 10:41:40 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 90022, SQLState: 90022
+nov. 16, 2026 10:41:40 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Function "sp_plano_estrategico_compras_vendas_inteligente" not found; SQL statement:
+ call sp_plano_estrategico_compras_vendas_inteligente(?,?)  [90022-224]
+nov. 16, 2026 10:41:40 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 90022, SQLState: 90022
+nov. 16, 2026 10:41:40 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Function "sp_analisar_destaques_e_picos_sazonais" not found; SQL statement:
+ call sp_analisar_destaques_e_picos_sazonais(?)  [90022-224]
+nov. 16, 2026 10:41:40 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 90022, SQLState: 90022
+nov. 16, 2026 10:41:40 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Function "sp_diagnosticar_motivos_perda_prematura" not found; SQL statement:
+ call sp_diagnosticar_motivos_perda_prematura(?,?)  [90022-224]
+nov. 16, 2026 10:41:40 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 90022, SQLState: 90022
+nov. 16, 2026 10:41:40 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Function "sp_prever_demanda_mensal_cliente" not found; SQL statement:
+ call sp_prever_demanda_mensal_cliente(?,?,?)  [90022-224]
+nov. 16, 2026 10:41:40 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 42102, SQLState: 42S02
+nov. 16, 2026 10:41:40 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Table "vw_picos_dias_eventos_quinto_dia_util" not found; SQL statement:
+SELECT * FROM vw_picos_dias_eventos_quinto_dia_util [42102-224]
+nov. 16, 2026 10:41:40 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 90022, SQLState: 90022
+nov. 16, 2026 10:41:40 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Function "sp_analisar_perfil_consumo_cliente" not found; SQL statement:
+ call sp_analisar_perfil_consumo_cliente(?)  [90022-224]
+nov. 16, 2026 10:41:40 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 90022, SQLState: 90022
+nov. 16, 2026 10:41:40 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Function "sp_analisar_destaques_e_picos_sazonais" not found; SQL statement:
+ call sp_analisar_destaques_e_picos_sazonais(?)  [90022-224]
+UI OK 6: Menu ativo: Estat�stica & Demanda
+UI OK 7: Menu ativo: Clima, Rios & Mapa
+UI OK 8: Menu ativo: Kanban Demanda
+UI OK 9: Menu ativo: Controle por IA
+UI OK 10: Menu ativo: Configura��es & CSV
+NAVEGA��O: 10 verifica��es aprovadas.

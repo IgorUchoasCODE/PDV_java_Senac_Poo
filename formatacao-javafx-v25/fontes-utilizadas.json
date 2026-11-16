@@ -1,0 +1,46 @@
+[
+  {
+    "arquivo": "01_home_dashboard_clima.png",
+    "sha256": "25c5fc864fc41a4851889a32324ba98d3b21e62a4283d1df9f0a257cc5b593eb"
+  },
+  {
+    "arquivo": "02_pdv_balcao_multi_pagamentos.png",
+    "sha256": "3e64d571a196c64b91a26166e86d27d3efd07970901818c3ed4c1ab6f6af1b17"
+  },
+  {
+    "arquivo": "03_catalogo_estoque_lotes.png",
+    "sha256": "7a9e5c46bf147c39d30b9e73a7bb753985c165f1b2d4e261e7c4d5482a2bae9b"
+  },
+  {
+    "arquivo": "04_financeiro_saude_contabil.png",
+    "sha256": "edc3949dfa1c2db8e9e3fa64b64cb51f919cd940f0f64608693a52762b128766"
+  },
+  {
+    "arquivo": "05_estatistica_preditiva_causas.png",
+    "sha256": "f6b6d668f31782eeb097f74620a029e14ba4f0b714ff11fa22dc17862e5ee368"
+  },
+  {
+    "arquivo": "06_mapa_gps_clima_relevo.png",
+    "sha256": "43bbaa1fac5704c2aac4698e0bd23455612eb7e528c2d57e32fb7f4816e19c2c"
+  },
+  {
+    "arquivo": "07_planejamento_demanda_kanban.png",
+    "sha256": "414c8bff7895f8c00b767208e8cfd9bd5cddaffc1223b5c5ace1716999d94ef1"
+  },
+  {
+    "arquivo": "08_controle_operacional_ia.png",
+    "sha256": "6ffa355da00b26f2bb4b2149252ecc788fb992636f469ce62c76a0caacbb6e65"
+  },
+  {
+    "arquivo": "09_configuracoes_mapeador_csv.png",
+    "sha256": "ff4d820e999e698d8d8bc7762196477f80479fc2fbab1071a963f9506c9184a1"
+  },
+  {
+    "arquivo": "10_tema_escuro_interface.png",
+    "sha256": "b0f1bc82a62ed81a8e10136ace4c25764f332547df3d1ac331faae5a5e12ddf4"
+  },
+  {
+    "arquivo": "Documentacao_Completa_Sazonalisei_e_ChatBotTerminal (2).pdf",
+    "sha256": "859a3b8519ee19ff2f1a920562dc7e6ab65fc24ba64759009ed0a711363e6b25"
+  }
+]

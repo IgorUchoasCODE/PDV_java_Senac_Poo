@@ -1,0 +1,58 @@
+==========================================================================================
+   TESTE DO IMPORTADOR CSV VIA CONTROLLERS & RESET RESTRITO DO BANCO
+==========================================================================================
+
+  [OK] LeitorCsv detectou delimitador ';'
+  [OK] LeitorCsv leu 3 cabeçalhos
+  [OK] LeitorCsv leu 2 linhas
+  [OK] LeitorCsv preservou aspas escapadas
+nov. 16, 2026 10:42:38 AM org.hibernate.jpa.boot.internal.PersistenceXmlParser parsePersistenceXml
+WARN: HHH015018: Encountered multiple persistence-unit stanzas defining same name [sazonalisei-embarcado]; persistence-unit names must be unique
+? [JPAUtil] Persistência MySQL não encontrada ou indisponível. Iniciando banco embarcado (sazonalisei-embarcado)...
+nov. 16, 2026 10:42:38 AM org.hibernate.jpa.boot.internal.PersistenceXmlParser parsePersistenceXml
+WARN: HHH015018: Encountered multiple persistence-unit stanzas defining same name [sazonalisei-embarcado]; persistence-unit names must be unique
+nov. 16, 2026 10:42:38 AM org.hibernate.jpa.internal.util.LogHelper logPersistenceUnitInformation
+INFO: HHH000204: Processing PersistenceUnitInfo [name: sazonalisei-embarcado]
+nov. 16, 2026 10:42:38 AM org.hibernate.Version logVersion
+INFO: HHH000412: Hibernate ORM core version 6.4.4.Final
+nov. 16, 2026 10:42:38 AM org.hibernate.cache.internal.RegionFactoryInitiator initiateService
+INFO: HHH000026: Second-level cache disabled
+nov. 16, 2026 10:42:38 AM org.hibernate.engine.jdbc.connections.internal.ConnectionProviderInitiator initiateService
+INFO: HHH000130: Instantiating explicit connection provider: org.hibernate.hikaricp.internal.HikariCPConnectionProvider
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+nov. 16, 2026 10:42:42 AM org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
+INFO: HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+  [OK] Importação CSV de Pessoas via rotas: Importação CSV [C:\Users\tieng\AppData\Local\Packages\openai.codex_2p2nqsd0c76g0\AC\#!sandbox.{7d0f3d8e-c271-4a65-8369-d3b77e4690ba}\Temp\pdv_csv_teste_15866633045539810479\pessoas.csv] -> Total: 2 | Sucessos: 2 | Falhas: 0
+  [OK] Importação CSV de Produtos Físicos via rotas: Importação CSV [C:\Users\tieng\AppData\Local\Packages\openai.codex_2p2nqsd0c76g0\AC\#!sandbox.{7d0f3d8e-c271-4a65-8369-d3b77e4690ba}\Temp\pdv_csv_teste_15866633045539810479\produtos.csv] -> Total: 1 | Sucessos: 1 | Falhas: 0
+nov. 16, 2026 10:42:44 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 42001, SQLState: 42001
+nov. 16, 2026 10:42:44 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Syntax error in SQL statement "SELECT 1 FROM evento_externo WHERE UPPER(cidade) = UPPER(?) AND UPPER(uf) = UPPER(?) AND coletado_em >= NOW() - INTERVAL [*]? DAY LIMIT 1"; expected "-, +, string"; SQL statement:
+SELECT 1 FROM evento_externo WHERE UPPER(cidade) = UPPER(?) AND UPPER(uf) = UPPER(?) AND coletado_em >= NOW() - INTERVAL ? DAY LIMIT 1 [42001-224]
+  [OK] Importação CSV de Notas de Compra via rotas: Importação CSV [C:\Users\tieng\AppData\Local\Packages\openai.codex_2p2nqsd0c76g0\AC\#!sandbox.{7d0f3d8e-c271-4a65-8369-d3b77e4690ba}\Temp\pdv_csv_teste_15866633045539810479\compras.csv] -> Total: 1 | Sucessos: 1 | Falhas: 0
+  [OK] Importação CSV de Notas de Venda via rotas: Importação CSV [C:\Users\tieng\AppData\Local\Packages\openai.codex_2p2nqsd0c76g0\AC\#!sandbox.{7d0f3d8e-c271-4a65-8369-d3b77e4690ba}\Temp\pdv_csv_teste_15866633045539810479\vendas.csv] -> Total: 2 | Sucessos: 2 | Falhas: 0
+  [OK] Produto importado encontrado no catálogo
+  [OK] Consulta de saldo consolidado pós-CSV OK
+  [OK] Rota /sistema/reset-restrito bloqueou token inválido
+  [OK] InicializadorSistemaService lançou SecurityException para token inválido
+nov. 16, 2026 10:42:51 AM org.hibernate.jpa.boot.internal.PersistenceXmlParser parsePersistenceXml
+WARN: HHH015018: Encountered multiple persistence-unit stanzas defining same name [sazonalisei-embarcado]; persistence-unit names must be unique
+nov. 16, 2026 10:42:51 AM org.hibernate.jpa.internal.util.LogHelper logPersistenceUnitInformation
+INFO: HHH000204: Processing PersistenceUnitInfo [name: sazonalisei-embarcado]
+nov. 16, 2026 10:42:51 AM org.hibernate.cache.internal.RegionFactoryInitiator initiateService
+INFO: HHH000026: Second-level cache disabled
+nov. 16, 2026 10:42:51 AM org.hibernate.engine.jdbc.connections.internal.ConnectionProviderInitiator initiateService
+INFO: HHH000130: Instantiating explicit connection provider: org.hibernate.hikaricp.internal.HikariCPConnectionProvider
+nov. 16, 2026 10:42:51 AM org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
+INFO: HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+  [OK] Reset H2 removeu todos os produtos
+  [OK] Reset H2 manteve apenas o Cliente Padrão
+  [OK] Reset H2 manteve as 10 Unidades de Medida fundamentais
+  [OK] Reset H2 manteve as 8 Formas de Pagamento fundamentais
+  [OK] Rota restrita de reset não está exposta nas ferramentas da IA Gemini
+
+==========================================================================================
+ RESULTADO CSV & RESET: 17 aprovados | 0 falhas
+==========================================================================================

@@ -1,0 +1,13 @@
+{
+  "data": "2026-11-16",
+  "base_codigo": "291d403",
+  "verificacoes_aprovadas": 41,
+  "arquivos_protegidos_conferidos": 221,
+  "arquivos_originais_alterados": [],
+  "modulos_montados": 9,
+  "cadastro_por_controller_real": true,
+  "banco_teste": "H2 em memoria isolado",
+  "apis_externas_validadas": false,
+  "suite_85_rotas_executada": false,
+  "publicado_github": false
+}

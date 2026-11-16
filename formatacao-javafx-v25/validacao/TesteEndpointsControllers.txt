@@ -1,0 +1,184 @@
+==========================================================================================
+   VALIDAÇÃO COMPLETA END-TO-END DE TODAS AS 85 ROTAS DO ROTA SISTEMA
+==========================================================================================
+
+nov. 16, 2026 10:40:17 AM org.hibernate.jpa.boot.internal.PersistenceXmlParser parsePersistenceXml
+WARN: HHH015018: Encountered multiple persistence-unit stanzas defining same name [sazonalisei-embarcado]; persistence-unit names must be unique
+? [JPAUtil] Persistência MySQL não encontrada ou indisponível. Iniciando banco embarcado (sazonalisei-embarcado)...
+nov. 16, 2026 10:40:17 AM org.hibernate.jpa.boot.internal.PersistenceXmlParser parsePersistenceXml
+WARN: HHH015018: Encountered multiple persistence-unit stanzas defining same name [sazonalisei-embarcado]; persistence-unit names must be unique
+nov. 16, 2026 10:40:17 AM org.hibernate.jpa.internal.util.LogHelper logPersistenceUnitInformation
+INFO: HHH000204: Processing PersistenceUnitInfo [name: sazonalisei-embarcado]
+nov. 16, 2026 10:40:17 AM org.hibernate.Version logVersion
+INFO: HHH000412: Hibernate ORM core version 6.4.4.Final
+nov. 16, 2026 10:40:17 AM org.hibernate.cache.internal.RegionFactoryInitiator initiateService
+INFO: HHH000026: Second-level cache disabled
+nov. 16, 2026 10:40:18 AM org.hibernate.engine.jdbc.connections.internal.ConnectionProviderInitiator initiateService
+INFO: HHH000130: Instantiating explicit connection provider: org.hibernate.hikaricp.internal.HikariCPConnectionProvider
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+nov. 16, 2026 10:40:26 AM org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
+INFO: HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+  [OK]    SISTEMA   | Rota: /sistema/inicializar                 | Tool IA: sistema_inicializar_dados_padrao   
+  [OK]    SISTEMA   | Rota: /sistema/reset-restrito                | Restrição de segurança validada
+  [OK]    PRODUTO   | Rota: /produtos/unidades/listar            | Tool IA: produto_unidade_listar             
+  [OK]    PRODUTO   | Rota: /produtos/unidades/cadastrar         | Tool IA: produto_unidade_cadastrar          
+  [OK]    PRODUTO   | Rota: /produtos/unidades/atualizar         | Tool IA: produto_unidade_atualizar          
+  [OK]    PRODUTO   | Rota: /produtos/unidades/excluir           | Tool IA: produto_unidade_excluir            
+  [OK]    PRODUTO   | Rota: /produtos/fisico/cadastrar           | Tool IA: produto_fisico_cadastrar           
+  [OK]    PRODUTO   | Rota: /produtos/fisico/dimensoes           | Tool IA: produto_fisico_atualizar_dimensoes 
+  [OK]    PRODUTO   | Rota: /produtos/digital/cadastrar          | Tool IA: produto_digital_cadastrar          
+  [OK]    PRODUTO   | Rota: /produtos/fisico/cadastrar           | Tool IA: produto_fisico_cadastrar           
+  [OK]    PRODUTO   | Rota: /produtos/kit/componente             | Tool IA: produto_kit_adicionar_componente   
+  [OK]    PRODUTO   | Rota: /produtos/catalogo/listar            | Tool IA: produto_catalogo_listar            
+  [OK]    PRODUTO   | Rota: /produtos/catalogo/buscar            | Tool IA: produto_catalogo_buscar            
+  [OK]    PRODUTO   | Rota: /produtos/catalogo/buscar            | Tool IA: produto_catalogo_buscar            
+  [OK]    PRODUTO   | Rota: /produtos/buscar-unico               | Tool IA: produto_buscar_unico               
+  [OK]    PRODUTO   | Rota: /produtos/estoque-valido/listar      | Tool IA: produto_estoque_valido_listar      
+  [OK]    PRODUTO   | Rota: /produtos/estoque-valido/buscar-unico | Tool IA: produto_estoque_valido_buscar_unico
+  [OK]    PRODUTO   | Rota: /produtos/buscar-unico               | Tool IA: produto_buscar_unico               
+  [OK]    PRODUTO   | Rota: /produtos/catalogo/buscar            | Tool IA: produto_catalogo_buscar            
+  [OK]    PRODUTO   | Rota: /produtos/catalogo/buscar            | Tool IA: produto_catalogo_buscar            
+  [OK]    PRODUTO   | Rota: /produtos/catalogo/atualizar         | Tool IA: produto_catalogo_atualizar         
+  [OK]    PRODUTO   | Rota: /produtos/catalogo/atualizar-preco   | Tool IA: produto_catalogo_atualizar_preco   
+  [OK]    PRODUTO   | Rota: /produtos/catalogo/excluir           | Tool IA: produto_catalogo_excluir           
+  [OK]    PRODUTO   | Rota: /produtos/imagens/adicionar          | Tool IA: produto_imagem_adicionar           
+  [OK]    PRODUTO   | Rota: /produtos/imagens/listar             | Tool IA: produto_imagem_listar              
+  [OK]    PRODUTO   | Rota: /produtos/imagens/principal          | Tool IA: produto_imagem_principal_obter     
+  [OK]    PRODUTO   | Rota: /produtos/imagens/definir-principal  | Tool IA: produto_imagem_definir_principal   
+  [OK]    PRODUTO   | Rota: /produtos/imagens/remover            | Tool IA: produto_imagem_remover             
+  [OK]    PESSOA    | Rota: /pessoas/clientes/padrao             | Tool IA: pessoa_cliente_padrao_obter        
+  [OK]    PESSOA    | Rota: /pessoas/cadastrar                   | Tool IA: pessoa_simples_cadastrar           
+  [OK]    PESSOA    | Rota: /pessoas/clientes/pf/cadastrar       | Tool IA: pessoa_cliente_pf_cadastrar        
+  [OK]    PESSOA    | Rota: /pessoas/clientes/pj/cadastrar       | Tool IA: pessoa_cliente_pj_cadastrar        
+  [OK]    PESSOA    | Rota: /pessoas/clientes/limite             | Tool IA: pessoa_cliente_atualizar_limite    
+  [OK]    PESSOA    | Rota: /pessoas/atualizar                   | Tool IA: pessoa_dados_atualizar             
+  [OK]    PESSOA    | Rota: /pessoas/fornecedores/pj/cadastrar   | Tool IA: pessoa_fornecedor_pj_cadastrar     
+  [OK]    PESSOA    | Rota: /pessoas/fornecedores/pf/cadastrar   | Tool IA: pessoa_fornecedor_pf_cadastrar     
+  [OK]    PESSOA    | Rota: /pessoas/registros/adicionar         | Tool IA: pessoa_registro_adicionar          
+  [OK]    PESSOA    | Rota: /pessoas/clientes/listar             | Tool IA: pessoa_listar_clientes             
+  [OK]    PESSOA    | Rota: /pessoas/fornecedores/listar         | Tool IA: pessoa_listar_fornecedores         
+nov. 16, 2026 10:40:30 AM org.hibernate.query.sqm.internal.QuerySqmImpl executionContextForDoList
+WARN: HHH90003004: firstResult/maxResults specified with collection fetch; applying in memory
+  [OK]    PESSOA    | Rota: /pessoas/buscar                      | Tool IA: pessoa_buscar                      
+  [OK]    PESSOA    | Rota: /pessoas/buscar-unica                | Tool IA: pessoa_buscar_unica                
+nov. 16, 2026 10:40:31 AM org.hibernate.query.sqm.internal.QuerySqmImpl executionContextForDoList
+WARN: HHH90003004: firstResult/maxResults specified with collection fetch; applying in memory
+  [OK]    PESSOA    | Rota: /pessoas/registros/buscar-unico      | Tool IA: pessoa_registro_buscar_unico       
+  [OK]    PESSOA    | Rota: /pessoas/historico-completo          | Tool IA: pessoa_historico_completo          
+  [OK]    PESSOA    | Rota: /pessoas/clientes/excluir            | Tool IA: pessoa_cliente_excluir             
+  [OK]    PAGAMENTO | Rota: /pagamentos/formas/ativas            | Tool IA: pagamento_forma_listar_ativas      
+  [OK]    PAGAMENTO | Rota: /pagamentos/formas/cadastrar         | Tool IA: pagamento_forma_cadastrar          
+  [OK]    PAGAMENTO | Rota: /pagamentos/formas/customizar        | Tool IA: pagamento_forma_customizar_regras  
+  [OK]    PAGAMENTO | Rota: /pagamentos/formas/status            | Tool IA: pagamento_forma_alterar_status     
+  [OK]    PAGAMENTO | Rota: /pagamentos/formas/excluir           | Tool IA: pagamento_forma_excluir            
+  [OK]    PAGAMENTO | Rota: /pagamentos/criar/a-vista            | Tool IA: pagamento_criar_a_vista            
+  [OK]    PAGAMENTO | Rota: /pagamentos/criar/a-prazo            | Tool IA: pagamento_criar_a_prazo            
+  [OK]    PAGAMENTO | Rota: /pagamentos/criar/parcelado          | Tool IA: pagamento_criar_parcelado          
+  [OK]    PAGAMENTO | Rota: /pagamentos/quitar                   | Tool IA: pagamento_quitar_titulo_ou_parcela 
+  [OK]    NOTA      | Rota: /notas/compra/sugerir-preco          | Tool IA: nota_compra_sugerir_preco_venda    
+nov. 16, 2026 10:40:33 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 42001, SQLState: 42001
+nov. 16, 2026 10:40:33 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Syntax error in SQL statement "SELECT 1 FROM evento_externo WHERE UPPER(cidade) = UPPER(?) AND UPPER(uf) = UPPER(?) AND coletado_em >= NOW() - INTERVAL [*]? DAY LIMIT 1"; expected "-, +, string"; SQL statement:
+SELECT 1 FROM evento_externo WHERE UPPER(cidade) = UPPER(?) AND UPPER(uf) = UPPER(?) AND coletado_em >= NOW() - INTERVAL ? DAY LIMIT 1 [42001-224]
+  [OK]    NOTA      | Rota: /notas/compra/emitir                 | Tool IA: nota_compra_emitir                 
+  [OK]    ESTOQUE   | Rota: /estoque/saldo-consolidado           | Tool IA: estoque_saldo_consolidado          
+  [OK]    ESTOQUE   | Rota: /estoque/lotes-fifo                  | Tool IA: estoque_fila_lotes_fifo            
+  [OK]    ESTOQUE   | Rota: /estoque/lotes-validos/listar        | Tool IA: estoque_lotes_validos_listar       
+  [OK]    ESTOQUE   | Rota: /estoque/lotes-validos/buscar-unico  | Tool IA: estoque_lote_valido_buscar_unico   
+  [OK]    ESTOQUE   | Rota: /estoque/lote/buscar                 | Tool IA: estoque_buscar_lote_especifico     
+  [OK]    ESTOQUE   | Rota: /estoque/lotes/validade              | Tool IA: estoque_lotes_proximos_validade    
+  [OK]    ESTOQUE   | Rota: /estoque/perda/baixar                | Tool IA: estoque_baixar_perda_direta        
+  [OK]    NOTA      | Rota: /notas/venda/emitir-fifo             | Tool IA: nota_venda_emitir_fifo             
+  [OK]    NOTA      | Rota: /notas/venda/emitir-balcao-padrao    | Tool IA: nota_venda_emitir_balcao_cliente_padrao
+  [OK]    NOTA      | Rota: /notas/venda/emitir-lote-desejavel   | Tool IA: nota_venda_emitir_lote_desejavel   
+nov. 16, 2026 10:40:42 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 90022, SQLState: 90022
+nov. 16, 2026 10:40:42 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Function "sp_consumir_estoque_fifo" not found; SQL statement:
+ call sp_consumir_estoque_fifo(?,?,?,?)  [90022-224]
+  [OK]    NOTA      | Rota: /notas/venda/procedure-fifo          | Tool IA: nota_venda_procedure_mysql_fifo    
+nov. 16, 2026 10:40:43 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 90022, SQLState: 90022
+nov. 16, 2026 10:40:43 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Function "sp_consumir_lote_especifico" not found; SQL statement:
+ call sp_consumir_lote_especifico(?,?,?,?)  [90022-224]
+  [OK]    NOTA      | Rota: /notas/venda/procedure-lote          | Tool IA: nota_venda_procedure_mysql_lote    
+  [OK]    NOTA      | Rota: /notas/devolucao/registrar           | Tool IA: nota_devolucao_registrar           
+  [OK]    NOTA      | Rota: /notas/compra/abater-perdas          | Tool IA: nota_compra_abater_perdas_fornecedor
+nov. 16, 2026 10:40:45 AM org.hibernate.engine.internal.StatefulPersistenceContext narrowProxy
+WARN: HHH000179: Narrowing proxy to class br.com.senac.repository.modal.nota.NotaCompra - this operation breaks ==
+  [OK]    NOTA      | Rota: /notas/buscar-unica                  | Tool IA: nota_buscar_unica                  
+nov. 16, 2026 10:40:45 AM org.hibernate.engine.internal.StatefulPersistenceContext narrowProxy
+WARN: HHH000179: Narrowing proxy to class br.com.senac.repository.modal.nota.NotaCompra - this operation breaks ==
+  [OK]    NOTA      | Rota: /notas/listar                        | Tool IA: nota_listar_padrao                 
+nov. 16, 2026 10:40:45 AM org.hibernate.engine.internal.StatefulPersistenceContext narrowProxy
+WARN: HHH000179: Narrowing proxy to class br.com.senac.repository.modal.nota.NotaCompra - this operation breaks ==
+  [OK]    NOTA      | Rota: /notas/definir-data                  | Tool IA: nota_definir_data                  
+  [OK]    SISTEMA   | Rota: /ia/busca-padrao                     | Tool IA: busca_padrao_ia                    
+  [OK]    RELATORIO | Rota: /relatorios/lucro-contabil-bacen     | Tool IA: relatorio_lucro_contabil_bacen     
+  [OK]    RELATORIO | Rota: /relatorios/perdas-fornecedor        | Tool IA: relatorio_perdas_por_fornecedor    
+  [OK]    RELATORIO | Rota: /relatorios/analise-sazonal          | Tool IA: relatorio_analise_sazonal_vendas   
+nov. 16, 2026 10:40:45 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 90022, SQLState: 90022
+nov. 16, 2026 10:40:45 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Function "sp_prever_demanda_mensal_cliente" not found; SQL statement:
+ call sp_prever_demanda_mensal_cliente(?,?,?)  [90022-224]
+  [OK]    ESTATISTICA | Rota: /estatisticas/demanda-mensal-cliente | Tool IA: estatistica_demanda_mensal_cliente 
+nov. 16, 2026 10:40:45 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 90022, SQLState: 90022
+nov. 16, 2026 10:40:45 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Function "sp_analisar_perfil_consumo_cliente" not found; SQL statement:
+ call sp_analisar_perfil_consumo_cliente(?)  [90022-224]
+  [OK]    ESTATISTICA | Rota: /estatisticas/perfil-cliente         | Tool IA: estatistica_perfil_cliente         
+nov. 16, 2026 10:40:45 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 90022, SQLState: 90022
+nov. 16, 2026 10:40:45 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Function "sp_analisar_impacto_externo_rios_clima_produtos" not found; SQL statement:
+ call sp_analisar_impacto_externo_rios_clima_produtos(?)  [90022-224]
+  [OK]    ESTATISTICA | Rota: /estatisticas/impacto-externo        | Tool IA: estatistica_impacto_externo_produtos
+nov. 16, 2026 10:40:45 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 90022, SQLState: 90022
+nov. 16, 2026 10:40:45 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Function "sp_ranking_fornecedores_custo_qualidade" not found; SQL statement:
+ call sp_ranking_fornecedores_custo_qualidade(?,?,?)  [90022-224]
+  [OK]    ESTATISTICA | Rota: /estatisticas/ranking-fornecedores   | Tool IA: estatistica_ranking_fornecedores   
+nov. 16, 2026 10:40:45 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 90022, SQLState: 90022
+nov. 16, 2026 10:40:45 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Function "sp_diagnosticar_motivos_perda_prematura" not found; SQL statement:
+ call sp_diagnosticar_motivos_perda_prematura(?,?)  [90022-224]
+  [OK]    ESTATISTICA | Rota: /estatisticas/motivos-perda          | Tool IA: estatistica_motivos_perda_prematura
+nov. 16, 2026 10:40:45 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 90022, SQLState: 90022
+nov. 16, 2026 10:40:45 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Function "sp_analisar_destaques_e_picos_sazonais" not found; SQL statement:
+ call sp_analisar_destaques_e_picos_sazonais(?)  [90022-224]
+  [OK]    ESTATISTICA | Rota: /estatisticas/destaques-sazonais     | Tool IA: estatistica_destaques_sazonais     
+nov. 16, 2026 10:40:45 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 42102, SQLState: 42S02
+nov. 16, 2026 10:40:45 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Table "vw_picos_dias_eventos_quinto_dia_util" not found; SQL statement:
+SELECT * FROM vw_picos_dias_eventos_quinto_dia_util [42102-224]
+  [OK]    ESTATISTICA | Rota: /estatisticas/picos-dias             | Tool IA: estatistica_picos_dias_eventos     
+nov. 16, 2026 10:40:45 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 90022, SQLState: 90022
+nov. 16, 2026 10:40:45 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Function "sp_plano_estrategico_compras_vendas_inteligente" not found; SQL statement:
+ call sp_plano_estrategico_compras_vendas_inteligente(?,?)  [90022-224]
+  [OK]    ESTATISTICA | Rota: /estatisticas/plano-estrategico      | Tool IA: estatistica_plano_estrategico_compras
+  [OK]    ESTATISTICA | Rota: /estatisticas/causas-externas-nota   | Tool IA: estatistica_causas_externas_nota   
+  [OK]    ESTATISTICA | Rota: /estatisticas/recalcular-fatores     | Tool IA: estatistica_recalcular_fatores     
+  [OK]    ESTATISTICA | Rota: /estatisticas/fatores-produto        | Tool IA: estatistica_fatores_produto        
+  [OK]    FATOR_EXTERNO | Rota: /fatores-externos/eventos            | Tool IA: fator_externo_eventos_listar       
+  [OK]    FATOR_EXTERNO | Rota: /fatores-externos/resolver-pendencias | Tool IA: fator_externo_resolver_pendencias  
+nov. 16, 2026 10:40:45 AM org.hibernate.engine.internal.StatefulPersistenceContext narrowProxy
+WARN: HHH000179: Narrowing proxy to class br.com.senac.repository.modal.nota.NotaCompra - this operation breaks ==
+  [OK]    FATOR_EXTERNO | Rota: /fatores-externos/relatorio-integrado-notas | Tool IA: fator_externo_relatorio_integrado_notas
+
+==========================================================================================
+   COBERTURA DE ROTAS: 85 / 85 ROTAS HOMOLOGADAS COM SUCESSO
+   ? 100% DAS ROTAS FORAM EXECUTADAS SEM ERROS!
+==========================================================================================

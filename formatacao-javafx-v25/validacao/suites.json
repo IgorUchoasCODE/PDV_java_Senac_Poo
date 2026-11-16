@@ -1,0 +1,37 @@
+[
+  {
+    "suite": "TesteEndpointsControllers",
+    "codigo_saida": 0,
+    "duracao_segundos": 29.7
+  },
+  {
+    "suite": "TesteBandejaContexto",
+    "codigo_saida": 0,
+    "duracao_segundos": 25.7
+  },
+  {
+    "suite": "TesteBandejaPassoAPasso",
+    "codigo_saida": 0,
+    "duracao_segundos": 32.1
+  },
+  {
+    "suite": "TesteSimulacaoBandeja",
+    "codigo_saida": 0,
+    "duracao_segundos": 12.5
+  },
+  {
+    "suite": "TesteParserEPreProcessador",
+    "codigo_saida": 0,
+    "duracao_segundos": 19.4
+  },
+  {
+    "suite": "TesteFluxoPromptLongoEValidacao",
+    "codigo_saida": 0,
+    "duracao_segundos": 21.4
+  },
+  {
+    "suite": "TesteImportadorCsvEReset",
+    "codigo_saida": 0,
+    "duracao_segundos": 15.3
+  }
+]

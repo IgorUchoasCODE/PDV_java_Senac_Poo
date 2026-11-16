@@ -1,0 +1,6 @@
+.build/
+*.class
+*.jar
+*.log
+*.mv.db
+*.trace.db

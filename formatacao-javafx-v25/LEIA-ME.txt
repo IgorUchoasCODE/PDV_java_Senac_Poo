@@ -1,0 +1,5 @@
+Abra LEIA-ME.html. Complemento aditivo para a NOVA interface JavaFX 2.5 do Igor.
+Execute iniciar_formatado.ps1 -Nucleo "C:\caminho\do\projeto-atualizado".
+Nenhum arquivo original foi alterado. 41 verificacoes passaram.
+Este complemento precisa de seu proprio lancador; o atalho original nao o instala.
+Consulte validacao/Relatorio_Testes_Sazonalisei_v25.pdf e o Pull Request para revisão.

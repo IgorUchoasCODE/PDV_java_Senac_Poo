@@ -1,0 +1,109 @@
+================================================================================
+   INICIANDO TESTES: PARSER RECURSIVO, TAGS SEMÂNTICAS E VALIDAÇÃO ATÔMICA
+================================================================================
+ [OK] Pré-processador extraiu e normalizou valor monetário R$ 150,50 -> 150.50.
+ [OK] Pré-processador anotou tag XML <valor> no texto.
+ [OK] Pré-processador extraiu e converteu data brasileira 15/03/2026 -> 2026-03-15.
+ [OK] Pré-processador extraiu data relativa 'ontem'.
+ [OK] Pré-processador extraiu e normalizou CPF.
+ [OK] Pré-processador extraiu e normalizou CNPJ.
+ [OK] Pré-processador extraiu sigla de busca rápida >oba.
+ [OK] Pré-processador gerou bloco estruturado de contexto semântico.
+ [OK] Pré-processamento preservou quebras de linha no texto normalizado e anotado.
+ [OK] Inferência de rotas prioritárias funcionou atravessando quebras de linha (DOTALL): [produto_catalogo_buscar, produto_fisico_cadastrar, produto_kit_adicionar_componente, produto_catalogo_atualizar, produto_unidade_listar, produto_unidade_cadastrar, produto_unidade_atualizar, produto_catalogo_listar, produto_catalogo_atualizar_preco, pessoa_buscar, pessoa_listar_clientes, pessoa_listar_fornecedores, pessoa_simples_cadastrar, pessoa_cliente_pf_cadastrar, pessoa_cliente_pj_cadastrar, pessoa_fornecedor_pf_cadastrar, pessoa_fornecedor_pj_cadastrar, nota_listar_padrao, nota_buscar_unica, nota_compra_emitir, nota_venda_emitir_fifo, nota_venda_emitir_balcao_cliente_padrao, nota_devolucao_registrar, estoque_saldo_consolidado, estoque_lotes_validos_listar, estoque_fila_lotes_fifo, estoque_lotes_proximos_validade, estoque_baixar_perda_direta, pagamento_forma_listar_ativas, pagamento_criar_a_vista, pagamento_criar_a_prazo, pagamento_criar_parcelado, pagamento_quitar_titulo_ou_parcela, busca_padrao_ia, estatistica_motivos_perda_prematura, estatistica_impacto_externo_produtos, estatistica_destaques_sazonais, estatistica_picos_dias_eventos, fator_externo_relatorio_integrado_notas, relatorio_analise_sazonal_vendas, relatorio_lucro_contabil_bacen, estatistica_plano_estrategico_compras, estatistica_ranking_fornecedores]
+ [OK] DecisaoConfirmacao reconhece edição multilinha sem cancelar a bandeja.
+ [OK] DecisaoConfirmacao reconhece simulação multilinha sem executar imediatamente.
+ [OK] Parser gerou 1 nó raiz para instrução simples.
+ [OK] Operação é C (Criar).
+ [OK] Entidade é PRODUTO.
+ [OK] Atributo nm> extraído corretamente.
+ [OK] Atributo um> extraído corretamente.
+ [OK] Atributo pr> extraído corretamente.
+ [OK] Parser extraiu 2 entidades de cascata.
+ [OK] Cascata contém FORNECEDOR e CONTATO.
+ [OK] Parser gerou 1 nó raiz para Kit aninhado.
+ [OK] Entidade raiz é CONJUNTOPRODUTO.
+ [OK] Nome do kit extraído.
+ [OK] Kit possui 2 sub-instruções de componentes.
+ [OK] Sub-instrução 1 é Componente Teclado com quantidade 1.
+ [OK] Sub-instrução 2 é Componente Mouse com quantidade 2.
+ [OK] Parser dividiu 3 instruções topo separadas por ponto-e-vírgula.
+ [OK] Primeira instrução é C.
+ [OK] Segunda instrução é R.
+ [OK] Terceira instrução é D.
+ [OK] Erro de sintaxe apontou colchete não fechado com indicador '^'.
+ [OK] Rejeitou colchete não fechado.
+ [OK] Erro de sintaxe apontou colchete de fechamento órfão.
+ [OK] Rejeitou colchete de fechamento órfão.
+ [OK] Erro de sintaxe identificou aspas abertas sem fechamento.
+ [OK] Rejeitou aspas não fechadas.
+ [OK] Erro de sintaxe barrou operação 'X=' não reconhecida.
+ [OK] Rejeitou operação inválida.
+ [OK] Erro de sintaxe barrou entidade desconhecida com lista de sugestões.
+ [OK] Rejeitou entidade inválida.
+nov. 16, 2026 10:41:58 AM org.hibernate.jpa.boot.internal.PersistenceXmlParser parsePersistenceXml
+WARN: HHH015018: Encountered multiple persistence-unit stanzas defining same name [sazonalisei-embarcado]; persistence-unit names must be unique
+? [JPAUtil] Persistência MySQL não encontrada ou indisponível. Iniciando banco embarcado (sazonalisei-embarcado)...
+nov. 16, 2026 10:41:58 AM org.hibernate.jpa.boot.internal.PersistenceXmlParser parsePersistenceXml
+WARN: HHH015018: Encountered multiple persistence-unit stanzas defining same name [sazonalisei-embarcado]; persistence-unit names must be unique
+nov. 16, 2026 10:41:58 AM org.hibernate.jpa.internal.util.LogHelper logPersistenceUnitInformation
+INFO: HHH000204: Processing PersistenceUnitInfo [name: sazonalisei-embarcado]
+nov. 16, 2026 10:41:58 AM org.hibernate.Version logVersion
+INFO: HHH000412: Hibernate ORM core version 6.4.4.Final
+nov. 16, 2026 10:41:59 AM org.hibernate.cache.internal.RegionFactoryInitiator initiateService
+INFO: HHH000026: Second-level cache disabled
+nov. 16, 2026 10:41:59 AM org.hibernate.engine.jdbc.connections.internal.ConnectionProviderInitiator initiateService
+INFO: HHH000130: Instantiating explicit connection provider: org.hibernate.hikaricp.internal.HikariCPConnectionProvider
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+nov. 16, 2026 10:42:04 AM org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
+INFO: HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+ [OK] Produtos componentes base criados com sucesso.
+ [OK] Compilador gerou OP-1 (criar produto conjunto), OP-2 e OP-3 (adicionar componentes) na bandeja.
+ [OK] Passo 1: Produto Conjunto base criado no banco.
+ [OK] Passo 1 retornou entidade Produto com ID gerado.
+ [OK] Passo 2: Componente 1 adicionado com sucesso ao Kit (referência OP-1 resolvida).
+ [OK] Passo 3: Componente 2 adicionado com sucesso ao Kit.
+ [OK] Produto no banco de dados agora está marcado como isConjunto=true.
+ [OK] Agente retornou erro de sintaxe amigável com indicador '^' para comando malformado.
+ [OK] Validação atômica: NENHUMA instrução foi inserida na bandeja após erro de sintaxe.
+ [OK] Limpeza dos registros de teste concluída.
+ [OK] Lookup numérico 'ver produto ID' retornou detalhes completos (Físico, Dimensões e Kit: NÃO).
+ [OK] Consulta DSL 'R= #Produto id>' retornou detalhes completos.
+ [OK] Consulta DSL 'R= #Produto nm> ID' resolveu o ID numérico perfeitamente.
+ [OK] Cadastro de Kit via #Produto com keyword 'conjunto' enfileirou OP-1 (criar kit) e OP-2 (adicionar componente).
+ [OK] Execução do Kit na bandeja confirmada com sucesso.
+ [OK] Pergunta contextual 'oque vem nele ?' identificou produto em foco e exibiu componentes do kit.
+ [OK] Lookup de Pessoa Física retornou natureza (PF), CPF, papel comercial e limite.
+ [OK] Lookup de Pessoa Jurídica retornou natureza (PJ) e CNPJ.
+ [OK] Limpeza de entidades de teste concluída.
+ [OK] Nota de compra sem pagamento informado assumiu padrão A PRAZO em 30 dias sem parcelas (R$ 220.00).
+nov. 16, 2026 10:42:09 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 42001, SQLState: 42001
+nov. 16, 2026 10:42:09 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Syntax error in SQL statement "SELECT 1 FROM evento_externo WHERE UPPER(cidade) = UPPER(?) AND UPPER(uf) = UPPER(?) AND coletado_em >= NOW() - INTERVAL [*]? DAY LIMIT 1"; expected "-, +, string"; SQL statement:
+SELECT 1 FROM evento_externo WHERE UPPER(cidade) = UPPER(?) AND UPPER(uf) = UPPER(?) AND coletado_em >= NOW() - INTERVAL ? DAY LIMIT 1 [42001-224]
+ [OK] Execução da Nota de Compra com pagamento a prazo confirmada com sucesso.
+ [OK] Lote gerado pela compra possui saldo disponível de 10 unidades.
+ [OK] Nota de venda sem pagamento informado assumiu semi-automaticamente DINHEIRO no valor total (R$ 60.00).
+ [OK] Execução da Nota de Venda semi-automática em dinheiro confirmada com sucesso.
+ [OK] Nota de perda gerou pré-relatório detalhado analisando data da perda vs validade do lote.
+ [OK] Consulta de Forma de Pagamento retornou detalhes ricos formatados com quebras de linha.
+ [OK] Listagem de Formas de Pagamento retornou visão limpa com quebras de linha e modalidades.
+nov. 16, 2026 10:42:15 AM org.hibernate.engine.jdbc.batch.internal.BatchImpl release
+INFO: HHH100503: On release of batch it still contained JDBC statements
+nov. 16, 2026 10:42:15 AM org.hibernate.engine.jdbc.batch.internal.BatchImpl lambda$performExecution$2
+ERROR: HHH100501: Exception executing batch [org.h2.jdbc.JdbcBatchUpdateException: Referential integrity constraint violation: "fkjn85iul8n1bkob5nucrdp6h67: public.nota FOREIGN KEY(id_pessoa) REFERENCES public.pessoa(id) (CAST(5 AS BIGINT))"; SQL statement:
+delete from pessoa where id=? [23503-224]], SQL: delete from pessoa where id=?
+nov. 16, 2026 10:42:15 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 23503, SQLState: 23503
+nov. 16, 2026 10:42:15 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Referential integrity constraint violation: "fkjn85iul8n1bkob5nucrdp6h67: public.nota FOREIGN KEY(id_pessoa) REFERENCES public.pessoa(id) (CAST(5 AS BIGINT))"; SQL statement:
+delete from pessoa where id=? [23503-224]
+ [OK] Limpeza de novas regras concluída.
+ [OK] Terminal não gerou falsos positivos por 'digital'/'esta'/'nao': ? Identificado: Ação=CADASTRO | Entidade=PRODUTO
+ [OK] FormatadorSaidaIA não converteu linha de erro em 'Registros encontrados': Motivo da falha: Produto não encontrado: {idProduto=343, quantidade=100}
+================================================================================
+ RESULTADO: 70 / 70 TESTES DO PARSER E PRÉ-PROCESSADOR APROVADOS!
+================================================================================

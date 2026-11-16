@@ -1,0 +1,46 @@
+================================================================================
+   INICIANDO TESTES: PERGUNTAS E SIMULAÇÕES NA BANDEJA DE CONTEXTO
+================================================================================
+ [OK] 'sim' => SIM
+ [OK] 'simm' => SIM (tolerância de digitação)
+ [OK] 'Confirmo, pode apagar' => SIM
+ [OK] 'não, pode cancelar' => NAO
+ [OK] 'não está ok' => NAO
+ [OK] Pergunta hipotética com 'executar' NÃO executa a bandeja (INDEFINIDA)
+ [OK] Pergunta com 'confirmar' e '?' NÃO executa a bandeja (INDEFINIDA)
+ [OK] 'não entendi...' NÃO cancela a bandeja (INDEFINIDA)
+ [OK] Comando 'simular bandeja' reconhecido localmente.
+ [OK] Pergunta com cenário ('10 combos por dia') segue para a IA com o contexto da bandeja.
+nov. 16, 2026 10:41:45 AM org.hibernate.jpa.boot.internal.PersistenceXmlParser parsePersistenceXml
+WARN: HHH015018: Encountered multiple persistence-unit stanzas defining same name [sazonalisei-embarcado]; persistence-unit names must be unique
+? [JPAUtil] Persistência MySQL não encontrada ou indisponível. Iniciando banco embarcado (sazonalisei-embarcado)...
+nov. 16, 2026 10:41:46 AM org.hibernate.jpa.boot.internal.PersistenceXmlParser parsePersistenceXml
+WARN: HHH015018: Encountered multiple persistence-unit stanzas defining same name [sazonalisei-embarcado]; persistence-unit names must be unique
+nov. 16, 2026 10:41:46 AM org.hibernate.jpa.internal.util.LogHelper logPersistenceUnitInformation
+INFO: HHH000204: Processing PersistenceUnitInfo [name: sazonalisei-embarcado]
+nov. 16, 2026 10:41:46 AM org.hibernate.Version logVersion
+INFO: HHH000412: Hibernate ORM core version 6.4.4.Final
+nov. 16, 2026 10:41:46 AM org.hibernate.cache.internal.RegionFactoryInitiator initiateService
+INFO: HHH000026: Second-level cache disabled
+nov. 16, 2026 10:41:47 AM org.hibernate.engine.jdbc.connections.internal.ConnectionProviderInitiator initiateService
+INFO: HHH000130: Instantiating explicit connection provider: org.hibernate.hikaricp.internal.HikariCPConnectionProvider
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+nov. 16, 2026 10:41:52 AM org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
+INFO: HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+ [OK] Produto base cadastrado: Barra de Chocolate 100g Sim 114536
+ [OK] Simulador calculou preço R$ 19.99, custo R$ 8.00 e lucro unitário R$ 11.99 da barra.
+ [OK] Simulador calculou custo R$ 16.00, lucro R$ 13.99 e desconto R$ 9.99 do combo.
+ [OK] Simulador calculou cenários do lote (R$ 479.60 avulso vs R$ 279.80 em 20 kits).
+ [OK] 'simular bandeja' resolveu localmente sem chamar a IA.
+ [OK] Resposta de 'simular bandeja' trouxe simulação e manteve bandeja ativa.
+ [OK] Bandeja preservada com 5 itens após pergunta com palavra 'executar'.
+ [OK] Resposta trouxe os lucros simulados após consulta READ_ONLY + follow-up.
+ [OK] Rodapé 'BANDEJA DE CONTEXTO ATIVA' exibido apenas 1 vez (sem duplicação).
+ [OK] Contexto de simulação foi injetado tanto na chamada inicial quanto no follow-up.
+ [OK] Nova operação adicionada (OP-6) sem perder itens anteriores.
+ [OK] Mensagem mista exibiu a síntese do lucro (R$ 23,98) junto da bandeja atualizada.
+================================================================================
+ RESULTADO: 22 / 22 TESTES DE SIMULAÇÃO NA BANDEJA APROVADOS!
+================================================================================
