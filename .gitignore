@@ -64,3 +64,8 @@ out/
 Thumbs.db
 
 config/ia.properties
+
+# Cache de Map Tiles e Comprovantes Gerados
+storage/map_tiles/
+storage/map_tiles_topo/
+storage/comprovantes/

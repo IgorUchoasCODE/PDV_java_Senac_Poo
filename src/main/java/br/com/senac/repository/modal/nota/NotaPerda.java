@@ -122,6 +122,10 @@ public class NotaPerda extends Nota {
         return tipoPerda;
     }
 
+    public void setTipoPerda(String tipoPerda) {
+        this.tipoPerda = tipoPerda;
+    }
+
     public NotaDevolucao getNotaDevolucao() {
         return notaDevolucao;
     }

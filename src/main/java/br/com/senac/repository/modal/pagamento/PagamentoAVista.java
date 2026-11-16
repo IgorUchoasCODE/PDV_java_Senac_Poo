@@ -59,6 +59,10 @@ public class PagamentoAVista extends NotaPagamento {
         this.dataConfirmacao = LocalDateTime.now();
     }
 
+    public void confirmarPagamento(LocalDateTime dataPagamento) {
+        this.dataConfirmacao = dataPagamento != null ? dataPagamento : LocalDateTime.now();
+    }
+
     @Override
     public BigDecimal calcularValorFinal() {
         BigDecimal desc = descontoAVista != null ? descontoAVista : BigDecimal.ZERO;

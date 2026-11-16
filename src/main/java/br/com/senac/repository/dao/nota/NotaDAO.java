@@ -400,7 +400,7 @@ public class NotaDAO implements PadraoDAO<Nota, Long> {
     public List<Item<? extends Produto>> listarLotesFisicosProduto(Long idProduto) {
         try (EntityManager em = JPAUtil.getEntityManager()) {
             return (List<Item<? extends Produto>>) (List<?>) em.createQuery(
-                            "SELECT i FROM Item i JOIN FETCH i.produto p LEFT JOIN FETCH p.um JOIN i.nota n " +
+                            "SELECT i FROM Item i JOIN FETCH i.produto p LEFT JOIN FETCH p.um JOIN FETCH i.nota n LEFT JOIN FETCH n.pessoa " +
                             "WHERE p.id = :idProduto AND TYPE(n) = br.com.senac.repository.modal.nota.NotaCompra " +
                             "AND i.quantidadeDisponivel > 0 ORDER BY i.data ASC, i.id ASC",
                             Item.class)
@@ -417,7 +417,7 @@ public class NotaDAO implements PadraoDAO<Nota, Long> {
     public List<Item<? extends Produto>> listarTodosLotesFisicosComSaldo() {
         try (EntityManager em = JPAUtil.getEntityManager()) {
             return (List<Item<? extends Produto>>) (List<?>) em.createQuery(
-                            "SELECT i FROM Item i JOIN FETCH i.produto p LEFT JOIN FETCH p.um JOIN i.nota n " +
+                            "SELECT i FROM Item i JOIN FETCH i.produto p LEFT JOIN FETCH p.um JOIN FETCH i.nota n LEFT JOIN FETCH n.pessoa " +
                             "WHERE TYPE(n) = br.com.senac.repository.modal.nota.NotaCompra " +
                             "AND i.quantidadeDisponivel > 0 ORDER BY p.id ASC, i.data ASC, i.id ASC",
                             Item.class)
@@ -654,6 +654,7 @@ public class NotaDAO implements PadraoDAO<Nota, Long> {
         }
         if (n.getVinculoFatorExterno() != null) {
             n.getVinculoFatorExterno().getChaveSnapshot();
+            n.getVinculoFatorExterno().getResumoEventosJson();
         }
         if (n.getItens() != null) {
             for (Item<? extends Produto> item : n.getItens()) {
@@ -662,8 +663,17 @@ public class NotaDAO implements PadraoDAO<Nota, Long> {
                 }
                 if (item.getItemOrigem() != null) {
                     item.getItemOrigem().getValor();
+                    if (item.getItemOrigem().getNota() != null) {
+                        item.getItemOrigem().getNota().getId();
+                        if (item.getItemOrigem().getNota().getPessoa() != null) {
+                            item.getItemOrigem().getNota().getPessoa().getNome();
+                        }
+                    }
                     if (item.getItemOrigem().getItemOrigem() != null) {
                         item.getItemOrigem().getItemOrigem().getValor();
+                        if (item.getItemOrigem().getItemOrigem().getNota() != null) {
+                            item.getItemOrigem().getItemOrigem().getNota().getId();
+                        }
                     }
                 }
             }
@@ -685,8 +695,29 @@ public class NotaDAO implements PadraoDAO<Nota, Long> {
         if (n instanceof br.com.senac.repository.modal.nota.NotaCompra nc && nc.getNotasPerdaAbatidas() != null) {
             nc.getNotasPerdaAbatidas().size();
         }
-        if (n instanceof br.com.senac.repository.modal.nota.NotaDevolucao nd && nd.getNotaPerdaGerada() != null) {
-            inicializarGrafoNotaParaEndpoint(nd.getNotaPerdaGerada());
+        if (n instanceof br.com.senac.repository.modal.nota.NotaDevolucao nd) {
+            if (nd.getNotaVenda() != null) {
+                nd.getNotaVenda().getId();
+                if (nd.getNotaVenda().getPessoa() != null) nd.getNotaVenda().getPessoa().getNome();
+            }
+            if (nd.getNotaPerdaGerada() != null) {
+                inicializarGrafoNotaParaEndpoint(nd.getNotaPerdaGerada());
+            }
+        }
+        if (n instanceof NotaPerda np) {
+            if (np.getNotaCompraOrigem() != null) {
+                np.getNotaCompraOrigem().getId();
+                if (np.getNotaCompraOrigem().getPessoa() != null) np.getNotaCompraOrigem().getPessoa().getNome();
+            }
+            if (np.getNotaCompraAbatimento() != null) {
+                np.getNotaCompraAbatimento().getId();
+            }
+            if (np.getNotaDevolucao() != null) {
+                np.getNotaDevolucao().getId();
+                if (np.getNotaDevolucao().getNotaVenda() != null) {
+                    np.getNotaDevolucao().getNotaVenda().getId();
+                }
+            }
         }
     }
 }

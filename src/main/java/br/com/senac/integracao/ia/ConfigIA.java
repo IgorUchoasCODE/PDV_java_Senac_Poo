@@ -164,4 +164,69 @@ public class ConfigIA {
     public String getMistralModelo() {
         return mistralModelo;
     }
+
+    public void setOpenaiUrl(String openaiUrl) {
+        if (openaiUrl != null) this.openaiUrl = openaiUrl.trim();
+    }
+
+    public void setOpenaiModelo(String openaiModelo) {
+        if (openaiModelo != null && !openaiModelo.isBlank()) this.openaiModelo = openaiModelo.trim();
+    }
+
+    public void setOpenaiChave(String openaiChave) {
+        if (openaiChave != null) this.openaiChave = openaiChave.trim();
+    }
+
+    public void setGroqChave(String groqChave) {
+        if (groqChave != null) this.groqChave = groqChave.trim();
+    }
+
+    public void setGroqModelo(String groqModelo) {
+        if (groqModelo != null && !groqModelo.isBlank()) this.groqModelo = groqModelo.trim();
+    }
+
+    public void setOpenrouterChave(String openrouterChave) {
+        if (openrouterChave != null) this.openrouterChave = openrouterChave.trim();
+    }
+
+    public void setOpenrouterModelo(String openrouterModelo) {
+        if (openrouterModelo != null && !openrouterModelo.isBlank()) this.openrouterModelo = openrouterModelo.trim();
+    }
+
+    public void setCerebrasChave(String cerebrasChave) {
+        if (cerebrasChave != null) this.cerebrasChave = cerebrasChave.trim();
+    }
+
+    public void setMistralChave(String mistralChave) {
+        if (mistralChave != null) this.mistralChave = mistralChave.trim();
+    }
+
+    public synchronized void salvarEmArquivo() {
+        try {
+            File dir = new File("config");
+            if (!dir.exists()) dir.mkdirs();
+            Properties p = new Properties();
+            File f = new File("config/ia.properties");
+            if (f.exists()) {
+                try (FileInputStream in = new FileInputStream(f)) {
+                    p.load(in);
+                }
+            }
+            p.setProperty("ia.provedor", provedor != null ? provedor : "gemini");
+            p.setProperty("ia.provedores.failover", provedoresFailover != null ? provedoresFailover : "gemini,groq,openrouter");
+            p.setProperty("ia.openai.url", openaiUrl != null ? openaiUrl : "");
+            p.setProperty("ia.openai.modelo", openaiModelo != null ? openaiModelo : "");
+            p.setProperty("ia.openai.chave", openaiChave != null ? openaiChave : "");
+            p.setProperty("ia.groq.chave", groqChave != null ? groqChave : "");
+            p.setProperty("ia.groq.modelo", groqModelo != null ? groqModelo : "");
+            p.setProperty("ia.openrouter.chave", openrouterChave != null ? openrouterChave : "");
+            p.setProperty("ia.openrouter.modelo", openrouterModelo != null ? openrouterModelo : "");
+            p.setProperty("ia.cerebras.chave", cerebrasChave != null ? cerebrasChave : "");
+            p.setProperty("ia.mistral.chave", mistralChave != null ? mistralChave : "");
+            try (java.io.FileOutputStream out = new java.io.FileOutputStream(f)) {
+                p.store(out, "Configuracoes Provedores IA Sazonalisei ERP");
+            }
+        } catch (Exception ignored) {
+        }
+    }
 }

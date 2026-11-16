@@ -1535,7 +1535,10 @@ public class RoteadorController {
                     int parcelas = inteiro(pm, "parcelas", inteiro(pm, "quantidadeParcelas", 1));
                     if (parcelas > 1) {
                         res.add(pagamentoController.criarPagamentoParcelado(codigoForma, valor, parcelas));
-                    } else if ("BOLETO".equalsIgnoreCase(codigoForma) || "PRAZO".equalsIgnoreCase(str(pm, "modalidade", ""))) {
+                    } else if ("BOLETO".equalsIgnoreCase(codigoForma)
+                            || "PRAZO".equalsIgnoreCase(str(pm, "modalidade", ""))
+                            || "A PRAZO".equalsIgnoreCase(str(pm, "modalidade", ""))
+                            || "A_PRAZO".equalsIgnoreCase(str(pm, "modalidade", ""))) {
                         LocalDate venc = resolverValidadeItem(pm);
                         if (venc == null) venc = LocalDate.now().plusDays(30);
                         res.add(pagamentoController.criarPagamentoAPrazo(codigoForma, valor, venc));

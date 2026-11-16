@@ -221,4 +221,35 @@ public class GeminiConfig {
             System.err.println("Aviso: Falha ao salvar config/personalidade.txt: " + e.getMessage());
         }
     }
+
+    public synchronized void salvarChaveEModeEmArquivo(String novaApiKey, String novoModelo) {
+        if (novaApiKey != null && !novaApiKey.isBlank()) {
+            this.apiKey = novaApiKey.trim();
+        }
+        if (novoModelo != null && !novoModelo.isBlank()) {
+            this.model = novoModelo.trim();
+        }
+        try {
+            File dir = new File("config");
+            if (!dir.exists()) dir.mkdirs();
+            Properties props = new Properties();
+            File f = new File("config/gemini.properties");
+            if (f.exists()) {
+                try (FileInputStream fis = new FileInputStream(f)) {
+                    props.load(fis);
+                }
+            }
+            if (this.apiKey != null && !this.apiKey.isBlank()) {
+                props.setProperty("gemini.api.key", this.apiKey);
+            }
+            if (this.model != null && !this.model.isBlank()) {
+                props.setProperty("gemini.model", this.model);
+            }
+            try (java.io.FileOutputStream out = new java.io.FileOutputStream(f)) {
+                props.store(out, "Configuracao API Gemini Sazonalisei ERP");
+            }
+        } catch (Exception e) {
+            System.err.println("Aviso: Falha ao salvar config/gemini.properties: " + e.getMessage());
+        }
+    }
 }

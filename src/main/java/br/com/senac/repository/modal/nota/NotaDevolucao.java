@@ -200,6 +200,10 @@ public class NotaDevolucao extends Nota {
         return motivo;
     }
 
+    public void setMotivo(String motivo) {
+        this.motivo = motivo;
+    }
+
     public NotaPerda getNotaPerdaGerada() {
         return notaPerdaGerada;
     }

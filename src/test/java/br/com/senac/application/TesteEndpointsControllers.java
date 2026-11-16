@@ -356,11 +356,15 @@ public class TesteEndpointsControllers {
             if (monitor != null) itensVenda1.put(monitor, new BigDecimal("2.000000"));
             if (garantiaDigital != null) itensVenda1.put(garantiaDigital, new BigDecimal("1.000000"));
 
+            // Múltiplos pagamentos no FIFO (Cliente Registrado): Combinação de À Vista (PIX) + Parcelado (Cartão de Crédito 2x)
             RespostaEndpoint<Object> respVendaFifo = validarEndpoint(roteador, RotaSistema.NOTA_VENDA_EMITIR_FIFO, Map.of(
                     "cliente", clientePf != null ? clientePf : roteador.pessoas().obterClientePadraoNaoRegistrado(),
-                    "descricao", "Venda FIFO Endpoint Test",
+                    "descricao", "Venda FIFO Multi-Pagamento Endpoint Test",
                     "itens", itensVenda1,
-                    "pagamentos", List.of(roteador.pagamentos().criarPagamentoAVista("PIX", new BigDecimal("3149.70"), new BigDecimal("3149.70"), BigDecimal.ZERO)),
+                    "pagamentos", List.of(
+                            Map.of("codigoForma", "PIX", "valor", new BigDecimal("1149.70"), "modalidade", "À Vista"),
+                            Map.of("codigoForma", "CARTAO_CREDITO", "valor", new BigDecimal("2000.00"), "parcelas", 2, "modalidade", "Parcelado")
+                    ),
                     "cupom", "DESC_50",
                     "descontoCupom", "50.00"
             ));
@@ -368,9 +372,13 @@ public class TesteEndpointsControllers {
 
             Map<Produto, BigDecimal> itensBalcao = new LinkedHashMap<>();
             if (monitor != null) itensBalcao.put(monitor, new BigDecimal("1.000000"));
+            // Múltiplos pagamentos no Balcão (Consumidor Não Registrado): Múltiplos À Vista (PIX + Dinheiro)
             validarEndpoint(roteador, RotaSistema.NOTA_VENDA_EMITIR_BALCAO_CLIENTE_PADRAO, Map.of(
                     "itens", itensBalcao,
-                    "pagamentos", List.of(roteador.pagamentos().criarPagamentoAVista("DINHEIRO", new BigDecimal("1499.90"), new BigDecimal("1500.00"), null))
+                    "pagamentos", List.of(
+                            Map.of("codigoForma", "PIX", "valor", new BigDecimal("499.90"), "modalidade", "À Vista"),
+                            Map.of("codigoForma", "DINHEIRO", "valor", new BigDecimal("1000.00"), "modalidade", "À Vista")
+                    )
             ));
 
             Map<Long, BigDecimal> mapaLoteDesejado = new LinkedHashMap<>();

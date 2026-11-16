@@ -33,6 +33,7 @@ public class ClimaService implements ProvedorFatorExterno {
     // Cache de 6 horas para o clima atual por coordenada ("LAT|LON") economizando requisições de API
     private final Map<String, CacheEntry<String>> cacheClimaAtual6Horas = new ConcurrentHashMap<>();
     private final Map<String, CacheEntry<ClimaDiario>> cacheClimaDiarioAtual6Horas = new ConcurrentHashMap<>();
+    private final Map<String, CacheEntry<List<ClimaDiario>>> cachePrevisaoProximosDias = new ConcurrentHashMap<>();
     // Cache em memória por "ANO-MES|LAT|LON" para evitar chamadas repetidas ao processar grandes lotes passados
     private final Map<String, Map<LocalDate, ClimaDiario>> cacheMensal = new ConcurrentHashMap<>();
     private volatile ClimaDiario ultimoClimaValido;
@@ -101,6 +102,42 @@ public class ClimaService implements ProvedorFatorExterno {
         ultimoClimaValido = registro;
         cacheClimaDiarioAtual6Horas.put(chaveRegiao, CacheEntry.criarComTtl(registro, TTL_CACHE_CLIMA_ATUAL));
         return registro;
+    }
+
+    /**
+     * Consulta a previsão diária dos próximos dias (até 7 dias) via Open-Meteo com cache de 6 horas
+     * e fallback sazonal realista caso esteja sem conectividade externa.
+     */
+    public List<ClimaDiario> buscarPrevisaoProximosDiasComCache6h(Coordenada coordenada, int dias) {
+        int horizonte = Math.max(1, Math.min(7, dias));
+        String chaveRegiao = String.format(Locale.US, "%.2f|%.2f|%d", coordenada.latitude(), coordenada.longitude(), horizonte);
+        CacheEntry<List<ClimaDiario>> emCache = cachePrevisaoProximosDias.get(chaveRegiao);
+        if (emCache != null && emCache.isValido()) {
+            return emCache.dados();
+        }
+
+        Map<LocalDate, ClimaDiario> mapa = new LinkedHashMap<>();
+        String url = String.format(Locale.US,
+                "https://api.open-meteo.com/v1/forecast?latitude=%.6f&longitude=%.6f&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean,precipitation_sum,wind_speed_10m_max&forecast_days=%d&timezone=auto",
+                coordenada.latitude(), coordenada.longitude(), horizonte);
+        String json = executarGet(url);
+        if (json != null && json.contains("\"daily\":")) {
+            preencherDeOpenMeteo(json, mapa);
+        }
+
+        List<ClimaDiario> resultado = new ArrayList<>(mapa.values());
+        if (resultado.isEmpty()) {
+            ClimaDiario base = ultimoClimaValido != null ? ultimoClimaValido : criarClimaFallback(LocalDate.now());
+            for (int i = 0; i < horizonte; i++) {
+                LocalDate d = LocalDate.now().plusDays(i);
+                double varTemp = ((d.getDayOfYear() + i) % 3 == 0) ? -1.8 : (((i % 2) == 0) ? 0.9 : 0.2);
+                double chuvaSim = ((d.getDayOfYear() + i) % 4 == 1) ? 14.5 : (((d.getDayOfYear() + i) % 3 == 0) ? 4.2 : 0.5);
+                double tempMed = Math.round((base.temperaturaMedia() + varTemp) * 10.0) / 10.0;
+                resultado.add(new ClimaDiario(d, tempMed + 3.0, tempMed - 3.5, tempMed, chuvaSim, 11.0));
+            }
+        }
+        cachePrevisaoProximosDias.put(chaveRegiao, CacheEntry.criarComTtl(resultado, TTL_CACHE_CLIMA_ATUAL));
+        return resultado;
     }
 
     private String executarGet(String url) {
