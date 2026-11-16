@@ -19,6 +19,8 @@ import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
@@ -85,14 +87,15 @@ public class AbaControleOperacionalIAView extends VBox {
         setSpacing(10);
         setPadding(new Insets(14, 16, 14, 16));
         setStyle("-fx-background-color: #F8FAFC;");
+        setMinWidth(0);
         setMaxWidth(Double.MAX_VALUE);
 
         this.scrollLog = new ScrollPane(boxLogRespostas);
         scrollLog.setFitToWidth(true);
         scrollLog.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scrollLog.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        scrollLog.setPrefHeight(280);
-        scrollLog.setMinHeight(160);
+        scrollLog.setPrefHeight(340);
+        scrollLog.setMinHeight(180);
         scrollLog.setStyle("-fx-background-color: #F8FAFC; -fx-border-color: #E2E8F0; -fx-border-radius: 8px; -fx-background-radius: 8px;");
 
         HBox topo = criarCabecalho();
@@ -116,7 +119,10 @@ public class AbaControleOperacionalIAView extends VBox {
         Label tit = FormatadorSeguroUI.criarTituloSecao("🤖", "Central de Controle Operacional por IA", "#0F172A");
         Label sub = FormatadorSeguroUI.criarSubtitulo(
                 "Orquestração completa por texto, comando de voz e pré-validação em lote da Bandeja para todos os setores.", "#64748B");
+        lblResumoEstado.setWrapText(true);
+        lblResumoEstado.setMinWidth(0);
         VBox boxTit = new VBox(2, tit, sub, lblResumoEstado);
+        boxTit.setMinWidth(0);
         HBox.setHgrow(boxTit, Priority.ALWAYS);
 
         Button btnAtualizar = FormatadorSeguroUI.criarBotaoCartoon("↻ Auditar Bandeja", "#FFFFFF", "#CBD5E1", "#0F172A");
@@ -124,6 +130,7 @@ public class AbaControleOperacionalIAView extends VBox {
 
         HBox topo = new HBox(10, boxTit, btnAtualizar);
         topo.setAlignment(Pos.CENTER_LEFT);
+        topo.setMinWidth(0);
         return topo;
     }
 
@@ -131,16 +138,18 @@ public class AbaControleOperacionalIAView extends VBox {
         GridPane grid = new GridPane();
         grid.setHgap(12);
         grid.setVgap(10);
+        grid.setMinWidth(0);
 
         ColumnConstraints colEsq = new ColumnConstraints();
-        colEsq.setPercentWidth(65);
+        colEsq.setPercentWidth(64);
         colEsq.setHgrow(Priority.ALWAYS);
         ColumnConstraints colDir = new ColumnConstraints();
-        colDir.setPercentWidth(35);
+        colDir.setPercentWidth(36);
         colDir.setHgrow(Priority.NEVER);
         grid.getColumnConstraints().addAll(colEsq, colDir);
 
         VBox painelComando = construirPainelComandoEPlaybooks();
+        painelComando.setMinWidth(0);
         VBox painelBandeja = construirPainelBandejaCompleta();
 
         GridPane.setVgrow(painelComando, Priority.ALWAYS);
@@ -152,7 +161,7 @@ public class AbaControleOperacionalIAView extends VBox {
     }
 
     private VBox construirPainelComandoEPlaybooks() {
-        txtComando.setPrefRowCount(4);
+        txtComando.setPrefRowCount(5);
         chkConfirmarAntes.setSelected(true);
         chkConfirmarAntes.setStyle("-fx-font-size: 12px; -fx-text-fill: #334155;");
 
@@ -170,6 +179,7 @@ public class AbaControleOperacionalIAView extends VBox {
 
         FlowPane barraEnvio = new FlowPane(8, 6, btnVoz, btnEnviar, btnLimparChat, chkConfirmarAntes);
         barraEnvio.setAlignment(Pos.CENTER_LEFT);
+        barraEnvio.setMinWidth(0);
 
         VBox cardConsole = new VBox(8,
                 FormatadorSeguroUI.criarLabel("💬 Comando Livre ou por Voz (Prompt Copiloto IA)", 13, true, "#0F172A"),
@@ -179,6 +189,7 @@ public class AbaControleOperacionalIAView extends VBox {
                 FormatadorSeguroUI.criarLabel("📜 Histórico de Execução & Respostas IA (clique no card para expandir)", 12, true, "#334155"),
                 scrollLog);
         cardConsole.setPadding(new Insets(12));
+        cardConsole.setMinWidth(0);
         cardConsole.setStyle(FormatadorSeguroUI.estiloCardCartoon("#FFFFFF", "#CBD5E1"));
         VBox.setVgrow(cardConsole, Priority.ALWAYS);
         VBox.setVgrow(scrollLog, Priority.ALWAYS);
@@ -215,11 +226,24 @@ public class AbaControleOperacionalIAView extends VBox {
                 criarBotaoAtalhoAba("🗂️ Kanban", "KANBAN", "#EEF2FF", "#4338CA"),
                 criarBotaoAtalhoAba("⚙️ API/CSV", "CONFIG", "#F8FAFC", "#0F172A"));
         barraAparAndNav.setAlignment(Pos.CENTER_LEFT);
+        barraAparAndNav.setMinWidth(0);
         barraAparAndNav.setPadding(new Insets(8, 10, 8, 10));
         barraAparAndNav.setStyle(FormatadorSeguroUI.estiloCartaoSuaveInterno("#F8FAFC", "#CBD5E1"));
 
-        // Atalhos Estratégicos responsivos sem estouro de container
-        FlowPane flowAtalhos = new FlowPane(8, 8);
+        TabPane tabEsquerda = FormatadorSeguroUI.criarTabPaneCorporativo();
+        tabEsquerda.setMinWidth(0);
+        VBox.setVgrow(tabEsquerda, Priority.ALWAYS);
+
+        Tab tabConsole = new Tab("💬 Console Livre & Histórico");
+        tabConsole.setClosable(false);
+        VBox wrapConsole = new VBox(cardConsole);
+        wrapConsole.setPadding(new Insets(8, 0, 0, 0));
+        wrapConsole.setMinWidth(0);
+        VBox.setVgrow(cardConsole, Priority.ALWAYS);
+        tabConsole.setContent(wrapConsole);
+
+        // Atalhos Estratégicos responsivos sem estouro nem esmagamento
+        FlowPane flowAtalhos = new FlowPane(10, 10);
         flowAtalhos.setPadding(new Insets(6, 4, 6, 4));
         flowAtalhos.setMinWidth(0);
 
@@ -241,6 +265,7 @@ public class AbaControleOperacionalIAView extends VBox {
 
         ToggleGroup grpSetor = new ToggleGroup();
         FlowPane barraSetores = new FlowPane(6, 4);
+        barraSetores.setMinWidth(0);
         String[] setores = {"TODOS", "PDV", "ESTOQUE", "FINANCEIRO", "ESTATISTICA"};
         String[] nomesSetor = {"✨ Todos", "🛒 PDV", "📦 Estoque", "💰 Financeiro", "📊 Clima & Kanban"};
         List<ToggleButton> tgs = new ArrayList<>();
@@ -258,10 +283,14 @@ public class AbaControleOperacionalIAView extends VBox {
             for (AtalhoSetor a : todosAtalhos) {
                 if (!"TODOS".equals(ativo) && !ativo.equals(a.setor())) continue;
                 Button btnExec = FormatadorSeguroUI.criarBotaoCartoon("▶ Executar", a.corAccent(), a.corAccent(), "#FFFFFF");
-                btnExec.setOnAction(ev -> dispararPromptComOuSemPopup(a.rotulo(), a.prompt()));
+                btnExec.setOnAction(ev -> {
+                    tabEsquerda.getSelectionModel().select(tabConsole);
+                    dispararPromptComOuSemPopup(a.rotulo(), a.prompt());
+                });
                 Button btnEd = FormatadorSeguroUI.criarBotaoCartoon("✏️ Editar", "#FFFFFF", "#CBD5E1", "#334155");
                 btnEd.setOnAction(ev -> {
                     txtComando.setText(a.prompt());
+                    tabEsquerda.getSelectionModel().select(tabConsole);
                     txtComando.requestFocus();
                 });
 
@@ -273,12 +302,12 @@ public class AbaControleOperacionalIAView extends VBox {
                 lDesc.setWrapText(true);
                 lDesc.setMinWidth(0);
 
-                FlowPane btns = new FlowPane(5, 4, btnExec, btnEd);
-                VBox mini = new VBox(5, new FlowPane(5, 4, lTag, lTit), lDesc, btns);
-                mini.setPrefWidth(215);
-                mini.setMinWidth(185);
-                mini.setMaxWidth(240);
-                mini.setPadding(new Insets(9));
+                FlowPane btns = new FlowPane(6, 4, btnExec, btnEd);
+                VBox mini = new VBox(6, new FlowPane(6, 4, lTag, lTit), lDesc, btns);
+                mini.setPrefWidth(225);
+                mini.setMinWidth(190);
+                mini.setMaxWidth(260);
+                mini.setPadding(new Insets(10));
                 mini.setStyle(FormatadorSeguroUI.estiloCartaoSuaveInterno("#FFFFFF", a.corAccent()));
                 flowAtalhos.getChildren().add(mini);
             }
@@ -298,19 +327,30 @@ public class AbaControleOperacionalIAView extends VBox {
         scrollAtalhos.setFitToWidth(true);
         scrollAtalhos.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scrollAtalhos.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        scrollAtalhos.setPrefHeight(135);
-        scrollAtalhos.setMinHeight(100);
         scrollAtalhos.setStyle("-fx-background-color: transparent; -fx-background: transparent; -fx-border-color: transparent;");
+        VBox.setVgrow(scrollAtalhos, Priority.ALWAYS);
 
         VBox cardPlaybooks = new VBox(8,
-                FormatadorSeguroUI.criarLabel("⚡ Central Unificada de Comandos por Setor (Zero Estouro — Faça Tudo Aqui)", 13, true, "#0F172A"),
+                FormatadorSeguroUI.criarLabel("⚡ Central Unificada de Comandos por Setor", 13, true, "#0F172A"),
                 barraSetores,
                 scrollAtalhos);
         cardPlaybooks.setPadding(new Insets(12));
+        cardPlaybooks.setMinWidth(0);
         cardPlaybooks.setStyle(FormatadorSeguroUI.estiloCardCartoon("#FFFFFF", "#93C5FD"));
+        VBox.setVgrow(cardPlaybooks, Priority.ALWAYS);
 
-        VBox col = new VBox(10, barraAparAndNav, cardConsole, cardPlaybooks);
-        VBox.setVgrow(cardConsole, Priority.ALWAYS);
+        Tab tabPlaybooks = new Tab("⚡ Central Unificada (Comandos por Setor)");
+        tabPlaybooks.setClosable(false);
+        VBox wrapPlaybooks = new VBox(cardPlaybooks);
+        wrapPlaybooks.setPadding(new Insets(8, 0, 0, 0));
+        wrapPlaybooks.setMinWidth(0);
+        VBox.setVgrow(cardPlaybooks, Priority.ALWAYS);
+        tabPlaybooks.setContent(wrapPlaybooks);
+
+        tabEsquerda.getTabs().addAll(tabConsole, tabPlaybooks);
+
+        VBox col = new VBox(8, barraAparAndNav, tabEsquerda);
+        col.setMinWidth(0);
         return col;
     }
 
@@ -321,6 +361,11 @@ public class AbaControleOperacionalIAView extends VBox {
     }
 
     private VBox construirPainelBandejaCompleta() {
+        lblTituloBandeja.setWrapText(true);
+        lblTituloBandeja.setMinWidth(0);
+        lblValidacaoBandeja.setWrapText(true);
+        lblValidacaoBandeja.setMinWidth(0);
+
         ScrollPane scrollBandeja = new ScrollPane(boxListaBandeja);
         scrollBandeja.setFitToWidth(true);
         scrollBandeja.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
@@ -335,16 +380,17 @@ public class AbaControleOperacionalIAView extends VBox {
 
         FlowPane rodapeBandeja = new FlowPane(8, 6, btnConfirmarLote, btnCorrigirLote, btnLimparBandeja);
         rodapeBandeja.setAlignment(Pos.CENTER_LEFT);
+        rodapeBandeja.setMinWidth(0);
 
         VBox box = new VBox(8,
                 lblTituloBandeja,
                 lblValidacaoBandeja,
                 scrollBandeja,
                 rodapeBandeja);
-        box.setPadding(new Insets(12));
+        box.setPadding(new Insets(12, 12, 14, 12));
         box.setStyle(FormatadorSeguroUI.estiloCardCartoon("#FFFFFF", "#CBD5E1"));
-        box.setMinWidth(300);
-        box.setPrefWidth(350);
+        box.setMinWidth(280);
+        box.setPrefWidth(340);
         box.setMaxWidth(380);
         VBox.setVgrow(box, Priority.ALWAYS);
         return box;

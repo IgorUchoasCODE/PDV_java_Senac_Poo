@@ -315,6 +315,7 @@ public class AbaBalcaoNotasView extends VBox {
         GridPane layout = new GridPane();
         layout.setHgap(12);
         layout.setPadding(new Insets(8, 0, 4, 0));
+        layout.setMinWidth(0);
 
         ColumnConstraints colEsq = new ColumnConstraints();
         colEsq.setPercentWidth(52);
@@ -327,6 +328,7 @@ public class AbaBalcaoNotasView extends VBox {
         // Coluna Esquerda: Tabela Catálogo + Preview Sob Demanda (Carrossel)
         VBox painelEsq = new VBox(8);
         painelEsq.setPadding(new Insets(10));
+        painelEsq.setMinWidth(0);
         painelEsq.setStyle(FormatadorSeguroUI.estiloCardCartoon("#FFFFFF", "#CBD5E1"));
 
         ToggleGroup grpModo = new ToggleGroup();
@@ -360,12 +362,15 @@ public class AbaBalcaoNotasView extends VBox {
                 ev.consume();
             }
         });
+        txtBuscaProduto.setMinWidth(100);
         HBox.setHgrow(txtBuscaProduto, Priority.ALWAYS);
 
         HBox barraFiltros = new HBox(6, txtBuscaProduto, tgModoAutomatico, tgModoLote);
         barraFiltros.setAlignment(Pos.CENTER_LEFT);
+        barraFiltros.setMinWidth(0);
 
         configurarTabelaCatalogo();
+        tabelaCatalogo.setMinWidth(0);
         VBox.setVgrow(tabelaCatalogo, Priority.ALWAYS);
 
         // Preview compacto + Carrossel sob demanda
@@ -375,15 +380,21 @@ public class AbaBalcaoNotasView extends VBox {
             if (sel != null) abrirCardDetalhesCatalogo(sel);
         });
 
+        lblInfoItemSelecionado.setWrapText(true);
+        lblInfoItemSelecionado.setMinWidth(0);
+
         VBox boxInfoSel = new VBox(6,
                 FormatadorSeguroUI.criarLabel("📸 Pré-visualização Sob Demanda", 12, true, "#0F172A"),
                 lblInfoItemSelecionado,
                 btnDetalhesProd);
+        boxInfoSel.setMinWidth(0);
+        carrosselPDV.setMinWidth(0);
         HBox.setHgrow(boxInfoSel, Priority.ALWAYS);
         HBox.setHgrow(carrosselPDV, Priority.ALWAYS);
 
         HBox boxPreview = new HBox(10, carrosselPDV, boxInfoSel);
         boxPreview.setAlignment(Pos.CENTER_LEFT);
+        boxPreview.setMinWidth(0);
         boxPreview.setPadding(new Insets(6));
         boxPreview.setStyle(FormatadorSeguroUI.estiloCartaoSuaveInterno("#F8FAFC", "#E2E8F0"));
 
@@ -492,8 +503,9 @@ public class AbaBalcaoNotasView extends VBox {
     }
 
     private VBox construirPainelCupomDireito() {
-        VBox boxCupom = new VBox(10);
+        VBox boxCupom = new VBox(8);
         boxCupom.setPadding(new Insets(12));
+        boxCupom.setMinWidth(0);
         boxCupom.setStyle(FormatadorSeguroUI.estiloCardCartoon("#FFFFFF", "#CBD5E1"));
 
         Button btnEditarRapido = FormatadorSeguroUI.criarBotaoCartoon("✏️ Editar (F3)", "#EFF6FF", "#93C5FD", "#1E40AF");
@@ -513,31 +525,45 @@ public class AbaBalcaoNotasView extends VBox {
 
         Label titCupom = FormatadorSeguroUI.criarLabel("🧾 Resumo da Venda", 13, true, "#0F172A");
         titCupom.setWrapText(true);
+        titCupom.setMinWidth(0);
         HBox.setHgrow(titCupom, Priority.ALWAYS);
         HBox topoCupom = new HBox(6, titCupom, btnEditarRapido, btnLimparCarrinho);
         topoCupom.setAlignment(Pos.CENTER_LEFT);
+        topoCupom.setMinWidth(0);
 
         boxListaCarrinho.setPadding(new Insets(6));
+        boxListaCarrinho.setMinWidth(0);
         var scrollCarrinho = FormatadorSeguroUI.envolverScrollSuave(boxListaCarrinho);
         scrollCarrinho.setPrefHeight(250);
         scrollCarrinho.setMinHeight(130);
+        scrollCarrinho.setMinWidth(0);
         scrollCarrinho.setStyle("-fx-background-color: #F8FAFC; -fx-border-color: #E2E8F0; -fx-border-radius: 6px; -fx-background-radius: 6px;");
         VBox.setVgrow(scrollCarrinho, Priority.ALWAYS);
 
         // Cliente & regra estrita Cliente Padrão
+        cbCliente.setMinWidth(0);
+        cbCliente.setMaxWidth(Double.MAX_VALUE);
         cbCliente.setOnAction(e -> atualizarOpcoesModalidadePagamento());
         HBox linhaCli = new HBox(8, FormatadorSeguroUI.criarLabel("Cliente (F4):", 12, true, "#334155"), cbCliente);
         HBox.setHgrow(cbCliente, Priority.ALWAYS);
         linhaCli.setAlignment(Pos.CENTER_LEFT);
+        linhaCli.setMinWidth(0);
+
+        lblRegraClientePadrao.setWrapText(true);
+        lblRegraClientePadrao.setMinWidth(0);
+        lblRegraClientePadrao.setMaxWidth(Double.MAX_VALUE);
 
         GridPane gridAjustes = new GridPane();
         gridAjustes.setHgap(8);
         gridAjustes.setVgap(4);
+        gridAjustes.setMinWidth(0);
         ColumnConstraints c1 = new ColumnConstraints();
         c1.setPercentWidth(50);
         ColumnConstraints c2 = new ColumnConstraints();
         c2.setPercentWidth(50);
         gridAjustes.getColumnConstraints().addAll(c1, c2);
+        txtDesconto.setMinWidth(0);
+        txtCupom.setMinWidth(0);
         txtDesconto.textProperty().addListener((obs, o, n) -> recalcularTotalCupom());
 
         gridAjustes.add(FormatadorSeguroUI.criarLabel("Desconto Global (R$):", 11, true, "#475569"), 0, 0);
@@ -707,9 +733,15 @@ public class AbaBalcaoNotasView extends VBox {
         Label lblErroModal = FormatadorSeguroUI.criarLabel("", 11, true, "#DC2626");
         lblErroModal.setWrapText(true);
 
+        Label lblRegraModal = new Label();
+        lblRegraModal.textProperty().bind(lblRegraClientePadrao.textProperty());
+        lblRegraModal.styleProperty().bind(lblRegraClientePadrao.styleProperty());
+        lblRegraModal.setWrapText(true);
+        lblRegraModal.setMaxWidth(Double.MAX_VALUE);
+
         VBox corpo = new VBox(10,
                 linhaCliModal,
-                lblRegraClientePadrao,
+                lblRegraModal,
                 formCheck,
                 lblDetalheTaxa,
                 barAddPg,
@@ -1336,22 +1368,25 @@ public class AbaBalcaoNotasView extends VBox {
                 String nomeLimpo = FormatadorSeguroUI.limparNomeProduto(ic.produto.getNome());
                 Label lNome = FormatadorSeguroUI.criarLabel(nomeLimpo, 12, true, "#0F172A");
                 lNome.setWrapText(true);
-                lNome.setMinWidth(60);
+                lNome.setMinWidth(0);
                 lNome.setTooltip(new Tooltip(ic.produto.getNome() + " — " + ic.rotuloLote));
 
                 Label badgeLote = FormatadorSeguroUI.criarBadgeCartoon(ic.rotuloLote, "#F1F5F9", "#CBD5E1", "#475569");
 
                 HBox boxProd = new HBox(6, lNome, badgeLote);
                 boxProd.setAlignment(Pos.CENTER_LEFT);
+                boxProd.setMinWidth(0);
                 HBox.setHgrow(boxProd, Priority.ALWAYS);
 
                 Label lSub = FormatadorSeguroUI.criarLabel(
                         FormatadorSeguroUI.formatarMoeda(ic.getSubtotal()), 13, true, "#047857");
+                lSub.setMinWidth(Region.USE_PREF_SIZE);
 
                 Button btnRem = FormatadorSeguroUI.criarBotaoCartoon("✕", "#FEE2E2", "#FCA5A5", "#991B1B");
                 btnRem.setTooltip(new Tooltip("Remover este item do cupom"));
-                btnRem.setPrefSize(26, 26);
-                btnRem.setMinSize(26, 26);
+                btnRem.setStyle(btnRem.getStyle() + "-fx-padding: 3px 8px;");
+                btnRem.setMinSize(32, 28);
+                btnRem.setPrefSize(32, 28);
                 btnRem.setOnAction(e -> {
                     carrinho.remove(idx);
                     atualizarVisualCarrinho();
@@ -1388,8 +1423,9 @@ public class AbaBalcaoNotasView extends VBox {
 
                 Label lblQtdTit = FormatadorSeguroUI.criarLabel("Qtd:", 11, false, "#64748B");
                 Button btnMenos = FormatadorSeguroUI.criarBotaoCartoon("−", "#F1F5F9", "#CBD5E1", "#0F172A");
-                btnMenos.setPrefSize(26, 26);
-                btnMenos.setMinSize(26, 26);
+                btnMenos.setStyle(btnMenos.getStyle() + "-fx-padding: 3px 8px;");
+                btnMenos.setMinSize(32, 28);
+                btnMenos.setPrefSize(32, 28);
                 btnMenos.setOnAction(e -> {
                     if (ic.quantidade.compareTo(BigDecimal.ONE) > 0) {
                         ic.quantidade = ic.quantidade.subtract(BigDecimal.ONE);
@@ -1418,8 +1454,9 @@ public class AbaBalcaoNotasView extends VBox {
                 });
 
                 Button btnMais = FormatadorSeguroUI.criarBotaoCartoon("+", "#F1F5F9", "#CBD5E1", "#0F172A");
-                btnMais.setPrefSize(26, 26);
-                btnMais.setMinSize(26, 26);
+                btnMais.setStyle(btnMais.getStyle() + "-fx-padding: 3px 8px;");
+                btnMais.setMinSize(32, 28);
+                btnMais.setPrefSize(32, 28);
                 btnMais.setOnAction(e -> {
                     ic.quantidade = ic.quantidade.add(BigDecimal.ONE);
                     atualizarVisualCarrinho();
