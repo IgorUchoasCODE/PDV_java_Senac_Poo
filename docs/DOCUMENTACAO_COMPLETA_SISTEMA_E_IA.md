@@ -103,6 +103,11 @@ Toda a especificação para a IA recriar a interface gráfica encontra-se detalh
   - **Curvas Financeiras**: Linhas sobrepostas de **Faturamento de Vendas (`R$`)**, **Lucro Líquido Real (`R$`)** e **Perdas de Estoque (`R$`, quando houver)**.
   - **Dimensões de Tempo e Filtros**: Botões para **`7D (Semana)`**, **`30D (Mês)`**, **`90D (Trimestre)`**, **`Tudo`** e **`Customizar Intervalo (Data Inicial / Final ou Mês)`**, além de filtros combinados por **Rio**, **Clima/Chuva** e **Atalhos Sazonais de Epicentro** (*Pico de Faturamento*, *Baixa no Faturamento*, *Maior Perda de Estoque*, *Época de Cheia do Rio*, *Época de Seca do Rio* e *Semanas Chuvosas*), como no [`PDV_Sazonal_Python`](file:///C:/workspace/cursoPython/PDV_Sazonal_Python/templates/dashboard.html).
 - **Mapa GPS de Eventos**: Radar visual mostrando a distância em `km` entre a loja e os eventos públicos/privados locais.
+- **Grafo em Foco (Mapa Mental de Bolhas Macias — Regra dos 7 Nós)**: Substitui o grafo poluído antigo por um mapa mental limpo com **1 nó central e no máximo 6 bolhas grandes ao redor**, operando em 4 modos visuais:
+  1. *Causa e Efeito Sazonal* (`Clima/Rio/Evento` $\rightarrow$ `Top 5 Produtos`);
+  2. *Árvore de Embalagens e Kits em 3 Níveis* (`Caixa` $\rightarrow$ `Cartela` $\rightarrow$ `Unidade` $\rightarrow$ `Kit`);
+  3. *Raio-X 360º de 1 Clique* (espelho visual da busca em cascata `>>` para um Produto, Cliente ou Fornecedor);
+  4. *Rastreio de Perdas e Devoluções* (conectando Produto $\rightarrow$ Fornecedor/Lote $\rightarrow$ Clima/Transporte $\rightarrow$ Ressarcimento via IA).
 - **Tratamento Total de Dados**: Proibido texto cortado (`...`), letras menores que `15px` ou dados técnicos sem tradução; todos os problemas, alertas e gráficos possuem botão direto para conversar com a IA do ChatBot.
 
 ---

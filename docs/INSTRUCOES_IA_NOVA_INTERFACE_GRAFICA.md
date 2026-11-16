@@ -201,6 +201,31 @@ Esta aba traduz todo o poder analítico das Stored Procedures ([`EstatisticaCont
      - Parcelas e status de pagamento;
      - **Selo Sazonal da Emissão**: Como estava o Clima, o Rio e qual Evento Público/Privado ocorria no dia daquela nota.
 
+4. **Bloco D — 🕸️ Grafo em Foco: Mapa Mental de Bolhas Macias (`GrafoFocoMapaMentalCanvas` — Regra dos 7 Nós, Zero Poluição)**:
+   - **Proibido o grafo estilo "teia de aranha" (Obsidian poluído)** que joga todos os registros do banco ao mesmo tempo na tela.
+   - Em vez disso, utiliza um **Grafo Radial em Foco (Mapa Mental Guiado)** com **limite rígido de 1 bolha central + no máximo 6 bolhas ao redor** (todas grandes, sólidas, macias, com fonte `>= 16px` e ícones claros). Ao clicar numa bolha periférica, ela desliza suavemente para o centro ou abre a recomendação da IA.
+   - **Os 4 Modos de Visão Limpa do Grafo (Seletor em Pílulas)**:
+     1. **🌦️ Modo 1: Causa e Efeito Sazonal (`Clima / Rio / Evento` $\rightarrow$ `Top 5 Produtos`)**:
+        - Alimentado por [`AnaliseImpactoExternoService`](file:///C:/workspace/Java/Sistema%20de%20Vendas/src/main/java/br/com/senac/service/AnaliseImpactoExternoService.java) e [`EstatisticaController`](file:///C:/workspace/Java/Sistema%20de%20Vendas/src/main/java/br/com/senac/controller/EstatisticaController.java).
+        - **Centro**: O cenário climático/sazonal selecionado (ex.: `🌧️ Chuva Forte + 🌊 Cheia do Rio` ou `🎪 Festival Local`).
+        - **Ao Redor**: Até 5 bolhas grandes dos produtos mais impactados — **Verdes** para os que disparam em vendas (`+35%`) e **Coral** para os que sofrem risco de perda/umidade, cada uma com botão **"🤖 O que fazer com este item?"**.
+     2. **📦 Modo 2: Árvore do Produto, Kit e Embalagens (3 Níveis)**:
+        - Alimentado por [`ConjuntoProduto`](file:///C:/workspace/Java/Sistema%20de%20Vendas/src/main/java/br/com/senac/repository/modal/produto/ConjuntoProduto.java) e [`EstoqueManage`](file:///C:/workspace/Java/Sistema%20de%20Vendas/src/main/java/br/com/senac/service/EstoqueManage.java).
+        - Mostra em 3 a 4 blocos macios conectados por setas grossas a equivalência física e composição sem confundir o iniciante:
+          `Caixa (5 CX)` $\longrightarrow$ `Cartela (60 CART)` $\longrightarrow$ `Unidade (1.800 Ovos)` $\longrightarrow$ `Compõe o "Kit Café da Manhã" (Custo FIFO: R$ 28,50)`.
+     3. **🔍 Modo 3: Raio-X 360º de 1 Clique (Espelho Visual da Busca em Cascata `>>`)**:
+        - O usuário escolhe **1 Produto**, **1 Cliente** ou **1 Fornecedor** (por nome ou sigla `>oba`, `>isu`).
+        - **Centro**: O item pesquisado.
+        - **Ao Redor (4 bolhas fixas e organizadas)**:
+          - `🚚 Fornecedor & Ressarcimentos`
+          - `🏬 Lotes FIFO & Validade`
+          - `👥 Principais Compradores`
+          - `🌤️ Clima/Evento de Pico`
+     4. **⚠️ Modo 4: Rastreio de Perdas e Devoluções (Diagnóstico Visual)**:
+        - Alimentado por `ESTATISTICA_MOTIVOS_PERDA_PREMATURA` e `RELATORIO_PERDAS_FORNECEDOR_BACEN`.
+        - **Centro**: O Produto que teve perda ou devolução.
+        - **Ao Redor (3 bolhas diretas)**: `Fornecedor / Lote de Origem` + `Fator Climático/Transporte Causador` + Botão de Ação **`"🤖 Gerar Abatimento de Ressarcimento com a IA"`**.
+
 ### Aba 3: 🗺️ Mapa GPS de Eventos Regionais e Distâncias
 Conectada diretamente ao [`GeolocalizacaoService`](file:///C:/workspace/Java/Sistema%20de%20Vendas/src/main/java/br/com/senac/integracao/geolocalizacao/GeolocalizacaoService.java), [`SymplaService`](file:///C:/workspace/Java/Sistema%20de%20Vendas/src/main/java/br/com/senac/integracao/eventos/SymplaService.java) e [`MinisterioCulturaService`](file:///C:/workspace/Java/Sistema%20de%20Vendas/src/main/java/br/com/senac/integracao/eventos/MinisterioCulturaService.java):
 - **Localização da Loja por GPS**:
@@ -260,7 +285,8 @@ src/main/java/br/com/senac/view/javafx/
 │   └── ConectorProblemasIA.java            # Transforma qualquer alerta/erro/dúvida da tela em consulta contextual para a IA
 ├── componentes/
 │   ├── CardMacioExpansivel.java            # Componente base Cartoon/Claymorphism com resumo + gaveta expansível
-│   ├── GraficoSazonalPeriodoCanvas.java    # Gráfico dinâmico com filtro Semana (7D), Mês (30D) e Trimestre (90D) + Clima/Rio
+│   ├── GraficoSazonalPeriodoCanvas.java    # Gráfico dinâmico bipartido (Céu/Temp + Rio) com filtro 7D/30D/90D/Custom e Epicentro
+│   ├── GrafoFocoMapaMentalCanvas.java      # Mapa mental limpo de bolhas macias (máx. 7 nós: Sazonal, Kit 3 níveis, Raio-X 360º e Perdas)
 │   ├── MapaGpsEventosCanvas.java           # Radar/Mapa GPS com cálculo Haversine (km) para eventos públicos e privados
 │   └── PainelCopilotoIAChat.java           # Chat IA + Microfone + Cards interativos da Bandeja de Contexto
 └── abas/
