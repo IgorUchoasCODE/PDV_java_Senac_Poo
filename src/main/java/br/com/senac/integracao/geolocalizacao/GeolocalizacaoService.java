@@ -3,6 +3,7 @@ package br.com.senac.integracao.geolocalizacao;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -10,13 +11,20 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class GeolocalizacaoService {
 
     private static final Duration TTL_CACHE_COORDENADA = Duration.ofHours(6);
+    public static final Coordenada COORDENADA_PADRAO_MANAUS = new Coordenada(
+            -3.0950, -60.0250, 25.0, "Manaus", "AM", "Chapada", "Av. Djalma Batista");
+
+    private static final Map<String, Coordenada> CACHE_LOCAIS_EVENTOS = new ConcurrentHashMap<>();
+    private static volatile Coordenada coordenadaManualOverride;
 
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
@@ -137,5 +145,125 @@ public class GeolocalizacaoService {
     private String extrairCampoJson(String json, String campo) {
         Matcher m = Pattern.compile("\"" + Pattern.quote(campo) + "\"\\s*:\\s*\"([^\"]+)\"").matcher(json);
         return m.find() ? m.group(1) : "";
+    }
+
+    /**
+     * Permite fixar manualmente a coordenada da loja na aba de Configuração de Ambiente.
+     */
+    public static void definirCoordenadaManual(Coordenada novaCoordenada) {
+        coordenadaManualOverride = novaCoordenada;
+    }
+
+    /**
+     * Retorna a coordenada ativa da loja (manual -> GPS/IP do dispositivo -> padrão Manaus/AM).
+     */
+    public Coordenada obterCoordenadaLojaAtiva() {
+        if (coordenadaManualOverride != null) {
+            return coordenadaManualOverride;
+        }
+        return obterCoordenadasDispositivo().orElse(COORDENADA_PADRAO_MANAUS);
+    }
+
+    /**
+     * Resolve a coordenada geográfica real de um evento próximo a partir do seu local/endereço/nome,
+     * combinando marcos regionais amazônicos, Nominatim OpenStreetMap (com cache) e fallback determinístico.
+     */
+    public Coordenada resolverCoordenadaEvento(String nomeEvento, String localEvento, Coordenada referenciaLoja) {
+        Coordenada base = referenciaLoja != null ? referenciaLoja : COORDENADA_PADRAO_MANAUS;
+        String textoBusca = ((localEvento != null ? localEvento : "") + " " + (nomeEvento != null ? nomeEvento : "")).trim();
+        if (textoBusca.isEmpty()) {
+            return base;
+        }
+        String chave = textoBusca.toLowerCase(Locale.ROOT);
+        Coordenada emCache = CACHE_LOCAIS_EVENTOS.get(chave);
+        if (emCache != null) {
+            return emCache;
+        }
+
+        // 1. Marcos conhecidos de Manaus e região amazônica para resposta instantânea e precisa
+        Coordenada marco = buscarMarcoConhecidoManaus(chave);
+        if (marco != null) {
+            CACHE_LOCAIS_EVENTOS.put(chave, marco);
+            return marco;
+        }
+
+        // 2. Geocodificação via Nominatim OpenStreetMap quando houver endereço/local explícito
+        if (localEvento != null && !localEvento.isBlank() && !localEvento.equalsIgnoreCase("Online")) {
+            try {
+                String query = localEvento + ", " + (base.cidade().isBlank() ? "Manaus, AM" : base.cidade() + ", " + base.uf());
+                String url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&q="
+                        + URLEncoder.encode(query, StandardCharsets.UTF_8);
+                HttpRequest req = HttpRequest.newBuilder()
+                        .uri(URI.create(url))
+                        .timeout(Duration.ofSeconds(4))
+                        .header("User-Agent", "SazonaliseiPDV/1.0")
+                        .GET()
+                        .build();
+                HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+                String body = resp.body();
+                String latStr = extrairCampoJson(body, "lat");
+                String lonStr = extrairCampoJson(body, "lon");
+                if (!latStr.isBlank() && !lonStr.isBlank()) {
+                    double lat = Double.parseDouble(latStr);
+                    double lon = Double.parseDouble(lonStr);
+                    Coordenada encontrada = new Coordenada(lat, lon, 30.0, base.cidade(), base.uf(), localEvento, nomeEvento != null ? nomeEvento : "");
+                    CACHE_LOCAIS_EVENTOS.put(chave, encontrada);
+                    return encontrada;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        // 3. Fallback determinístico no entorno da loja (raio 0.9 km a 7.5 km) para eventos sem endereço postal
+        int hash = Math.abs(chave.hashCode());
+        double angulo = Math.toRadians(hash % 360);
+        double raioGraus = 0.008 + ((hash % 60) * 0.0009); // ~0.9km a ~6.8km
+        double lat = base.latitude() + Math.sin(angulo) * raioGraus;
+        double lon = base.longitude() + Math.cos(angulo) * raioGraus;
+        Coordenada estimada = new Coordenada(lat, lon, 100.0, base.cidade(), base.uf(),
+                localEvento != null && !localEvento.isBlank() ? localEvento : "Região Metropolitana",
+                nomeEvento != null ? nomeEvento : "Evento Local");
+        CACHE_LOCAIS_EVENTOS.put(chave, estimada);
+        return estimada;
+    }
+
+    private Coordenada buscarMarcoConhecidoManaus(String textoLower) {
+        if (textoLower.contains("arena da amazonia") || textoLower.contains("arena da amazônia") || textoLower.contains("flores")) {
+            return new Coordenada(-3.0831, -60.0281, 15.0, "Manaus", "AM", "Flores", "Arena da Amazônia");
+        }
+        if (textoLower.contains("vasco vasques") || textoLower.contains("centro de convencoes") || textoLower.contains("centro de convenções")) {
+            return new Coordenada(-3.0845, -60.0265, 15.0, "Manaus", "AM", "Flores", "Centro de Convenções Vasco Vasques");
+        }
+        if (textoLower.contains("teatro amazonas") || textoLower.contains("largo") || textoLower.contains("sao sebastiao") || textoLower.contains("são sebastião") || textoLower.contains("centro historico") || textoLower.contains("centro histórico")) {
+            return new Coordenada(-3.1303, -60.0234, 15.0, "Manaus", "AM", "Centro", "Largo de São Sebastião / Teatro Amazonas");
+        }
+        if (textoLower.contains("ponta negra")) {
+            return new Coordenada(-3.0672, -60.1011, 20.0, "Manaus", "AM", "Ponta Negra", "Anfiteatro da Ponta Negra");
+        }
+        if (textoLower.contains("studio 5") || textoLower.contains("distrito") || textoLower.contains("japiim")) {
+            return new Coordenada(-3.1189, -59.9839, 20.0, "Manaus", "AM", "Distrito Industrial", "Studio 5 Centro de Convenções");
+        }
+        if (textoLower.contains("adrianopolis") || textoLower.contains("adrianópolis") || textoLower.contains("manauara")) {
+            return new Coordenada(-3.1039, -60.0125, 20.0, "Manaus", "AM", "Adrianópolis", "Setor Adrianópolis");
+        }
+        if (textoLower.contains("vieiralves") || textoLower.contains("nossa senhora das gracas") || textoLower.contains("nossa senhora das graças")) {
+            return new Coordenada(-3.1058, -60.0228, 20.0, "Manaus", "AM", "Nossa Sra. das Graças", "Eixo Vieiralves");
+        }
+        if (textoLower.contains("parque dez") || textoLower.contains("parque 10") || textoLower.contains("CSU")) {
+            return new Coordenada(-3.0805, -60.0082, 20.0, "Manaus", "AM", "Parque 10 de Novembro", "Parque Dez");
+        }
+        if (textoLower.contains("ufam") || textoLower.contains("coroado") || textoLower.contains("inpa") || textoLower.contains("aleixo")) {
+            return new Coordenada(-3.0908, -59.9644, 20.0, "Manaus", "AM", "Coroado / Aleixo", "Campus Universitário / Bosque");
+        }
+        if (textoLower.contains("cidade nova") || textoLower.contains("sumauma") || textoLower.contains("sumaúma") || textoLower.contains("zona norte")) {
+            return new Coordenada(-3.0338, -59.9815, 25.0, "Manaus", "AM", "Cidade Nova", "Eixo Cidade Nova");
+        }
+        if (textoLower.contains("porto") || textoLower.contains("feira da manaus moderna") || textoLower.contains("adolpho lisboa") || textoLower.contains("mercado")) {
+            return new Coordenada(-3.1394, -60.0239, 20.0, "Manaus", "AM", "Centro / Porto", "Orla Fluvial do Rio Negro");
+        }
+        if (textoLower.contains("chapada") || textoLower.contains("djalma batista") || textoLower.contains("senac")) {
+            return new Coordenada(-3.0950, -60.0250, 15.0, "Manaus", "AM", "Chapada", "Av. Djalma Batista");
+        }
+        return null;
     }
 }

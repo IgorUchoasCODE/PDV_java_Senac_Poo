@@ -226,18 +226,27 @@ Esta aba traduz todo o poder analítico das Stored Procedures ([`EstatisticaCont
         - **Centro**: O Produto que teve perda ou devolução.
         - **Ao Redor (3 bolhas diretas)**: `Fornecedor / Lote de Origem` + `Fator Climático/Transporte Causador` + Botão de Ação **`"🤖 Gerar Abatimento de Ressarcimento com a IA"`**.
 
-### Aba 3: 🗺️ Mapa GPS de Eventos Regionais e Distâncias
+### Aba 3: 🗺️ Mapa GPS de Eventos Regionais e Distâncias (Motor Nativo SlippyMap + Tiles CartoDB Voyager / OpenStreetMap)
 Conectada diretamente ao [`GeolocalizacaoService`](file:///C:/workspace/Java/Sistema%20de%20Vendas/src/main/java/br/com/senac/integracao/geolocalizacao/GeolocalizacaoService.java), [`SymplaService`](file:///C:/workspace/Java/Sistema%20de%20Vendas/src/main/java/br/com/senac/integracao/eventos/SymplaService.java) e [`MinisterioCulturaService`](file:///C:/workspace/Java/Sistema%20de%20Vendas/src/main/java/br/com/senac/integracao/eventos/MinisterioCulturaService.java):
-- **Localização da Loja por GPS**:
-  - Exibe no topo o endereço/bairro atual detectado pelo GPS do computador (ex.: *"📍 Sua Loja: Chapada, Manaus/AM (-3.095, -60.025)"*) com opção de ajuste rápido na Configuração de Ambiente.
-- **Mapa Visual Cartoon / Radar de Distâncias (Fórmula de Haversine)**:
-  - Desenha um mapa interativo limpo em `Canvas` JavaFX com estética cartoon amazônica (rios estilizados, zonas da cidade e anéis de distância a partir do GPS da loja: **Raio 2 km**, **Raio 5 km**, **Raio 15 km**).
-  - Cada **Evento Público** (feiras regionais, projetos culturais MinC, feriados municipais/estaduais) e **Evento Privado** (shows, congressos, eventos Sympla) aparece como um **Pin Cartoon Sólido** colorido por categoria e distância.
-- **Cálculo de Distância e Impacto Comercial**:
-  - Ao clicar em um evento no mapa (ou na lista lateral expansível ordenada do mais próximo ao mais distante):
-    - Mostra a **distância exata em km** até o comércio (ex.: `📍 A 1,8 km da sua loja — Alto Impacto no Fluxo`);
-    - Previsão climática para a data do evento;
-    - Sugestão de estoque para aquele evento e botão **"🤖 Preparar Pedido de Compra com a IA para este Evento"**.
+
+- **Por que usar o Motor Nativo SlippyMap JavaFX em vez do Gluon Maps puro?**
+  - O `com.gluonhq:maps` padrão envia um `User-Agent` antigo bloqueado pelo servidor oficial do OpenStreetMap (`HTTP 403`) e exige módulos externos extras.
+  - A estratégia recomendada e 100% compatível com o JDK 21 usa o próprio `HttpClient` do Java (`User-Agent: SazonaliseiPDV/1.0`) para baixar os blocos reais (`256x256` Web Mercator `z/x/y.png`) do **CartoDB Voyager** (`https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png` — mapa real de ruas, avenidas e rios com estética pastel macia estilo cartoon) ou **OpenStreetMap**, salvando cache automático em `storage/map_tiles/` e oferecendo fallback instantâneo para o **Modo Radar Cartoon Offline** caso o computador esteja sem internet!
+
+- **Geocodificação Automática dos Eventos Mais Próximos (`GeolocalizacaoService.resolverCoordenadaEvento`)**:
+  1. **Posição GPS da Loja**: Obtida via `GeolocalizacaoService.obterCoordenadaLojaAtiva()` (sensor GPS do Windows -> fallback por IP -> coordenada configurada na aba de Ambiente).
+  2. **Resolução dos Locais de Eventos**: Cada evento vindo do `SymplaService`, `MinisterioCulturaService` ou `ESTATISTICA_EVENTOS_PERSISTIDOS` passa por `resolverCoordenadaEvento(nome, local, coordLoja)`, que cruza marcos conhecidos de Manaus/Amazônia (*Arena da Amazônia*, *Vasco Vasques*, *Largo de São Sebastião*, *Ponta Negra*, *Studio 5*, *Chapada*, *Adrianópolis*, *Vieiralves*, *Parque Dez*, *Porto*, etc.) e consulta o `Nominatim OpenStreetMap` (`https://nominatim.openstreetmap.org/search`) com cache local.
+  3. **Cálculo Exato de Distância (`Coordenada.calcularDistanciaKm` — Fórmula de Haversine)**:
+     - Calcula a distância em quilômetros (`km`) entre o GPS da loja e cada evento, ordenando a lista e os pins do **mais próximo para o mais distante**.
+
+- **Recursos Interativos do Mapa na Tela (`MapaGpsEventosCanvas`)**:
+  - **Controles de Navegação e Filtro de Raio**:
+    - Arrastar com o mouse (Pan) e Zoom (`+` / `–` / roda do mouse entre níveis `11` e `16`), botão **`[ 📍 Centralizar na Minha Loja ]`** e alternador **`[ 🗺️ Mapa de Ruas Pastel | 🎯 Radar Cartoon ]`**.
+    - Filtro de proximidade em pílulas: **`[ Todos ]`**, **`[ 🔥 Até 2 km (Vizinhança) ]`**, **`[ 📍 Até 5 km (Bairro/Zona) ]`**, **`[ 🏙️ Até 15 km (Cidade) ]`**.
+  - **Pins Cartoon Sólidos e Linha de Distância**:
+    - Desenha o **Pin da Loja (`🏪 SUA LOJA`)** com anéis suaves de raio (`2 km`, `5 km`, `15 km`) e traça uma linha pontilhada até o evento selecionado mostrando a distância no meio da linha (`ex.: 1,3 km`).
+  - **Integração com a IA em 1 Clique**:
+    - Ao clicar em qualquer Pin de evento no mapa (ou no card expansível lateral), exibe: Nome do Evento, Tipo (*Público* ou *Privado*), Local, Data, Distância exata em `km`, Clima Previsto e o botão **`"🤖 Qual estratégia e estoque preparar para este evento?"`**, que envia os dados completos do evento e da distância para o ChatBot IA responder na hora!
 
 ### Aba 4: 🛒 Balcão & Notas (Vendas, Compras, Devoluções e Perdas Simples)
 - **Modo Passo a Passo para Iniciantes**:

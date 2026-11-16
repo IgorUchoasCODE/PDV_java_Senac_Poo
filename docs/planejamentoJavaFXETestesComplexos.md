@@ -451,8 +451,9 @@ flowchart TB
    - **Perguntas Sazonais em 1 Clique**: Responde visualmente e via IA como o clima e eventos sociais (públicos ou privados) mudam o comportamento de consumo dos clientes.
    - **Análise dos 4 Padrões (Venda, Compra, Perda e Devolução)**: Cards expansíveis detalhando os **motivos reais** de perdas e devoluções, melhores épocas de compra/venda e a **estratégia recomendada pela IA** para cada cenário.
    - **🕸️ Grafo em Foco (Mapa Mental de Bolhas Macias — Máximo de 7 Nós)**: Em vez de um grafo "teia de aranha" poluído, exibe apenas **1 bolha central + até 6 bolhas grandes ao redor** em 4 modos selecionáveis: (1) *Causa e Efeito Sazonal*, (2) *Árvore de Embalagens e Kits (3 níveis)*, (3) *Raio-X 360º (Cascata `>>`)* e (4) *Rastreio de Perdas/Devoluções e Ressarcimento*.
-3. **🗺️ Mapa GPS de Eventos Regionais e Distâncias (`GeolocalizacaoService`)**:
-   - Mostra no radar/mapa cartoon a posição GPS atual da loja e a **distância em quilômetros (`km` via Haversine)** até os eventos públicos (MinC/feiras) e privados (Sympla/shows) que ocorrem na região, permitindo pedir à IA uma estratégia de vendas para cada evento próximo.
+3. **🗺️ Mapa GPS de Eventos Regionais e Distâncias (`GeolocalizacaoService` + Motor SlippyMap CartoDB Voyager / OpenStreetMap)**:
+   - Renderiza o mapa interativo de ruas e rios em paleta pastel macia (`CartoDB Voyager` / `OpenStreetMap` com cache local em `storage/map_tiles/` e fallback Radar Cartoon offline, evitando bloqueios `HTTP 403` do Gluon Maps).
+   - Resolve a localização real dos eventos mais próximos via `GeolocalizacaoService.resolverCoordenadaEvento(...)` e calcula a **distância exata em quilômetros (`km` via Haversine)** até a loja, com filtros de raio (`2 km`, `5 km`, `15 km`) e botão direto para pedir à IA a estratégia de estoque/vendas daquele evento.
 4. **🛒 Balcão & Notas (Vendas, Compras, Devoluções e Perdas)**:
    - Fluxo guiado passo a passo para iniciantes, com busca por sigla (`>oba`, `i.s.u`), botões grandes `+`/`-` e sincronização instantânea com a `BandejaOperacoesContexto`.
 5. **📦 Produtos, Kits, Estoque FIFO & Pessoas**:
