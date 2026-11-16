@@ -243,10 +243,26 @@ Conectada diretamente ao [`GeolocalizacaoService`](file:///C:/workspace/Java/Sis
   - **Controles de Navegação e Filtro de Raio**:
     - Arrastar com o mouse (Pan) e Zoom (`+` / `–` / roda do mouse entre níveis `11` e `16`), botão **`[ 📍 Centralizar na Minha Loja ]`** e alternador **`[ 🗺️ Mapa de Ruas Pastel | 🎯 Radar Cartoon ]`**.
     - Filtro de proximidade em pílulas: **`[ Todos ]`**, **`[ 🔥 Até 2 km (Vizinhança) ]`**, **`[ 📍 Até 5 km (Bairro/Zona) ]`**, **`[ 🏙️ Até 15 km (Cidade) ]`**.
-  - **Pins Cartoon Sólidos e Linha de Distância**:
-    - Desenha o **Pin da Loja (`🏪 SUA LOJA`)** com anéis suaves de raio (`2 km`, `5 km`, `15 km`) e traça uma linha pontilhada até o evento selecionado mostrando a distância no meio da linha (`ex.: 1,3 km`).
-  - **Integração com a IA em 1 Clique**:
-    - Ao clicar em qualquer Pin de evento no mapa (ou no card expansível lateral), exibe: Nome do Evento, Tipo (*Público* ou *Privado*), Local, Data, Distância exata em `km`, Clima Previsto e o botão **`"🤖 Qual estratégia e estoque preparar para este evento?"`**, que envia os dados completos do evento e da distância para o ChatBot IA responder na hora!
+  - **Pins Cartoon Sólidos, Lista de Próximos e Card Interativo do Evento**:
+    - **1. Ao abrir a aba ou filtrar por raio (`Até 2 km`, `Até 5 km`, `Até 15 km`)**:
+      - O mapa já destaca os pins dos eventos dentro daquele raio e exibe na faixa lateral/inferior os **Cards Resumidos dos Eventos Mais Próximos** ordenados pela distância (`1,2 km` $\rightarrow$ `2,8 km` $\rightarrow$ `4,5 km`).
+      - Clicar em qualquer card da lista move suavemente a câmera do mapa até o Pin daquele evento e traça a linha pontilhada ligando **`🏪 SUA LOJA`** $\longleftrightarrow$ **`🎪 EVENTO`**.
+    - **2. Ao clicar no Pin do Evento no Mapa (ou no Card da Lista)**:
+      - Abre imediatamente um **Card Macio Cartoon de Detalhe do Evento** (com fonte `>= 16px`, `wrapText=true` e zero texto cortado), contendo exatamente:
+        ```text
+        ┌─────────────────────────────────────────────────────────────────────────┐
+        │ 🎪 Feira Regional de Gastronomia e Cultura          [ PÚBLICO • MinC ]  │
+        │ 📍 Local: Centro de Convenções Vasco Vasques (Flores, Manaus/AM)        │
+        │ 📏 Distância da sua loja: 1,4 km (aprox. 4 min — Alto Impacto no Fluxo) │
+        │ 📅 Data: 20/11/2026 às 18:00   |   ☀️ Clima Previsto: 31°C (Sol Forte)   │
+        │ 💡 Oportunidade Sazonal: Eventos a menos de 2 km aumentam em +28% a     │
+        │    procura por bebidas geladas, insumos de café da manhã e descartáveis.│
+        │                                                                         │
+        │  [ 🤖 Perguntar Estratégia à IA ]   [ 🛒 Preparar Compra na Bandeja ]   │
+        └─────────────────────────────────────────────────────────────────────────┘
+        ```
+      - **Botão `[ 🤖 Perguntar Estratégia à IA ]`**: Envia automaticamente o contexto do evento (nome, tipo público/privado, distância em `km`, data e clima previsto) para o `GeminiAgenteOperacional` explicar em linguagem simples de balcão como aproveitar o evento.
+      - **Botão `[ 🛒 Preparar Compra na Bandeja ]`**: Pede para a IA montar na `BandejaOperacoesContexto` a sugestão de reposição dos produtos que mais vendem sob aquele evento e clima!
 
 ### Aba 4: 🛒 Balcão & Notas (Vendas, Compras, Devoluções e Perdas Simples)
 - **Modo Passo a Passo para Iniciantes**:
