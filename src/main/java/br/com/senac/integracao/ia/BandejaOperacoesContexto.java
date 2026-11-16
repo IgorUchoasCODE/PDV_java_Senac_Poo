@@ -4,10 +4,16 @@ import br.com.senac.controller.RespostaEndpoint;
 import br.com.senac.controller.RotaSistema;
 import br.com.senac.controller.RoteadorController;
 import br.com.senac.integracao.gemini.GeminiToolRegistry;
+import br.com.senac.integracao.ia.validacao.LeitorParametros;
+import br.com.senac.integracao.ia.validacao.RegistroValidadores;
+import br.com.senac.integracao.ia.validacao.ResultadoValidacao;
+import br.com.senac.integracao.ia.validacao.ValidadorExecucao;
+import br.com.senac.integracao.ia.validacao.ValidadorLoteBandeja;
 import br.com.senac.repository.dao.PadraoDAO;
 import br.com.senac.repository.modal.nota.Nota;
 import br.com.senac.repository.modal.pessoa.Pessoa;
 import br.com.senac.repository.modal.produto.Produto;
+import br.com.senac.repository.modal.produto.Um;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -27,11 +33,29 @@ public class BandejaOperacoesContexto {
     private final AtomicInteger sequencial = new AtomicInteger(1);
     private final LocalDateTime dataAberturaJanela;
     private volatile boolean janelaAberta;
+    private volatile RoteadorController roteadorValidacao;
 
     public BandejaOperacoesContexto(String idSessao) {
         this.idSessao = idSessao != null ? idSessao : "default";
         this.dataAberturaJanela = LocalDateTime.now();
         this.janelaAberta = true;
+    }
+
+    public void vincularRoteadorValidacao(RoteadorController roteador) {
+        if (roteador != null) {
+            this.roteadorValidacao = roteador;
+        }
+    }
+
+    public ValidadorLoteBandeja.RelatorioValidacaoLote validarLote() {
+        return validarLote(this.roteadorValidacao);
+    }
+
+    public ValidadorLoteBandeja.RelatorioValidacaoLote validarLote(RoteadorController roteador) {
+        if (roteador != null) {
+            this.roteadorValidacao = roteador;
+        }
+        return ValidadorLoteBandeja.validar(this, this.roteadorValidacao);
     }
 
     public String getIdSessao() {
@@ -319,8 +343,57 @@ public class BandejaOperacoesContexto {
             // vincula automaticamente a pessoa recém-cadastrada no lote (evita cair em CONSUMIDOR FINAL por omissão da IA).
             vincularPessoaDoMesmoLoteSeOmitida(item, mapaValidados, idsCriadosPorItem, jaExecutados, emExecucao, roteador, detalhes);
 
+            // Verifica dependências por nome/sigla que falharam em operações anteriores do mesmo lote.
+            String erroDepPorNome = verificarDependenciaPorNomeOuSiglaFalhada(item, mapaValidados, jaExecutados);
+            if (erroDepPorNome != null) {
+                item.setMensagemErro(erroDepPorNome);
+                detalhes.add(new RelatorioExecucaoBandeja.ItemExecutado(
+                        item.getIdItem(), item.getRota().name(), item.getDescricaoAmigavel(),
+                        false, erroDepPorNome, null, item.getParametros()));
+                return;
+            }
+
+            // Pré-validação por rota (RegistroValidadores) antes de mutar o banco
+            RegistroValidadores validadores = RegistroValidadores.padrao();
+            Optional<ValidadorExecucao> validadorOpt = validadores.para(item.getRota());
+            Map<String, Object> fotoAntes = Map.of();
+            if (validadorOpt.isPresent()) {
+                ValidadorExecucao validador = validadorOpt.get();
+                fotoAntes = validador.capturarEstadoAntes(item, roteador);
+                ResultadoValidacao pre = validador.antes(item, roteador);
+                if (!pre.ok()) {
+                    item.setMensagemErro(pre.mensagem());
+                    detalhes.add(new RelatorioExecucaoBandeja.ItemExecutado(
+                            item.getIdItem(),
+                            item.getRota().name(),
+                            item.getDescricaoAmigavel(),
+                            false,
+                            pre.mensagem(),
+                            null,
+                            item.getParametros()
+                    ));
+                    return;
+                }
+            }
+
             RespostaEndpoint<Object> resp = roteador.executarEndpoint(item.getRota(), item.getParametros());
             if (resp.sucesso()) {
+                if (validadorOpt.isPresent()) {
+                    ResultadoValidacao pos = validadorOpt.get().depois(item, resp.dados(), fotoAntes, roteador);
+                    if (!pos.ok()) {
+                        item.setMensagemErro(pos.mensagem());
+                        detalhes.add(new RelatorioExecucaoBandeja.ItemExecutado(
+                                item.getIdItem(),
+                                item.getRota().name(),
+                                item.getDescricaoAmigavel(),
+                                false,
+                                pos.mensagem(),
+                                resp.dados(),
+                                item.getParametros()
+                        ));
+                        return;
+                    }
+                }
                 item.setResultadoExecucao(resp.dados());
                 Long idGerado = extrairIdResultado(resp.dados());
                 if (idGerado != null) {
@@ -412,6 +485,88 @@ public class BandejaOperacoesContexto {
     }
 
     /**
+     * Corrige automaticamente conflitos de unidade de medida no lote atual quando há uma criação
+     * redundante de {@link Um} cujo nome ou sigla já existe no banco (ex.: tentar criar "PT/Pacote"
+     * quando "PCT/Pacote" já existe), removendo o cadastro redundante sem renumerar os demais
+     * {@code OP-N} e atualizando os produtos da bandeja que referenciam a sigla substituída.
+     */
+    public synchronized List<String> corrigirConflitosUnidadeNoLote(RoteadorController roteador) {
+        if (roteador == null || itens.isEmpty()) {
+            return List.of();
+        }
+        List<Um> unidadesExistentes = roteador.produtos().listarUnidadesMedida();
+        if (unidadesExistentes == null || unidadesExistentes.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> correcoes = new ArrayList<>();
+        Map<String, String> siglasSubstituidas = new LinkedHashMap<>();
+        List<ItemBandeja> paraRemover = new ArrayList<>();
+
+        for (ItemBandeja item : itens) {
+            if (item.isConcluido() || item.isPulado()) {
+                continue;
+            }
+            if (item.getRota() != RotaSistema.PRODUTO_UNIDADE_CADASTRAR) {
+                continue;
+            }
+            String sigla = LeitorParametros.textoOuNulo(item.getParametros(), "sigla", "siglaAtual");
+            String nome = LeitorParametros.textoOuNulo(item.getParametros(), "nome");
+            Um conflito = null;
+            for (Um um : unidadesExistentes) {
+                if (sigla != null && um.getSigla() != null && um.getSigla().equalsIgnoreCase(sigla.trim())) {
+                    conflito = um;
+                    break;
+                }
+                if (nome != null && um.getNome() != null && um.getNome().equalsIgnoreCase(nome.trim())) {
+                    conflito = um;
+                    break;
+                }
+            }
+            if (conflito != null && conflito.getSigla() != null) {
+                paraRemover.add(item);
+                String siglaBanco = conflito.getSigla().trim().toUpperCase(Locale.ROOT);
+                if (sigla != null && !sigla.trim().equalsIgnoreCase(siglaBanco)) {
+                    siglasSubstituidas.put(sigla.trim().toUpperCase(Locale.ROOT), siglaBanco);
+                    correcoes.add("Removida " + item.getIdItem() + " (cadastro redundante de '" + sigla.trim()
+                            + "' / " + (nome != null ? nome : conflito.getNome())
+                            + "): o banco já possui '" + conflito.getNome() + "' com sigla '" + siglaBanco + "'.");
+                } else {
+                    correcoes.add("Removida " + item.getIdItem() + " (unidade '" + siglaBanco
+                            + "' já está cadastrada no banco).");
+                }
+            }
+        }
+
+        if (!paraRemover.isEmpty()) {
+            itens.removeAll(paraRemover);
+        }
+
+        if (!siglasSubstituidas.isEmpty()) {
+            for (ItemBandeja item : itens) {
+                if (item.isConcluido() || item.isPulado()) {
+                    continue;
+                }
+                String siglaAtual = LeitorParametros.textoOuNulo(item.getParametros(), "siglaUm");
+                if (siglaAtual == null) {
+                    continue;
+                }
+                String siglaNova = siglasSubstituidas.get(siglaAtual.trim().toUpperCase(Locale.ROOT));
+                if (siglaNova != null && !siglaNova.equalsIgnoreCase(siglaAtual)) {
+                    item.getParametrosModificaveis().put("siglaUm", siglaNova);
+                    String desc = item.getDescricaoAmigavel();
+                    if (desc != null && !desc.isBlank()) {
+                        item.setDescricaoAmigavel(desc.replace("(" + siglaAtual.trim(), "(" + siglaNova));
+                    }
+                    correcoes.add("Atualizada " + item.getIdItem() + " (" + item.getDescricaoAmigavel()
+                            + "): unidade alterada de '" + siglaAtual.trim() + "' para '" + siglaNova + "'.");
+                }
+            }
+        }
+        return correcoes;
+    }
+
+    /**
      * Verifica se há um produto agendado para criação nesta mesma bandeja em memória de execução,
      * permitindo que instruções seguintes no mesmo bloco $$ referenciem o produto antes do commit no banco.
      */
@@ -472,6 +627,9 @@ public class BandejaOperacoesContexto {
                 validados, validados > 1 ? "s" : "",
                 pendentes, pendentes > 1 ? "s" : ""));
 
+        ValidadorLoteBandeja.RelatorioValidacaoLote relatorioPre =
+                roteadorValidacao != null ? ValidadorLoteBandeja.validar(this, roteadorValidacao) : null;
+
         for (int i = 0; i < itens.size(); i++) {
             ItemBandeja item = itens.get(i);
             String statusTxt = switch (item.getStatus()) {
@@ -487,7 +645,18 @@ public class BandejaOperacoesContexto {
 
             if (item.isPendente() && !item.getCamposFaltantes().isEmpty()) {
                 sb.append("     Faltam informar: ").append(item.getCamposFaltantes()).append("\n");
+            } else if (relatorioPre != null) {
+                String conflitoOp = relatorioPre.primeiroConflito(item.getIdItem());
+                if (conflitoOp != null) {
+                    sb.append("     [!] PRÉ-VALIDAÇÃO: ").append(conflitoOp).append("\n");
+                }
             }
+        }
+
+        if (relatorioPre != null && !relatorioPre.todoValido()) {
+            sb.append("\nATENÇÃO PRÉ-VALIDAÇÃO: ").append(relatorioPre.totalConflitos())
+              .append(" operação(ões) possuem conflito ou dependência quebrada (marcadas com [!] acima).\n")
+              .append("Corrija os itens antes de confirmar para evitar execução parcial ou falhas em cascata.\n");
         }
 
         if (pendentes > 0) {
@@ -527,11 +696,17 @@ public class BandejaOperacoesContexto {
 
         ItemBandeja pessoaCadastro = null;
         for (ItemBandeja candidato : mapaValidados.values()) {
-            if (candidato.getRota() != null
-                    && candidato.getRota().name().startsWith("PESSOA_")
-                    && candidato.getRota().name().endsWith("_CADASTRAR")) {
+            if (candidato.getRota() == null) continue;
+            String nomeRotaCand = candidato.getRota().name();
+            if (!nomeRotaCand.startsWith("PESSOA_") || !nomeRotaCand.endsWith("_CADASTRAR")) continue;
+            boolean compativelPapel = (ehCompra && nomeRotaCand.contains("FORNECEDOR"))
+                    || (ehVenda && nomeRotaCand.contains("CLIENTE"));
+            if (compativelPapel) {
                 pessoaCadastro = candidato;
                 break;
+            }
+            if (nomeRotaCand.equals("PESSOA_SIMPLES_CADASTRAR") && pessoaCadastro == null) {
+                pessoaCadastro = candidato;
             }
         }
         if (pessoaCadastro == null) return;
@@ -580,6 +755,94 @@ public class BandejaOperacoesContexto {
                 executarItemComDependencias(candidato, roteador, mapaValidados, idsCriadosPorItem, jaExecutados, emExecucao, detalhes);
             }
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private String verificarDependenciaPorNomeOuSiglaFalhada(
+            ItemBandeja item,
+            Map<String, ItemBandeja> mapaValidados,
+            Set<String> jaExecutados) {
+        if (item == null || item.getRota() == null || mapaValidados.isEmpty()) return null;
+        Map<String, Object> p = item.getParametros();
+        String idAtual = item.getIdItem().toUpperCase(Locale.ROOT);
+
+        if (item.getRota() == RotaSistema.PRODUTO_FISICO_CADASTRAR
+                || item.getRota() == RotaSistema.PRODUTO_DIGITAL_CADASTRAR) {
+            Object siglaObj = p.get("siglaUm");
+            String sigla = (item.getRota() == RotaSistema.PRODUTO_DIGITAL_CADASTRAR) ? "UN"
+                    : (siglaObj != null && !siglaObj.toString().isBlank() ? siglaObj.toString().trim() : "UN");
+            for (ItemBandeja cand : mapaValidados.values()) {
+                if (cand.getIdItem().equalsIgnoreCase(idAtual)) continue;
+                if (cand.getRota() == RotaSistema.PRODUTO_UNIDADE_CADASTRAR
+                        && jaExecutados.contains(cand.getIdItem().toUpperCase(Locale.ROOT))
+                        && cand.getMensagemErro() != null) {
+                    Object candSigla = cand.getParametros().get("sigla");
+                    if (candSigla != null && candSigla.toString().trim().equalsIgnoreCase(sigla)) {
+                        return "Dependência " + cand.getIdItem() + " (unidade \"" + sigla + "\") não concluída: " + cand.getMensagemErro();
+                    }
+                }
+            }
+        }
+
+        if (item.getRota() == RotaSistema.PRODUTO_KIT_ADICIONAR_COMPONENTE) {
+            String erroKit = buscarProdutoFalhadoNoLote(p.get("nomeKit"), idAtual, mapaValidados, jaExecutados);
+            if (erroKit != null) return erroKit;
+            String erroComp = buscarProdutoFalhadoNoLote(p.get("nomeComponente"), idAtual, mapaValidados, jaExecutados);
+            if (erroComp != null) return erroComp;
+        }
+
+        if (item.getRota() == RotaSistema.NOTA_COMPRA_EMITIR
+                || item.getRota().name().startsWith("NOTA_VENDA_EMITIR_")) {
+            Object nomePessoa = item.getRota() == RotaSistema.NOTA_COMPRA_EMITIR
+                    ? (p.get("nomeFornecedor") != null ? p.get("nomeFornecedor") : p.get("idFornecedor"))
+                    : (p.get("nomeCliente") != null ? p.get("nomeCliente") : p.get("idCliente"));
+            if (nomePessoa != null && !nomePessoa.toString().isBlank()) {
+                String termo = nomePessoa.toString().trim();
+                for (ItemBandeja cand : mapaValidados.values()) {
+                    if (cand.getRota() == null || !cand.getRota().name().startsWith("PESSOA_")) continue;
+                    if (!jaExecutados.contains(cand.getIdItem().toUpperCase(Locale.ROOT)) || cand.getMensagemErro() == null) continue;
+                    Object nCand = cand.getParametros().get("nome");
+                    if (nCand == null) nCand = cand.getParametros().get("razaoSocial");
+                    if (nCand != null && nCand.toString().trim().equalsIgnoreCase(termo)) {
+                        return "Dependência " + cand.getIdItem() + " (\"" + termo + "\") não concluída: " + cand.getMensagemErro();
+                    }
+                }
+            }
+            Object itensObj = p.get("itens");
+            if (itensObj instanceof List<?> lista) {
+                for (Object el : lista) {
+                    if (el instanceof Map<?, ?> m) {
+                        Object np = m.get("nomeProduto") != null ? m.get("nomeProduto") : m.get("nome");
+                        String errItem = buscarProdutoFalhadoNoLote(np, idAtual, mapaValidados, jaExecutados);
+                        if (errItem != null) return errItem;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private String buscarProdutoFalhadoNoLote(
+            Object nomeProdutoObj,
+            String idAtual,
+            Map<String, ItemBandeja> mapaValidados,
+            Set<String> jaExecutados) {
+        if (nomeProdutoObj == null) return null;
+        String nomeProd = nomeProdutoObj.toString().trim();
+        if (nomeProd.isEmpty()) return null;
+        for (ItemBandeja cand : mapaValidados.values()) {
+            if (cand.getIdItem().equalsIgnoreCase(idAtual)) continue;
+            if ((cand.getRota() == RotaSistema.PRODUTO_FISICO_CADASTRAR
+                    || cand.getRota() == RotaSistema.PRODUTO_DIGITAL_CADASTRAR)
+                    && jaExecutados.contains(cand.getIdItem().toUpperCase(Locale.ROOT))
+                    && cand.getMensagemErro() != null) {
+                Object candNome = cand.getParametros().get("nome");
+                if (candNome != null && candNome.toString().trim().equalsIgnoreCase(nomeProd)) {
+                    return "Dependência " + cand.getIdItem() + " (produto \"" + nomeProd + "\") não concluída: " + cand.getMensagemErro();
+                }
+            }
+        }
+        return null;
     }
 
     /**

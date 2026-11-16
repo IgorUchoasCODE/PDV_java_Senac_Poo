@@ -62,3 +62,7 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 Write-Host "--- Executando Teste do Importador CSV e Reset Restrito (TesteImportadorCsvEReset) ---" -ForegroundColor Cyan
 & java "-Dfile.encoding=UTF-8" -cp "$fullCp" br.com.senac.application.TesteImportadorCsvEReset
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "--- Executando Teste de Contexto: Prompt Longo e Validação 3 Fases (TesteFluxoPromptLongoEValidacao) ---" -ForegroundColor Cyan
+& java "-Dfile.encoding=UTF-8" -cp "$fullCp" br.com.senac.application.TesteFluxoPromptLongoEValidacao
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

@@ -16,7 +16,9 @@ import br.com.senac.integracao.ia.ProvedorIA.PedidoIA;
 import br.com.senac.integracao.ia.ProvedorIA.RespostaIA;
 import br.com.senac.integracao.ia.ProvedorIAFactory;
 import br.com.senac.integracao.ia.RelatorioExecucaoBandeja;
+import br.com.senac.integracao.ia.parser.DecompositorPromptLongo;
 import br.com.senac.integracao.ia.parser.PreProcessadorMensagem;
+import br.com.senac.integracao.ia.validacao.ValidadorLoteBandeja;
 import br.com.senac.repository.modal.nota.*;
 import br.com.senac.repository.modal.pessoa.Pessoa;
 import br.com.senac.repository.modal.produto.Produto;
@@ -144,7 +146,9 @@ public class GeminiAgenteOperacional {
      */
     public BandejaOperacoesContexto obterBandeja(String idSessao) {
         if (idSessao == null || idSessao.isBlank()) idSessao = "default";
-        return bandejasPorSessao.computeIfAbsent(idSessao, BandejaOperacoesContexto::new);
+        BandejaOperacoesContexto bandeja = bandejasPorSessao.computeIfAbsent(idSessao, BandejaOperacoesContexto::new);
+        bandeja.vincularRoteadorValidacao(roteadorController);
+        return bandeja;
     }
 
     /**
@@ -273,6 +277,29 @@ public class GeminiAgenteOperacional {
                         resposta);
                 return resposta;
             }
+            if (bandejaAtiva != null && bandejaAtiva.temItens() && ehPedidoCorrecaoDireta(msg)) {
+                List<String> correcoes = bandejaAtiva.corrigirConflitosUnidadeNoLote(roteadorController);
+                if (!correcoes.isEmpty()) {
+                    bandejaAtiva.vincularRoteadorValidacao(roteadorController);
+                    StringBuilder sbCorrecao = new StringBuilder();
+                    sbCorrecao.append("✔ Correções aplicadas automaticamente na bandeja (sem perda das demais operações):\n");
+                    for (String c : correcoes) {
+                        sbCorrecao.append("  • ").append(c).append("\n");
+                    }
+                    sbCorrecao.append("\n").append(bandejaAtiva.formatarVisualizacao());
+                    sbCorrecao.append("\n\nResponda 'sim' para confirmar e executar estas operações ou 'não' para cancelar.");
+                    String brutoCorrecao = sbCorrecao.toString();
+                    String respostaCorrecao = finalizarRespostaFormatada(brutoCorrecao);
+                    registrarNoHistorico(idSessao, "user", msg);
+                    registrarNoHistorico(idSessao, "model", respostaCorrecao);
+                    registrarLogTurnoSeAtivo(idSessao, msg,
+                            "Pedido direto de correção na Bandeja detectado (sem acionar confirmação SIM).",
+                            "(Não enviado à IA — auto-correção relacional na BandejaOperacoesContexto)",
+                            "Correções aplicadas:\n" + brutoCorrecao,
+                            respostaCorrecao);
+                    return respostaCorrecao;
+                }
+            }
         }
 
         // Busca direta por sigla fora de $$ (ex: "procura produto o.b.a", "procura prodito >oba", "cliente i.s.u")
@@ -299,15 +326,21 @@ public class GeminiAgenteOperacional {
             }
             List<Map<String, Object>> historico = obterHistoricoSessao(idSessao);
             notificarProgresso("Pré-processando...");
+            boolean substituirBandeja = (bandejaAtiva != null && bandejaAtiva.temItens()) && ehIntencaoCorrecaoBandeja(msg);
+            var decomp = (!ehPerguntaOuSimulacao(msg))
+                    ? DecompositorPromptLongo.decompor(msg)
+                    : new DecompositorPromptLongo.ResultadoDecomposicao(false, List.of(), "");
+            if (decomp.promptLongo()) {
+                return processarPromptLongoEmEtapas(idSessao, msg, decomp, historico, substituirBandeja);
+            }
             var preProc = preProcessador.processar(msg);
             String msgParaIA = msg.trim().replaceAll("[ \\t]{2,}", " ");
             if (preProc.temContexto()) {
                 msgParaIA = msgParaIA + "\n\n" + preProc.gerarContextoSemantico();
             }
-            boolean substituirBandeja = false;
             if (bandejaAtiva != null && bandejaAtiva.temItens()) {
+                bandejaAtiva.vincularRoteadorValidacao(roteadorController);
                 msgParaIA = msgParaIA + "\n\n" + resumirBandejaParaEdicaoIA(bandejaAtiva);
-                substituirBandeja = ehIntencaoCorrecaoBandeja(msg);
             }
             if (Thread.currentThread().isInterrupted()) {
                 return "Operação cancelada pelo usuário.";
@@ -339,6 +372,185 @@ public class GeminiAgenteOperacional {
             return finalizarRespostaFormatada(br.com.senac.integracao.ia.ContextoIABuilder.propriedade("ia.msg.erro.generico",
                     "Não consegui processar sua solicitação agora. Tente novamente em instantes."));
         }
+    }
+
+    /**
+     * Divide prompts longos em sub-prompts menores ordenados por dependência, envia etapa a etapa
+     * à IA com o contexto acumulado da bandeja e executa pré-validação relacional após cada etapa.
+     */
+    private String processarPromptLongoEmEtapas(
+            String idSessao,
+            String msgOriginal,
+            DecompositorPromptLongo.ResultadoDecomposicao decomp,
+            List<Map<String, Object>> historico,
+            boolean substituirBandeja) throws Exception {
+        if (substituirBandeja) {
+            limparApenasBandejaParaReconstrucao(idSessao);
+        }
+        BandejaOperacoesContexto bandeja = obterBandeja(idSessao);
+        registrarNoHistorico(idSessao, "user", msgOriginal);
+
+        StringBuilder resumoEtapas = new StringBuilder();
+        StringBuilder observacoesIA = new StringBuilder();
+        StringBuilder logEnvios = new StringBuilder();
+        StringBuilder logRespostas = new StringBuilder();
+        int totalEtapas = decomp.etapas().size();
+
+        for (DecompositorPromptLongo.EtapaPrompt etapa : decomp.etapas()) {
+            if (Thread.currentThread().isInterrupted()) {
+                return "Operação cancelada pelo usuário.";
+            }
+            notificarProgresso("Etapa " + etapa.ordem() + "/" + totalEtapas + ": " + etapa.titulo() + "...");
+
+            var preEtapa = preProcessador.processar(etapa.prompt());
+            StringBuilder promptEtapa = new StringBuilder();
+            promptEtapa.append("[EXECUÇÃO SEGMENTADA DE PROMPT LONGO - ETAPA ")
+                       .append(etapa.ordem()).append("/").append(totalEtapas)
+                       .append(" (").append(etapa.titulo()).append(")]\n")
+                       .append("Enfileire EXCLUSIVAMENTE as operações desta etapa usando as ferramentas do sistema. ")
+                       .append("NÃO repita operações já listadas na bandeja abaixo e use exatamente os nomes/OP-N já criados quando referenciar itens anteriores.\n\n")
+                       .append("Instrução da etapa:\n").append(etapa.prompt());
+            if (preEtapa.temContexto()) {
+                promptEtapa.append("\n\n").append(preEtapa.gerarContextoSemantico());
+            }
+            if (bandeja.temItens()) {
+                promptEtapa.append("\n\n").append(formatarResumoCompactoParaEtapa(bandeja));
+                ValidadorLoteBandeja.RelatorioValidacaoLote relPrev = ValidadorLoteBandeja.validar(bandeja, roteadorController);
+                promptEtapa.append("\n").append(relPrev.formatarParaIA());
+            }
+
+            logEnvios.append("--- ETAPA ").append(etapa.ordem()).append("/").append(totalEtapas)
+                     .append(" (").append(etapa.titulo()).append(") ---\n").append(promptEtapa).append("\n");
+
+            int qtdAntes = bandeja.totalItens();
+            RespostaIA respEtapa = provedor.conversar(new PedidoIA(promptEtapa.toString(), null, null, historico));
+            if (Thread.currentThread().isInterrupted()) {
+                return "Operação cancelada pelo usuário.";
+            }
+            logRespostas.append("--- RESPOSTA ETAPA ").append(etapa.ordem()).append(" ---\n")
+                        .append(resumirRespostaIAParaLog(respEtapa)).append("\n");
+
+            String avisoEtapa = executarLoopEtapaPromptLongo(idSessao, etapa, promptEtapa.toString(), respEtapa, historico, 0);
+            if (avisoEtapa != null && !avisoEtapa.isBlank()) {
+                if (observacoesIA.length() > 0) observacoesIA.append("\n");
+                observacoesIA.append(avisoEtapa);
+            }
+
+            int qtdAdicionada = Math.max(0, bandeja.totalItens() - qtdAntes);
+            ValidadorLoteBandeja.RelatorioValidacaoLote valEtapa = ValidadorLoteBandeja.validar(bandeja, roteadorController);
+            resumoEtapas.append("  • Etapa ").append(etapa.ordem()).append("/").append(totalEtapas)
+                        .append(" (").append(etapa.titulo()).append("): ")
+                        .append("+").append(qtdAdicionada).append(" instrução(ões)");
+            if (valEtapa.todoValido()) {
+                resumoEtapas.append(" [pré-validação OK]\n");
+            } else {
+                resumoEtapas.append(" [⚠ ").append(valEtapa.totalConflitos()).append(" conflito(s) na bandeja até aqui]\n");
+            }
+        }
+
+        StringBuilder posBruto = new StringBuilder();
+        posBruto.append("⚠ [AVISO PROMPT LONGO]: ").append(decomp.avisoUsuario()).append("\n")
+                .append("Evite comandos extensos em um único prompt para não perder o contexto nem diminuir a eficiência.\n\n")
+                .append("RESUMO POR ETAPA (COM PRÉ-VALIDAÇÃO INCREMENTAL):\n")
+                .append(resumoEtapas.toString().trim());
+        if (observacoesIA.length() > 0) {
+            posBruto.append("\n\n").append(observacoesIA.toString().trim());
+        }
+        if (bandeja.temItens()) {
+            posBruto.append("\n\n").append(bandeja.formatarVisualizacao());
+        }
+
+        String resposta = finalizarRespostaFormatada(posBruto.toString());
+        registrarNoHistorico(idSessao, "model", resposta);
+        if (logFluxo.isAtivo()) {
+            registrarLogTurnoSeAtivo(idSessao, msgOriginal,
+                    "Prompt longo decomposto em " + totalEtapas + " etapas ordenadas por dependência.",
+                    logEnvios.toString(),
+                    logRespostas + "\nSaída pós-processada:\n" + posBruto,
+                    resposta);
+        }
+        return resposta;
+    }
+
+    private String executarLoopEtapaPromptLongo(
+            String idSessao,
+            DecompositorPromptLongo.EtapaPrompt etapa,
+            String promptOriginalEtapa,
+            RespostaIA resp,
+            List<Map<String, Object>> historico,
+            int nivelLoop) throws Exception {
+        BandejaOperacoesContexto bandeja = obterBandeja(idSessao);
+        if (resp == null) return "";
+        if (!resp.temChamadas()) {
+            String texto = resp.texto() != null ? resp.texto().trim() : "";
+            String dsl = extrairBlocoDsl(texto);
+            if (dsl != null) {
+                compiladorInstrucoesCurta.compilarEProcessar(
+                        idSessao, dsl, bandeja, () -> fecharJanelaContexto(idSessao));
+                return "";
+            }
+            return "";
+        }
+
+        List<ChamadaFerramenta> leituras = new ArrayList<>();
+        List<ChamadaFerramenta> escritas = new ArrayList<>();
+        for (ChamadaFerramenta c : resp.chamadas()) {
+            RotaSistema rota = roteadorController.resolverRota(c.rota());
+            GeminiToolRegistry.NivelRiscoOperacao risco = rota != null
+                    ? GeminiToolRegistry.classificarRisco(rota)
+                    : GeminiToolRegistry.NivelRiscoOperacao.READ_ONLY;
+            if (risco == GeminiToolRegistry.NivelRiscoOperacao.READ_ONLY) {
+                leituras.add(c);
+            } else {
+                escritas.add(c);
+            }
+        }
+
+        StringBuilder retornoLeituras = new StringBuilder();
+        for (ChamadaFerramenta c : leituras) {
+            if (Thread.currentThread().isInterrupted()) return "";
+            String r = despacharChamadaTool(idSessao, c);
+            if (r != null && !r.isBlank()) {
+                if (retornoLeituras.length() > 0) retornoLeituras.append("\n\n");
+                retornoLeituras.append(r);
+            }
+        }
+
+        StringBuilder avisos = new StringBuilder();
+        for (ChamadaFerramenta c : escritas) {
+            if (Thread.currentThread().isInterrupted()) return avisos.toString();
+            String r = despacharChamadaTool(idSessao, c);
+            if (r != null && r.contains("⚠️")) {
+                if (avisos.length() > 0) avisos.append("\n");
+                avisos.append("Etapa ").append(etapa.ordem()).append(": ").append(r);
+            }
+        }
+
+        if (escritas.isEmpty() && !leituras.isEmpty() && nivelLoop < 1 && provedor != null) {
+            String followUp = promptOriginalEtapa
+                    + "\n\nResultados das consultas realizadas para esta etapa:\n"
+                    + retornoLeituras
+                    + "\n\nCom base nesses dados, chame agora as ferramentas de escrita necessárias para concluir esta etapa ("
+                    + etapa.titulo() + ").";
+            RespostaIA resp2 = provedor.conversar(new PedidoIA(followUp, null, null, historico));
+            String extra = executarLoopEtapaPromptLongo(idSessao, etapa, promptOriginalEtapa, resp2, historico, nivelLoop + 1);
+            if (!extra.isBlank()) {
+                if (avisos.length() > 0) avisos.append("\n");
+                avisos.append(extra);
+            }
+        }
+        return avisos.toString();
+    }
+
+    private String formatarResumoCompactoParaEtapa(BandejaOperacoesContexto bandeja) {
+        StringBuilder sb = new StringBuilder("[Operações já enfileiradas na Bandeja neste lote]:\n");
+        for (ItemBandeja item : bandeja.getItens()) {
+            sb.append(" - ").append(item.getIdItem())
+              .append(" [").append(item.getRota().name()).append("] ")
+              .append(item.getDescricaoAmigavel())
+              .append(" | params=").append(item.getParametros()).append("\n");
+        }
+        return sb.toString();
     }
 
     /**
@@ -1095,6 +1307,8 @@ public class GeminiAgenteOperacional {
               .append(item.getDescricaoAmigavel())
               .append(" | params=").append(item.getParametros()).append("\n");
         }
+        ValidadorLoteBandeja.RelatorioValidacaoLote relatorio = ValidadorLoteBandeja.validar(bandeja, roteadorController);
+        sb.append("\n").append(relatorio.formatarParaIA()).append("\n");
         String simulacao = br.com.senac.integracao.ia.bandeja.SimuladorBandejaService
                 .gerarContextoSimulacaoParaIA(bandeja, roteadorController);
         if (!simulacao.isBlank()) {
@@ -1104,8 +1318,16 @@ public class GeminiAgenteOperacional {
           .append("1) PERGUNTAS E SIMULAÇÕES (lucro, margem, custo, desconto, estoque projetado, 'como ficaria', 'quanto lucraria', 'se eu vender X'): ")
           .append("NÃO chame ferramentas de escrita e NÃO repita o bloco 'BANDEJA DE CONTEXTO ATIVA'. Responda com cálculos objetivos usando os dados da bandeja e a simulação acima (e consultas READ_ONLY apenas se precisar de dados extras do banco).\n")
           .append("2) CORREÇÃO/SUBSTITUIÇÃO: Se o usuário pedir explicitamente para corrigir ou trocar algo do plano, reemita as ferramentas de escrita corrigidas.\n")
-          .append("3) NOVAS ADIÇÕES: Se o usuário pedir novas operações além das atuais, chame APENAS as novas ferramentas (não duplique os itens já listados na bandeja).");
+          .append("3) NOVAS ADIÇÕES: Se o usuário pedir novas operações além das atuais, chame APENAS as novas ferramentas (não duplique os itens já listados na bandeja).\n")
+          .append("4) AUDITORIA E VALIDAÇÃO: Se o usuário perguntar se o lote/bandeja já foi validado ou se está tudo correto, responda ESTRITAMENTE com base na [AUDITORIA DE PRÉ-VALIDAÇÃO DA BANDEJA] acima. Se STATUS GERAL for REPROVADA, liste exatamente quais OP-N falharão e por quê — NUNCA diga que está tudo válido quando houver conflitos.");
         return sb.toString();
+    }
+
+    private boolean ehPedidoCorrecaoDireta(String msg) {
+        if (msg == null || msg.isBlank()) return false;
+        String lower = msg.toLowerCase(Locale.ROOT).trim();
+        if (lower.endsWith("?")) return false;
+        return lower.matches("(?s)^(?:pode\\s+|por\\s+favor\\s+)?(?:corrig\\w*|ajust\\w*|arrum\\w*|consert\\w*)(?:\\s+(?:isso|a\\s+bandeja|o\\s+lote|os\\s+(?:erros?|conflitos?|problemas?)|as\\s+(?:instru[cç][oõ]es|opera[cç][oõ]es)))?\\s*[!.]*$");
     }
 
     private boolean ehIntencaoCorrecaoBandeja(String msg) {
@@ -1114,7 +1336,7 @@ public class GeminiAgenteOperacional {
         if (lower.endsWith("?") || lower.matches("(?s)^(?:n[aã]o\\s+(?:entendi|sei|compreendi))\\b.*")) {
             return false;
         }
-        return lower.matches("(?s)^(?:n[aã]o|na\\s+verdade|em\\s+vez|ao\\s+inv[eé]s|corrig\\w*|ajust\\w*|modifi\\w*|alter\\w*|troc\\w*|substitu\\w*|refa[cz]\\w*|quero\\s+que\\s+(?:modifi|alter|troc|corrij|mud)).*");
+        return lower.matches("(?s)^(?:(?:pode\\s+)?(?:corrig\\w*|ajust\\w*|arrum\\w*|consert\\w*|modifi\\w*|alter\\w*|troc\\w*|substitu\\w*|refa[cz]\\w*)|n[aã]o|na\\s+verdade|em\\s+vez|ao\\s+inv[eé]s|quero\\s+que\\s+(?:modifi|alter|troc|corrij|mud)).*");
     }
 
     private String extrairBlocoDsl(String texto) {

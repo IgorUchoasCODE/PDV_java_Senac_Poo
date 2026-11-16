@@ -67,17 +67,18 @@ public class ValidadorProduto implements ValidadorExecucao {
                 return ResultadoValidacao.aprovado("O nome \"" + nome + "\" na unidade " + sigla + " está livre.");
             }
             case PRODUTO_KIT_ADICIONAR_COMPONENTE -> {
-                Long idKit = LeitorParametros.longOuNulo(p, "idProdutoKit");
-                Long idComp = LeitorParametros.longOuNulo(p, "idProdutoComponente");
-                BigDecimal qtd = LeitorParametros.decimalOuNulo(p, "quantidade");
-                Produto kit = idKit != null ? roteador.produtos().buscarPorId(idKit) : null;
+                Produto kit = localizarProdutoKitOuComponente(p, "idProdutoKit", "nomeKit", roteador);
                 if (kit == null) {
-                    return ResultadoValidacao.reprovado("Não encontrei o produto do conjunto (#" + idKit + ").");
+                    String refKit = LeitorParametros.textoOuNulo(p, "nomeKit", "idProdutoKit");
+                    return ResultadoValidacao.reprovado("Não encontrei o produto do conjunto (" + (refKit != null ? refKit : "não informado") + ").");
                 }
-                if (idComp == null || roteador.produtos().buscarPorId(idComp) == null) {
-                    return ResultadoValidacao.reprovado("Não encontrei o item que você quer colocar no conjunto (#" + idComp + ").");
+                Produto comp = localizarProdutoKitOuComponente(p, "idProdutoComponente", "nomeComponente", roteador);
+                if (comp == null) {
+                    String refComp = LeitorParametros.textoOuNulo(p, "nomeComponente", "idProdutoComponente");
+                    return ResultadoValidacao.reprovado("Não encontrei o item que você quer colocar no conjunto (" + (refComp != null ? refComp : "não informado") + ").");
                 }
-                if (idKit.equals(idComp)) {
+                BigDecimal qtd = LeitorParametros.decimalOuNulo(p, "quantidade");
+                if (kit.getId() != null && kit.getId().equals(comp.getId())) {
                     return ResultadoValidacao.reprovado("Um conjunto não pode conter ele mesmo.");
                 }
                 if (qtd != null && qtd.signum() <= 0) {
@@ -92,7 +93,7 @@ public class ValidadorProduto implements ValidadorExecucao {
                                 kit.getNome(), siglaKit, true, conflito.getId()));
                     }
                 }
-                return ResultadoValidacao.aprovado("O conjunto e o item existem.");
+                return ResultadoValidacao.aprovado("O conjunto \"" + kit.getNome() + "\" e o item \"" + comp.getNome() + "\" existem.");
             }
             case PRODUTO_CATALOGO_ATUALIZAR_PRECO -> {
                 Produto alvo = localizarAlvo(item.getRota(), p, roteador);
@@ -163,18 +164,18 @@ public class ValidadorProduto implements ValidadorExecucao {
                 return ResultadoValidacao.aprovado("Produto removido e conferido.");
             }
             case PRODUTO_KIT_ADICIONAR_COMPONENTE -> {
-                Long idKit = LeitorParametros.longOuNulo(p, "idProdutoKit");
-                Long idComp = LeitorParametros.longOuNulo(p, "idProdutoComponente");
-                Produto kit = idKit != null ? roteador.produtos().buscarPorId(idKit) : null;
+                Produto kit = localizarProdutoKitOuComponente(p, "idProdutoKit", "nomeKit", roteador);
+                Produto comp = localizarProdutoKitOuComponente(p, "idProdutoComponente", "nomeComponente", roteador);
                 if (kit == null) {
                     return ResultadoValidacao.reprovado("Não achei o conjunto no banco ao conferir.");
                 }
-                boolean contem = kit.getItensConjunto() != null && kit.getItensConjunto().stream()
+                Long idComp = comp != null ? comp.getId() : LeitorParametros.longOuNulo(p, "idProdutoComponente");
+                boolean contem = idComp != null && kit.getItensConjunto() != null && kit.getItensConjunto().stream()
                         .map(ConjuntoProduto::getItem)
                         .anyMatch(i -> i != null && i.getId() != null && i.getId().equals(idComp));
                 return kit.isConjunto() && contem
-                        ? ResultadoValidacao.aprovado("O conjunto #" + idKit + " agora tem o item #" + idComp + ".")
-                        : ResultadoValidacao.reprovado("O item #" + idComp + " não apareceu dentro do conjunto #" + idKit + ".");
+                        ? ResultadoValidacao.aprovado("O conjunto #" + kit.getId() + " agora tem o item #" + idComp + ".")
+                        : ResultadoValidacao.reprovado("O item #" + idComp + " não apareceu dentro do conjunto #" + kit.getId() + ".");
             }
             default -> {
                 return ResultadoValidacao.naoSeAplica();
@@ -190,11 +191,25 @@ public class ValidadorProduto implements ValidadorExecucao {
             Produto porId = roteador.produtos().buscarPorId(id);
             if (porId != null) return porId;
         }
-        String nome = LeitorParametros.textoOuNulo(p, "nomeProduto", "nomeAtual", "nome");
+        String nome = LeitorParametros.textoOuNulo(p, "nomeProduto", "nomeAtual", "nome", "nomeKit");
         if (nome != null && rota != RotaSistema.PRODUTO_FISICO_CADASTRAR && rota != RotaSistema.PRODUTO_DIGITAL_CADASTRAR) {
             return roteador.produtos().buscarPorNome(nome);
         }
         return null;
+    }
+
+    private Produto localizarProdutoKitOuComponente(Map<String, Object> p, String chaveId, String chaveNome, RoteadorController roteador) {
+        Long id = LeitorParametros.longOuNulo(p, chaveId);
+        if (id != null) {
+            Produto porId = roteador.produtos().buscarPorId(id);
+            if (porId != null) return porId;
+        }
+        String nome = LeitorParametros.textoOuNulo(p, chaveNome, chaveId);
+        if (nome == null) return null;
+        Produto exato = roteador.produtos().buscarPorNome(nome);
+        if (exato != null) return exato;
+        var candidatos = roteador.produtos().buscarPorTermo(nome);
+        return candidatos != null && !candidatos.isEmpty() ? candidatos.get(0) : null;
     }
 
     private Produto recarregar(Object resultado, Map<String, Object> antes, RoteadorController roteador) {

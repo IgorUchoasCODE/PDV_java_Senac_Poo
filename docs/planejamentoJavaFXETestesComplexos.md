@@ -375,123 +375,83 @@ ia.ui.janela.nao_mapeada=Comando de janela '%s' nao reconhecido. Exemplos: abrir
 
 ---
 
-## 4. Arquitetura JavaFX Nível Empresarial e Configuração de Ambiente
+## 4. Novas Atualizações da Integração IA: Decomposição de Prompts Longos e Validação em 3 Fases
 
-### 4.1. Configuração de Ambiente (JDK 21 + JavaFX 21 + Maven)
+### 4.1. Decomposição Automática de Prompts Longos (`DecompositorPromptLongo`)
+Quando o usuário envia um comando extenso em linguagem natural (`>= 320` caracteres e `>= 3` etapas independentes), o [`DecompositorPromptLongo`](file:///C:/workspace/Java/Sistema%20de%20Vendas/src/main/java/br/com/senac/integracao/ia/parser/DecompositorPromptLongo.java) divide automaticamente o texto em até **5 camadas estritas de dependência**:
+1. **`BASE_ESTRUTURAL` (Ordem 1)**: Unidades de Medida (`Um`) e Formas de Pagamento (`FormaPagamento`).
+2. **`PESSOAS` (Ordem 2)**: Fornecedores e Clientes (PF, PJ e Simples).
+3. **`PRODUTOS_SIMPLES` (Ordem 3)**: Produtos Físicos e Produtos Digitais.
+4. **`KITS_E_VINCULOS` (Ordem 4)**: Conjuntos/Kits (incluindo suporte a Kits Digitais e Físicos) e vínculo de componentes.
+5. **`NOTAS_E_MOVIMENTACOES` (Ordem 5)**: Notas de Compra, Venda, Devolução, Perda e baixas financeiras.
 
-Para rodar a interface gráfica empresarial sem conflitos de módulo com Hibernate 6.4+ / 7.4+ / HikariCP / Jackson e aproveitando **Virtual Threads do Java 21**:
+### 4.2. Validação Estrutural e Relacional em 3 Fases (`ValidadorLoteBandeja`)
+Toda instrução enfileirada na [`BandejaOperacoesContexto`](file:///C:/workspace/Java/Sistema%20de%20Vendas/src/main/java/br/com/senac/integracao/ia/BandejaOperacoesContexto.java) passa por três níveis de verificação antes do commit no banco:
+- **Fase 1 — Validação Individual (`RegistroValidadores`, `ValidadorUnidadeMedida`, `ValidadorProduto`, `ValidadorNota`)**: Checa campos obrigatórios, formatos numéricos, sigla de unidade (`<= 4` caracteres) e parâmetros de itens.
+- **Fase 2 — Simulação Cumulativa do Lote (`ValidadorLoteBandeja.validar`)**: Confronta `OP-1..OP-N` contra o estado real do banco e os efeitos simulados das operações anteriores do mesmo lote, detectando conflitos de chave única (ex.: tentar criar unidade `PT` com nome `"Pacote"` quando `"Pacote"` já existe como `PCT`) e propagando dependências quebradas para produtos (`OP-7`, `OP-8`), kits (`OP-13`, `OP-14`) e notas (`OP-15`).
+- **Fase 3 — Auditoria Injetada na IA e Auto-Correção (`"pode corrigir"`)**: O relatório `[AUDITORIA DE PRÉ-VALIDAÇÃO DA BANDEJA]` é enviado ao modelo impedindo falsos positivos, e comandos como `"pode corrigir"` acionam o reparo cirúrgico das instruções com conflito sem disparar confirmação prematura (`DecisaoConfirmacao`).
 
-1. **Dependências no [`pom.xml`](file:///C:/workspace/Java/Sistema%20de%20Vendas/pom.xml)**:
-   - `org.openjfx:javafx-controls:21.0.2`
-   - `org.openjfx:javafx-fxml:21.0.2`
-   - `org.openjfx:javafx-graphics:21.0.2`
-   - Plugin `org.openjfx:javafx-maven-plugin:0.0.8` configurado com a classe lançadora `br.com.senac.application.SazonaliseiJavaFXLauncher`.
-2. **Padrão de Inicialização (`SazonaliseiJavaFXLauncher` -> `SazonaliseiApp`)**:
-   - Criar uma classe `SazonaliseiJavaFXLauncher` (que **não** estende `javafx.application.Application` diretamente e apenas chama `Application.launch(SazonaliseiApp.class, args)`) — isso permite executar o JavaFX direto do classpath padrão (`java -cp ...`) no Windows/PowerShell sem exigir `--module-path` manual!
-3. **Integração de Concorrência (`Virtual Threads` + `Platform.runLater`)**:
-   - **Regra de Ouro UI**: A JavaFX Application Thread **nunca** executa consultas JPA ou chamadas HTTP para a IA diretamente.
-   - Toda ação de tela ou comando de prompt é submetida ao [`ConcorrenciaSeguraEngine`](file:///C:/workspace/Java/Sistema%20de%20Vendas/src/main/java/br/com/senac/integracao/gemini/ConcorrenciaSeguraEngine.java) (Virtual Thread), e o retorno atualiza os componentes visuais (`TableView`, `ObservableList`, `BandejaDrawer`, `ModalWindow`) dentro de `Platform.runLater(...)`.
+---
 
-### 4.2. Arquitetura Visual (Shell Empresarial + Integração Dupla de Prompt)
+## 5. Diretrizes Atualizadas da Nova Interface Gráfica: Estética Cartoon Minimalista, Sólida, Macia e Climática Amazônica
+
+> **Documentação Mestre Completa da Nova Interface:** Consulte [`docs/INSTRUCOES_IA_NOVA_INTERFACE_GRAFICA.md`](file:///C:/workspace/Java/Sistema%20de%20Vendas/docs/INSTRUCOES_IA_NOVA_INTERFACE_GRAFICA.md) para o guia detalhado passo a passo.  
+> Todo o código antigo e poluído que estava em `src/main/java/br/com/senac/view/javafx` foi removido para dar lugar a uma interface limpa, sólida, macia e 100% integrada ao ChatBot IA.
+
+### 5.1. Premissas Visuais e de Usabilidade (Baseadas no `PDV_Sazonal_Python`, sem Poluição)
+1. **Estética Sólida, Macia e Cartoon Simples (Cozy Soft-Cartoon / Claymorphism)**:
+   - Pensada para **pessoas que estão entrando agora no ramo comercial**: botões grandes em formato pílula/bloco macio (`border-radius: 16px..22px`), bordas sólidas suaves (`2.5px`) e sombras difusas confortáveis.
+   - **Telas e Cards Expansíveis**: Em vez de tabelas gigantes, cada tela mostra apenas o resumo essencial e permite expandir suavemente os detalhes (itens da nota, lotes FIFO, cálculos sazonais) com um clique.
+2. **Tratamento Rigoroso de Dados, Zero Estouro e Zero Letra Pequena (`FormatadorSeguroUI`)**:
+   - **Proibido** texto cortado com `...`, letras menores que `15px`, `null`, JSON cru ou códigos técnicos de rotas.
+   - Todo `Label` usa `setWrapText(true)` e `setMinHeight(Region.USE_PREF_SIZE)` para crescer verticalmente sem cortar palavras.
+3. **Cores Dinâmicas de Acordo com o Último Registro do Clima Amazônico (`ClimaService`)**:
+   - A paleta da interface adapta-se automaticamente ao clima real/último snapshot:
+     - **☀️ Sol Equatorial (`>= 29°C`)**: Fundo Creme Tucumã (`#FFFDF6`), borda Âmbar (`#F6AD55`) e destaque Laranja Buriti (`#DD6B20`).
+     - **🌧️ Chuva Amazônica / Toró**: Fundo Neblina do Rio (`#EEF5F9`), borda Azul Igarapé (`#63B3ED`) e destaque Azul Rio Negro (`#2B6CB0`).
+     - **⛅ Brisa da Floresta (Ameno)**: Fundo Menta Suave (`#F3FAF5`), borda Verde Sálvia (`#68D391`) e destaque Verde Copaíba (`#2F855A`).
+     - **🌬️ Friagem Amazônica (`< 24°C`)**: Fundo Lavanda Açaí (`#F6F4FB`), borda Lilás (`#B794F4`) e destaque Roxo Açaí (`#6B46C1`).
+
+---
+
+## 6. Abas Especializadas, Gráficos (Semana / Mês / Trimestre), Mapa GPS e Conexão Total com a IA
 
 ```mermaid
 flowchart TB
-    subgraph Shell["Janela Principal Empresarial (MainShellView)"]
-        Menu["Barra Lateral de Modulos + Atalhos (F1..F10)"]
-        Workspace["Area Central Dinamica (TabPane / MDI de Janelas CRUD)"]
-        ChatDock["Painel Lateral Direito: Chat Assistente IA + Cards da Bandeja de Contexto"]
+    subgraph UI["Janela Principal Minimalista Cartoon (Cores Dinamicas do Clima Amazonico)"]
+        Header["Barra Climatica: Sol/Chuva + Temperatura + Nivel do Rio (Cheia/Normal/Seca)"]
+        Abas["6 Abas Especializadas Limpas com Cards Expansiveis"]
+        Copiloto["Copiloto ChatBot IA + Voz + Bandeja de Contexto Visual"]
     end
 
-    Spotlight["Janela Especial Flutuante: Command Palette / Prompt Rapido (Ctrl+Espaco ou F2)"]
-
-    subgraph Core["Nucleo de Comando e Roteamento"]
-        Agente["GeminiAgenteOperacional + ProvedorIAComFailover"]
-        Compilador["CompiladorInstrucoesCurtaService ($$)"]
-        GerenciadorUI["GerenciadorJanelasJavaFX (abrir>janela>...)"]
-        Bandeja["BandejaOperacoesContexto (Staging OP-1, OP-2...)"]
-        Roteador["RoteadorController (85 Rotas)"]
+    subgraph Recursos["Modulos Especializados da Interface"]
+        G["Grafico Dinamico Sazonal: Filtro Semana (7D), Mes (30D) e Trimestre (90D)"]
+        E["Estatistica Avancada: Perguntas Sazonais + Padroes de Venda, Compra, Perda e Devolucao"]
+        M["Mapa GPS de Eventos: Distancia Real em km (Haversine) + Impacto Publico/Privado"]
+        C["Configuracao de Ambiente: GPS, Cidade/Rio Amazonico, IA, Voz e Tamanho de Fonte"]
     end
 
-    ChatDock -->|Texto livre, sigla >oba ou $$| Agente
-    Spotlight -->|abrir>janela>Registrar>nota ou $$| Compilador
-    Agente --> Compilador
-    Agente --> GerenciadorUI
-    Compilador --> GerenciadorUI
-    Compilador --> Bandeja
-    GerenciadorUI -->|Platform.runLater: Abre Janela e Preenche Campos| Workspace
-    Bandeja -->|Confirmar SIM| Roteador
+    UI --> G
+    UI --> E
+    UI --> M
+    UI --> C
+    G -->|"Botao: Explicar com IA"| Copiloto
+    E -->|"Botao: Estrategia com IA"| Copiloto
+    M -->|"Botao: Preparar Estoque com IA"| Copiloto
 ```
 
----
+### 6.1. Resumo das 6 Abas Especializadas e Suas Integrações com a IA
+1. **🏠 Início & Clima (com Gráfico de Semana, Mês e Trimestre)**:
+   - Exibe os 4 KPIs principais em cartões macios e o **Gráfico Dinâmico Sazonal** com botões de filtro rápido para **Semana (7D)**, **Mês (30D)** e **Trimestre (90D)** (além de filtro por Sol, Chuva, Cheia e Seca do Rio), conectando qualquer ponto do gráfico ao ChatBot IA.
+2. **📊 Estatística Avançada, Comportamento de Consumo e Estratégias**:
+   - **Perguntas Sazonais em 1 Clique**: Responde visualmente e via IA como o clima e eventos sociais (públicos ou privados) mudam o comportamento de consumo dos clientes.
+   - **Análise dos 4 Padrões (Venda, Compra, Perda e Devolução)**: Cards expansíveis detalhando os **motivos reais** de perdas e devoluções, melhores épocas de compra/venda e a **estratégia recomendada pela IA** para cada cenário.
+3. **🗺️ Mapa GPS de Eventos Regionais e Distâncias (`GeolocalizacaoService`)**:
+   - Mostra no radar/mapa cartoon a posição GPS atual da loja e a **distância em quilômetros (`km` via Haversine)** até os eventos públicos (MinC/feiras) e privados (Sympla/shows) que ocorrem na região, permitindo pedir à IA uma estratégia de vendas para cada evento próximo.
+4. **🛒 Balcão & Notas (Vendas, Compras, Devoluções e Perdas)**:
+   - Fluxo guiado passo a passo para iniciantes, com busca por sigla (`>oba`, `i.s.u`), botões grandes `+`/`-` e sincronização instantânea com a `BandejaOperacoesContexto`.
+5. **📦 Produtos, Kits, Estoque FIFO & Pessoas**:
+   - Catálogo visual (físicos, digitais e kits), semáforo de validade FIFO e fichas 360º de clientes, fornecedores e parcelas.
+6. **⚙️ Configuração de Ambiente**:
+   - Ajuste de GPS/Cidade/Rio amazônico, modo de cores dinâmicas pelo clima, configuração de provedores IA/microfone, tamanho da fonte (`16px` a `20px`) e importação CSV.
 
-## 5. Mapeamento Completo das Janelas JavaFX e Comandos `abrir>janela>...`
-
-O sistema contará com um roteador de janelas determinístico (`CatalogoJanelasJavaFX`) que aceita comandos tanto no **Chat Lateral** quanto na **Janela Especial de Comando Rápido (`Ctrl+Espaço` / `F2`)**, além de ser acionado automaticamente quando o usuário pede para a IA realizar um registro.
-
-> **Tolerância a erros de digitação na navegação:**  
-> Como o comando passa pelo [`BuscaPalavrasParciaisUtil`](file:///C:/workspace/Java/Sistema%20de%20Vendas/src/main/java/br/com/senac/repository/dao/BuscaPalavrasParciaisUtil.java), mesmo que o usuário digite `abrir>janela>Registarr>nota` (com dois `r`) ou `abrir>janela>reg>nota`, o roteador resolve para a janela `JANELA_REGISTRAR_NOTA`!
-
-### 5.1. Tabela Oficial de Mapeamento de Janelas (`CatalogoJanelasJavaFX`)
-
-| ID da Janela | Comando Principal (`abrir>janela>...`) | Aliases / Variações Aceitas | Classe Controller JavaFX / FXML | Rotas do `RoteadorController` Vinculadas | Comportamento ao Abrir via IA / Prompt |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **`JANELA_DASHBOARD`** | `abrir>janela>Painel>principal` | `abrir>janela>dashboard`, `abrir>janela>inicio` | `DashboardController` (`dashboard.fxml`) | `RELATORIO_LUCRO_CONTABIL_BACEN`, `RELATORIO_ANALISE_SAZONAL_VENDAS` | Exibe KPIs BACEN, alertas de validade FIFO e resumo da Bandeja. |
-| **`JANELA_REGISTRAR_NOTA`** | `abrir>janela>Registrar>nota` | `abrir>janela>Registarr>nota`, `abrir>janela>Emitir>nota`, `abrir>janela>nota` | `RegistroNotaModalController` (`registro_nota.fxml`) | `NOTA_COMPRA_EMITIR`, `NOTA_VENDA_EMITIR_FIFO`, `NOTA_VENDA_EMITIR_BALCAO_CLIENTE_PADRAO`, `NOTA_VENDA_EMITIR_LOTE_DESEJAVEL`, `NOTA_DEVOLUCAO_REGISTRAR` | Abre a janela unificada de emissão de Nota (abas Compra, Venda FIFO/Balcão, Devolução e Perda). Se houver `OP-X` de nota na Bandeja, **pré-preenche automaticamente fornecedor/cliente, itens, ressarcimentos e parcelas!** |
-| **`JANELA_REGISTRAR_COMPRA`** | `abrir>janela>Registrar>compra` | `abrir>janela>Nota>compra`, `abrir>janela>entrada>estoque` | `RegistroNotaModalController` (aba `COMPRA`) | `NOTA_COMPRA_EMITIR`, `NOTA_COMPRA_ABATER_PERDAS_FORNECEDOR`, `NOTA_COMPRA_SUGERIR_PRECO_VENDA` | Abre direto na aba de Entrada de Mercadoria / Nota de Compra com cálculo de sugestão de preço e abatimento de perdas do fornecedor. |
-| **`JANELA_REGISTRAR_VENDA`** | `abrir>janela>Registrar>venda` | `abrir>janela>Pdv>caixa`, `abrir>janela>Nota>venda` | `PdvVendaRapidaController` (`pdv_venda.fxml`) | `NOTA_VENDA_EMITIR_FIFO`, `NOTA_VENDA_EMITIR_BALCAO_CLIENTE_PADRAO`, `NOTA_VENDA_EMITIR_LOTE_DESEJAVEL` | Abre a frente de caixa (PDV) com busca rápida por sigla (`>oba`, `o.b.a`) e consumo automático de lote FIFO. |
-| **`JANELA_REGISTRAR_DEVOLUCAO`** | `abrir>janela>Registrar>devolucao` | `abrir>janela>Registrar>perda`, `abrir>janela>baixa>perda` | `DevolucaoPerdaController` (`devolucao_perda.fxml`) | `NOTA_DEVOLUCAO_REGISTRAR`, `ESTOQUE_BAIXAR_PERDA_DIRETA` | Abre o formulário de devolução pós-venda ou baixa de perda física com chave `Fornecedor Isento` vs `Ressarcimento`. |
-| **`JANELA_CADASTRAR_PRODUTO`** | `abrir>janela>Cadastrar>produto` | `abrir>janela>Registrar>produto`, `abrir>janela>Editar>produto` | `ProdutoFormController` (`produto_form.fxml`) | `PRODUTO_FISICO_CADASTRAR`, `PRODUTO_DIGITAL_CADASTRAR`, `PRODUTO_CATALOGO_ATUALIZAR`, `PRODUTO_CATALOGO_ATUALIZAR_PRECO`, `PRODUTO_FISICO_ATUALIZAR_DIMENSOES` | Abre o cadastro de Produto Físico/Digital/Kit com galeria de fotos e cálculo automático de cubagem (`cm³`/`m³`). Pré-preenche se houver produto na Bandeja. |
-| **`JANELA_CATALOGO_PRODUTOS`** | `abrir>janela>Consultar>produto` | `abrir>janela>Listar>produtos`, `abrir>janela>Catalogo>produto` | `ProdutoCatalogoController` (`produto_catalogo.fxml`) | `PRODUTO_CATALOGO_LISTAR`, `PRODUTO_CATALOGO_BUSCAR`, `PRODUTO_CATALOGO_EXCLUIR` | Abre a grade pesquisável de produtos com filtro instantâneo por siglas (`>oba`, `o.b.a`). |
-| **`JANELA_UNIDADES_E_KITS`** | `abrir>janela>Cadastrar>kit` | `abrir>janela>Cadastrar>um`, `abrir>janela>Unidades>medida` | `KitUnidadeController` (`kit_unidade.fxml`) | `PRODUTO_UNIDADE_CADASTRAR`, `PRODUTO_UNIDADE_ATUALIZAR`, `PRODUTO_KIT_ADICIONAR_COMPONENTE` | Gerencia Unidades de Medida (`Um`) e composição multinível (3+ níveis, ex.: `Caixa → 12 Cartelas → 30 Ovos`, `Cesta Básica`). Exibe custo composto calculado (`calcularCustoCompostoFIFO`: preserva custo de lote próprio se houver estoque, ou soma recursivamente os níveis abaixo) e alerta sobre troca via remoção + reinserção (`ConjuntoProduto`). |
-| **`JANELA_CADASTRAR_PESSOA`** | `abrir>janela>Cadastrar>pessoa` | `abrir>janela>Registrar>pessoa`, `abrir>janela>Cadastrar>cliente`, `abrir>janela>Cadastrar>fornecedor` | `PessoaFormController` (`pessoa_form.fxml`) | `PESSOA_SIMPLES_CADASTRAR`, `PESSOA_CLIENTE_PF_CADASTRAR`, `PESSOA_CLIENTE_PJ_CADASTRAR`, `PESSOA_FORNECEDOR_PJ_CADASTRAR`, `PESSOA_REGISTRO_ADICIONAR` | Abre o formulário de Cliente/Fornecedor (PF, PJ ou Simples) e grade de documentos auxiliares (`IE`, `RG`, `CNH`). |
-| **`JANELA_DOSSIE_PESSOA`** | `abrir>janela>Consultar>pessoa` | `abrir>janela>Historico>pessoa`, `abrir>janela>Dossie>cliente` | `PessoaDossie360Controller` (`pessoa_dossie360.fxml`) | `PESSOA_BUSCAR`, `PESSOA_HISTORICO_COMPLETO`, `PESSOA_CLIENTE_ATUALIZAR_LIMITE` | Exibe a visão 360º do cliente/fornecedor (cadastro, limite de crédito, todas as notas emitidas, produtos e pagamentos). |
-| **`JANELA_ESTOQUE_FIFO`** | `abrir>janela>Consultar>estoque` | `abrir>janela>Estoque>fifo`, `abrir>janela>Lotes>validade` | `EstoqueLotesFifoController` (`estoque_fifo.fxml`) | `ESTOQUE_SALDO_CONSOLIDADO`, `ESTOQUE_FILA_LOTES_FIFO`, `ESTOQUE_LOTES_VALIDOS_LISTAR`, `ESTOQUE_LOTES_PROXIMOS_VALIDADE` | Exibe a fila visual de lotes FIFO por produto, semáforo de vencimento, saldo direto vs. saldo equivalente em embalagens superiores (`calcularSaldoEquivalenteTotal`: ex. `5 Caixas = 60 Cartelas = 1.800 Ovos`) e indicador de fracionamento automático (`fracionarEmbalagemSuperiorFIFO`). |
-| **`JANELA_FINANCEIRO_PAGAMENTOS`** | `abrir>janela>Financeiro>pagamento` | `abrir>janela>Registrar>pagamento`, `abrir>janela>Quitar>parcela` | `FinanceiroPagamentoController` (`financeiro_pagamento.fxml`) | `PAGAMENTO_FORMA_LISTAR_ATIVAS`, `PAGAMENTO_FORMA_CADASTRAR`, `PAGAMENTO_FORMA_CUSTOMIZAR_REGRAS`, `PAGAMENTO_QUITAR_TITULO_OU_PARCELA` | Gestão de taxas MDR, descontos à vista, títulos em aberto e baixa múltipla de parcelas (`NotaPagamento`). |
-| **`JANELA_INTELIGENCIA_SAZONAL`** | `abrir>janela>Analise>estatistica` | `abrir>janela>Fator>externo`, `abrir>janela>Plano>compras` | `InteligenciaSazonalController` (`inteligencia_sazonal.fxml`) | `ESTATISTICA_PLANO_ESTRATEGICO_COMPRAS`, `ESTATISTICA_IMPACTO_EXTERNO_PRODUTOS`, `ESTATISTICA_RANKING_FORNECEDORES`, `FATOR_EXTERNO_RELATORIO_INTEGRADO_NOTAS` | Painel de inteligência sazonal com métricas proporcionais (janela ativa via `PERIOD_DIFF`, amostra mínima `n >= 2` e picos por `AVG`), cruzando Clima, Nível dos Rios, Eventos Sympla/MinC e recomendação de compras. |
-| **`JANELA_BANDEJA_CONTEXTO`** | `abrir>janela>Bandeja>contexto` | `abrir>janela>Lista>espera`, `abrir>janela>bandeja` | `BandejaContextoModalController` (`bandeja_contexto.fxml`) | Todas as rotas `WRITE_SEGURO` e `DESTRUTIVO` em estágio (`OP-1..OP-N`) | Permite revisar visualmente cada instrução pendente, editar valores na tabela, remover um item (`close<OP-1>`) ou aprovar tudo (`SIM`). |
-
----
-
-## 6. Como Funciona a Integração Dupla de Prompt (Chat Lateral + Janela Especial)
-
-### 6.1. Fluxo 1: Comando Direto na Janela Especial (`Ctrl+Espaço` ou `F2` — Command Palette)
-
-O operador pressiona `Ctrl+Espaço` (ou `F2`) de qualquer tela do sistema e abre uma barra flutuante minimalista no centro da tela (estilo Spotlight / VS Code Command Palette):
-
-1. **Apenas Navegação**:
-   - Entrada: `abrir>janela>Registrar>nota`
-   - Ação: Abre imediatamente a janela `JANELA_REGISTRAR_NOTA` em foco.
-2. **Navegação + Pré-preenchimento com `$$`**:
-   - Entrada:
-     ```text
-     $$ abrir>janela>Registrar>nota; C= #NotaCompra nm> Granja Marinho, ++ #Produto[ ++ nm> >oba, vc> 12.50, q> 50 ] ++ #Pagamento[ ++ pix, 625.00, hoje ];
-     ```
-   - Ação:
-     1. O compilador valida a `NotaCompra`, resolve `>oba` (`Ovos Branco Tipo A Especial`) e `Granja Marinho`, e coloca a instrução `OP-1` na `BandejaOperacoesContexto`.
-     2. Abre a janela `JANELA_REGISTRAR_NOTA` **já com todos os campos preenchidos** (fornecedor, tabela de itens, subtotal `R$ 625,00` e pagamento `PIX`).
-     3. O usuário pode clicar no botão verde **"Confirmar e Emitir Nota (Enter)"** na própria janela ou digitar `sim` no prompt!
-
-### 6.2. Fluxo 2: Pedido para a IA no Chat Lateral Abrir e Preparar o Registro
-
-Quando o usuário conversa com a IA no Chat Lateral (ou na Janela Especial):
-- **Exemplo de entrada do usuário**:
-  > *"Quero registrar uma nota de compra da Granja Marinho com 50 unidades do produto >oba a 12,50 no pix hoje, abre a janela pra mim"* (ou simplesmente envia `abrir>janela>Registrar>nota` junto com o pedido).
-- **O que acontece nos bastidores**:
-  1. O `GeminiAgenteOperacional` (com failover automático entre IAs via `ProvedorIAComFailover`) ou o `CompiladorInstrucoesCurtaService` prepara a operação na `BandejaOperacoesContexto` (`OP-1`).
-  2. O `GerenciadorJanelasJavaFX` detecta a intenção de registro / comando `abrir>janela>Registrar>nota` e dispara um evento assíncrono (`EventoAberturaJanelaUI`) para a thread do JavaFX (`Platform.runLater`).
-  3. A janela gráfica `RegistroNotaModal` se abre na frente do operador com os dados da instrução `OP-1` carregados nos campos visuais, sincronizados com a Bandeja de Contexto!
-
----
-
-## 7. Plano de Execução para a Próxima Rodada (Passo a Passo)
-
-Caso você aprove este planejamento, na próxima rodada executaremos na seguinte ordem:
-
-1. **Camada de Propriedades e Erros (`config/ia-contexto.properties` + `ContextoIABuilder`)**:
-   - Adicionar todas as chaves `ia.erro.*` e `ia.ui.janela.*` no arquivo `.properties` e o método `ContextoIABuilder.formatarPropriedade(...)`.
-2. **Catálogo e Roteador de Janelas (`CatalogoJanelasJavaFX` + `GerenciadorJanelasJavaFX`)**:
-   - Implementar o parser e roteador para comandos `abrir>janela>...` (com tolerância a erros de digitação como `abrir>janela>Registarr>nota`) e barramento de eventos (`ListenerJanelaUI`) para abrir e pré-preencher as telas JavaFX a partir da `BandejaOperacoesContexto`.
-3. **Expansão do `CompiladorInstrucoesCurtaService` e Suíte de Testes Complexos `$$`**:
-   - Garantir que 100% dos erros de validação usem as mensagens do `.properties` e adicionar a bateria completa de testes complexos `$$` por CRUD e de comandos `abrir>janela>...` em `TesteBandejaContexto`.
-4. **Implementação da Interface Gráfica JavaFX Empresarial (`br.com.senac.view.javafx`)**:
-   - Configurar o JavaFX 21 no `pom.xml` e criar o `MainShellView`, a **Janela Especial Flutuante (`PromptEspecialDialog`)**, o **Painel Lateral de Chat + Bandeja Interativa** e as janelas operacionais mapeadas na Seção 5 (`RegistroNotaModal`, `ProdutoForm`, `PessoaForm`, `EstoqueFifoView`, `FinanceiroView`, `DashboardView`), mais o script `iniciar_interface_javafx.ps1`.

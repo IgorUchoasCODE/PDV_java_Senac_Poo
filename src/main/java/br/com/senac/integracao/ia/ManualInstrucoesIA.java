@@ -239,6 +239,15 @@ public final class ManualInstrucoesIA {
             if (!temIdentificador) {
                 faltando.add("idNota");
             }
+        } else if (r == RotaSistema.NOTA_COMPRA_EMITIR) {
+            boolean temFornecedor = params != null && (
+                    (params.get("idFornecedor") != null && !params.get("idFornecedor").toString().isBlank())
+                    || (params.get("nomeFornecedor") != null && !params.get("nomeFornecedor").toString().isBlank())
+                    || (params.get("fornecedor") != null && !params.get("fornecedor").toString().isBlank())
+                    || (params.get("idPessoa") != null && !params.get("idPessoa").toString().isBlank()));
+            if (!temFornecedor) {
+                faltando.add("idFornecedor");
+            }
         }
 
         return faltando;

@@ -113,18 +113,28 @@ public final class BuscaPalavrasParciaisUtil {
     public static boolean isFormatoSiglaExplicita(String termoBusca) {
         if (termoBusca == null) return false;
         String t = termoBusca.trim();
-        if (t.startsWith(">") && t.length() >= 2) return true;
-        if (t.contains(".") && t.replace(".", "").trim().length() >= 2) return true;
+        if (t.isEmpty() || t.length() > 30) return false;
+        if (t.startsWith(">") && !t.contains(" ") && t.length() >= 2) return true;
+        if (t.contains(".") && !t.contains(" ")) {
+            String[] segs = t.split("\\.");
+            int naoVazios = 0;
+            for (String s : segs) {
+                if (s.isEmpty()) continue;
+                if (s.length() > 2 || !s.chars().allMatch(Character::isLetter)) {
+                    return false;
+                }
+                naoVazios++;
+            }
+            return naoVazios >= 2;
+        }
         String[] partes = t.split("\\s+");
-        if (partes.length >= 2) {
-            boolean todasCurta = true;
+        if (partes.length >= 2 && partes.length <= 8) {
             for (String p : partes) {
-                if (p.length() > 2) {
-                    todasCurta = false;
-                    break;
+                if (p.length() > 2 || !p.chars().allMatch(Character::isLetter)) {
+                    return false;
                 }
             }
-            return todasCurta;
+            return true;
         }
         return false;
     }

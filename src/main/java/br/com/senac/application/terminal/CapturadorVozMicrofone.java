@@ -1,4 +1,4 @@
-package br.com.senac.view.javafx.componentes;
+package br.com.senac.application.terminal;
 
 import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioFormat;

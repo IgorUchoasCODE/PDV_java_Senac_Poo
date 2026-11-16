@@ -18,7 +18,11 @@ public class RegistroValidadores {
     }
 
     public static RegistroValidadores padrao() {
-        return new RegistroValidadores(List.of(new ValidadorProduto(), new ValidadorPessoa()));
+        return new RegistroValidadores(List.of(
+                new ValidadorUnidadeMedida(),
+                new ValidadorProduto(),
+                new ValidadorPessoa(),
+                new ValidadorNota()));
     }
 
     /** Validador responsável pela rota, se existir. Rotas sem validador executam sem conferência extra. */

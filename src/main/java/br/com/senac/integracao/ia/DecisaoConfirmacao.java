@@ -22,7 +22,7 @@ public enum DecisaoConfirmacao {
             "CANCELA", "CANCELAR", "CANCELE", "DESISTI", "DESISTO");
 
     private static final java.util.regex.Pattern INTENCAO_EDICAO_OU_NOVA_ACAO = java.util.regex.Pattern.compile(
-            ".*\\b(QUERO|MODIFI\\w*|MUD\\w*|ALTER\\w*|TROC\\w*|CORRIG\\w*|REMOV\\w*|TIR\\w*|ADICION\\w*|COLOC\\w*|CRI[AE]\\w*|ATUALIZ\\w*|EDIT\\w*|SUBSTITU\\w*|REFA[CZ]\\w*|OP-?\\d+|EM VEZ|AO INVES)\\b.*",
+            ".*\\b(QUERO|MODIFI\\w*|MUD\\w*|ALTER\\w*|TROC\\w*|CORRIG\\w*|AJUST\\w*|ARRUM\\w*|CONSERT\\w*|REMOV\\w*|TIR\\w*|ADICION\\w*|COLOC\\w*|CRI[AE]\\w*|ATUALIZ\\w*|EDIT\\w*|SUBSTITU\\w*|REFA[CZ]\\w*|OP-?\\d+|EM VEZ|AO INVES)\\b.*",
             java.util.regex.Pattern.DOTALL);
 
     private static final java.util.regex.Pattern INTENCAO_PERGUNTA_OU_SIMULACAO = java.util.regex.Pattern.compile(
@@ -60,7 +60,7 @@ public enum DecisaoConfirmacao {
             }
             return NAO;
         }
-        if (positiva && ehPerguntaOuSimulacao) {
+        if (positiva && (ehPerguntaOuSimulacao || INTENCAO_EDICAO_OU_NOVA_ACAO.matcher(n).matches())) {
             return INDEFINIDA;
         }
         return positiva ? SIM : INDEFINIDA;

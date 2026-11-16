@@ -1087,6 +1087,37 @@ public class RoteadorController {
         return null;
     }
 
+    /**
+     * Tenta interpretar um campo como ID numérico, mas retorna {@code null} quando contém texto
+     * (por exemplo, um nome ou sigla enviado em campo {@code id*}), preservando o erro apenas
+     * quando é uma referência {@code OP-N} não resolvida.
+     */
+    private Long lngOuFallbackTexto(Map<String, Object> p, String chave) {
+        if (p == null) return null;
+        Object v = p.get(chave);
+        if (v instanceof Long l) return l;
+        if (v instanceof Number n) return n.longValue();
+        if (v != null) {
+            String s = v.toString().trim();
+            if (s.isEmpty()) return null;
+            if (br.com.senac.integracao.ia.BandejaOperacoesContexto.ehReferenciaOp(s)) {
+                throw new IllegalArgumentException("Referência " + s.toUpperCase(Locale.ROOT)
+                        + " não pôde ser resolvida porque a operação dependente não foi concluída.");
+            }
+            if (s.startsWith("#")) {
+                String semHash = s.substring(1).trim();
+                if (!semHash.isEmpty() && semHash.chars().allMatch(Character::isDigit)) {
+                    return Long.parseLong(semHash);
+                }
+                return null;
+            }
+            if (s.chars().allMatch(Character::isDigit)) {
+                return Long.parseLong(s);
+            }
+        }
+        return null;
+    }
+
     private int inteiro(Map<String, Object> p, String chave, int padrao) {
         Object v = p.get(chave);
         if (v instanceof Number n) return n.intValue();
@@ -1191,8 +1222,8 @@ public class RoteadorController {
 
     private Pessoa resolverFornecedor(Map<String, Object> p) {
         if (p.get("fornecedor") instanceof Pessoa pes) return pes;
-        Long id = lng(p, "idFornecedor");
-        if (id == null) id = lng(p, "idPessoa");
+        Long id = lngOuFallbackTexto(p, "idFornecedor");
+        if (id == null) id = lngOuFallbackTexto(p, "idPessoa");
         if (id == null && p.get("fornecedor") instanceof Number n) id = n.longValue();
         if (id != null) {
             Pessoa pes = pessoaController.buscarPorId(id);
@@ -1202,10 +1233,19 @@ public class RoteadorController {
             }
         }
         String termo = str(p, "nomeFornecedor", null);
-        if (termo == null && p.get("fornecedor") instanceof String s) termo = s;
+        if (termo == null && p.get("fornecedor") instanceof String s && !s.isBlank()) termo = s;
+        if (termo == null) {
+            String idFornecedorTxt = str(p, "idFornecedor", null);
+            if (idFornecedorTxt != null && !idFornecedorTxt.isBlank()) termo = idFornecedorTxt;
+        }
+        if (termo == null) {
+            String idPessoaTxt = str(p, "idPessoa", null);
+            if (idPessoaTxt != null && !idPessoaTxt.isBlank()) termo = idPessoaTxt;
+        }
         if (termo != null && !termo.isBlank()) {
+            String termoLimpo = termo.trim().startsWith("#") ? termo.trim().substring(1).trim() : termo.trim();
             try {
-                Long parsed = Long.parseLong(termo.trim());
+                Long parsed = Long.parseLong(termoLimpo);
                 Pessoa pes = pessoaController.buscarPorId(parsed);
                 if (pes != null) {
                     if (!pes.isFornecedor()) pes.definirComoFornecedor();
@@ -1214,13 +1254,19 @@ public class RoteadorController {
             } catch (Exception ignored) {}
             List<Pessoa> fornecedores = pessoaController.listarFornecedores();
             for (Pessoa f : fornecedores) {
-                if (f.getNome().equalsIgnoreCase(termo.trim())) return f;
+                if (f.getNome().equalsIgnoreCase(termoLimpo)) return f;
             }
             for (Pessoa f : fornecedores) {
-                if (f.getNome().toLowerCase(Locale.ROOT).contains(termo.toLowerCase(Locale.ROOT))) return f;
+                if (f.getNome().toLowerCase(Locale.ROOT).contains(termoLimpo.toLowerCase(Locale.ROOT))) return f;
             }
-            List<Pessoa> porSigla = br.com.senac.repository.dao.BuscaPalavrasParciaisUtil.filtrarEOrdenar(fornecedores, Pessoa::getNome, termo);
+            List<Pessoa> porSigla = br.com.senac.repository.dao.BuscaPalavrasParciaisUtil.filtrarEOrdenar(fornecedores, Pessoa::getNome, termoLimpo);
             if (!porSigla.isEmpty()) return porSigla.get(0);
+            List<Pessoa> todas = pessoaController.buscarPessoasPorTermo(termoLimpo, null);
+            for (Pessoa pes : todas) {
+                if (!pes.isFornecedor()) pes.definirComoFornecedor();
+                return pes;
+            }
+            return null;
         }
         List<Pessoa> fornecedores = pessoaController.listarFornecedores();
         if (!fornecedores.isEmpty()) {
@@ -1231,29 +1277,38 @@ public class RoteadorController {
 
     private Pessoa resolverCliente(Map<String, Object> p) {
         if (p.get("cliente") instanceof Pessoa pes) return pes;
-        Long id = lng(p, "idCliente");
-        if (id == null) id = lng(p, "idPessoa");
+        Long id = lngOuFallbackTexto(p, "idCliente");
+        if (id == null) id = lngOuFallbackTexto(p, "idPessoa");
         if (id == null && p.get("cliente") instanceof Number n) id = n.longValue();
         if (id != null) {
             Pessoa pes = pessoaController.buscarPorId(id);
             if (pes != null) return pes;
         }
         String termo = str(p, "nomeCliente", null);
-        if (termo == null && p.get("cliente") instanceof String s) termo = s;
+        if (termo == null && p.get("cliente") instanceof String s && !s.isBlank()) termo = s;
+        if (termo == null) {
+            String idClienteTxt = str(p, "idCliente", null);
+            if (idClienteTxt != null && !idClienteTxt.isBlank()) termo = idClienteTxt;
+        }
+        if (termo == null) {
+            String idPessoaTxt = str(p, "idPessoa", null);
+            if (idPessoaTxt != null && !idPessoaTxt.isBlank()) termo = idPessoaTxt;
+        }
         if (termo != null && !termo.isBlank()) {
+            String termoLimpo = termo.trim().startsWith("#") ? termo.trim().substring(1).trim() : termo.trim();
             try {
-                Long parsed = Long.parseLong(termo.trim());
+                Long parsed = Long.parseLong(termoLimpo);
                 Pessoa pes = pessoaController.buscarPorId(parsed);
                 if (pes != null) return pes;
             } catch (Exception ignored) {}
             List<Pessoa> clientes = pessoaController.listarClientes();
             for (Pessoa c : clientes) {
-                if (c.getNome().equalsIgnoreCase(termo.trim())) return c;
+                if (c.getNome().equalsIgnoreCase(termoLimpo)) return c;
             }
             for (Pessoa c : clientes) {
-                if (c.getNome().toLowerCase(Locale.ROOT).contains(termo.toLowerCase(Locale.ROOT))) return c;
+                if (c.getNome().toLowerCase(Locale.ROOT).contains(termoLimpo.toLowerCase(Locale.ROOT))) return c;
             }
-            List<Pessoa> porSigla = br.com.senac.repository.dao.BuscaPalavrasParciaisUtil.filtrarEOrdenar(clientes, Pessoa::getNome, termo);
+            List<Pessoa> porSigla = br.com.senac.repository.dao.BuscaPalavrasParciaisUtil.filtrarEOrdenar(clientes, Pessoa::getNome, termoLimpo);
             if (!porSigla.isEmpty()) return porSigla.get(0);
         }
         return null;
@@ -1343,9 +1398,9 @@ public class RoteadorController {
     }
 
     private Produto resolverProdutoPorCampos(Map<String, Object> map, String chaveId, String chaveNome, String... chavesFallback) {
-        Long id = lng(map, chaveId);
+        Long id = lngOuFallbackTexto(map, chaveId);
         if (id == null && chavesFallback.length > 0) {
-            id = lng(map, chavesFallback[0]);
+            id = lngOuFallbackTexto(map, chavesFallback[0]);
         }
         if (id != null) {
             Produto p = produtoController.buscarPorId(id);
@@ -1354,6 +1409,14 @@ public class RoteadorController {
         String nome = str(map, chaveNome, null);
         if (nome == null && chavesFallback.length > 1) {
             nome = str(map, chavesFallback[1], null);
+        }
+        if (nome == null) {
+            String idComoTexto = str(map, chaveId, null);
+            if (idComoTexto != null && !idComoTexto.isBlank()) nome = idComoTexto;
+        }
+        if (nome == null && chavesFallback.length > 0) {
+            String fbTxt = str(map, chavesFallback[0], null);
+            if (fbTxt != null && !fbTxt.isBlank()) nome = fbTxt;
         }
         if (nome != null && !nome.isBlank()) {
             try {

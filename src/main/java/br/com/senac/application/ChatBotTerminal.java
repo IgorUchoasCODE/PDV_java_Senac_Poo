@@ -29,7 +29,7 @@ import br.com.senac.integracao.ia.parser.ParserInstrucao;
 import br.com.senac.integracao.ia.parser.PreProcessadorMensagem;
 import br.com.senac.repository.dao.BuscaPalavrasParciaisUtil;
 import br.com.senac.repository.dao.JPAUtil;
-import br.com.senac.view.javafx.componentes.CapturadorVozMicrofone;
+import br.com.senac.application.terminal.CapturadorVozMicrofone;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -313,6 +313,14 @@ public class ChatBotTerminal {
         }
         if (siglaExplicita) {
             System.out.println("  " + AMARELO + "⚡ [ATALHO_SIGLA]" + RESET + ": " + CIANO + entrada.trim() + RESET);
+        }
+        var decompLongo = br.com.senac.integracao.ia.parser.DecompositorPromptLongo.decompor(entrada);
+        if (decompLongo.promptLongo()) {
+            String avisoLongo = "⚠ [AVISO PROMPT LONGO]: Evite enviar muitos comandos em um único prompt para não perder contexto nem diminuir a eficiência. Dividindo em "
+                    + decompLongo.etapas().size() + " etapas ordenadas por dependência com validação a cada etapa.";
+            for (String linha : quebrarParaTerminal(avisoLongo, Math.max(40, larguraTerminal - 4)).split("\n")) {
+                System.out.println(AMARELO + "  " + linha + RESET);
+            }
         }
         if (preProc.rotasSugeridas() != null && !preProc.rotasSugeridas().isEmpty()) {
             String rotas = "Rotas prioritárias: " + String.join(", ", preProc.rotasSugeridas());
@@ -776,8 +784,9 @@ public class ChatBotTerminal {
         }
         agente.ativarSalvamentoLogs(novoEstado);
         if (novoEstado) {
+            var arquivoUnico = agente.getLogFluxo().iniciarNovoArquivoSessao(sessaoTerminal);
             System.out.println(VERDE + "✔ Salvamento de logs do fluxo IA ATIVADO." + RESET);
-            System.out.println(CIANO + "  • Arquivo: " + agente.getLogFluxo().getArquivoLogAtual() + RESET);
+            System.out.println(CIANO + "  • Arquivo único: " + arquivoUnico + RESET);
             System.out.println(CIANO + "  • Exibição automática ao finalizar a Bandeja de Contexto ou ao sair (:sair)." + RESET);
         } else {
             System.out.println(AMARELO + "⏸️ Salvamento de logs do fluxo IA DESATIVADO." + RESET);

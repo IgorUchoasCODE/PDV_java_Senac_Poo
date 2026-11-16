@@ -13,14 +13,21 @@ public final class LeitorParametros {
     }
 
     public static Long longOuNulo(Map<String, Object> params, String... chaves) {
+        if (params == null) return null;
         for (String chave : chaves) {
             Object v = params.get(chave);
             if (v == null) continue;
             if (v instanceof Number n) return n.longValue();
-            try {
-                return Long.valueOf(v.toString().trim().replaceAll("[^0-9\\-]", ""));
-            } catch (NumberFormatException ignored) {
-                // tenta a próxima chave
+            String s = v.toString().trim();
+            if (s.startsWith("#")) {
+                s = s.substring(1).trim();
+            }
+            if (s.matches("\\d+")) {
+                try {
+                    return Long.valueOf(s);
+                } catch (NumberFormatException ignored) {
+                    // tenta a próxima chave
+                }
             }
         }
         return null;

@@ -398,15 +398,17 @@ public class GeminiToolRegistry {
             }
             case NOTA_COMPRA_EMITIR -> {
                 props.put("idFornecedor", prop("STRING", "ID numérico do fornecedor (ou 'OP-1', 'OP-2', etc. se o fornecedor foi agendado para cadastro no mesmo lote)"));
+                props.put("nomeFornecedor", prop("STRING", "Nome ou razão social do fornecedor caso não possua o ID numérico"));
                 props.put("descricao", prop("STRING", "Descrição da nota de compra"));
-                props.put("itens", propArrayItens("Lista de itens comprados contendo idProduto, valorUnitario, quantidade e validade", true, false));
-                required.addAll(Arrays.asList("idFornecedor", "itens"));
+                props.put("itens", propArrayItens("Lista de itens comprados contendo idProduto (ou nomeProduto), valorUnitario, quantidade e validade", true, false));
+                required.add("itens");
             }
             case NOTA_VENDA_EMITIR_FIFO, NOTA_VENDA_PROCEDURE_MYSQL_FIFO -> {
                 props.put("idCliente", prop("STRING", "ID numérico do cliente ou 'OP-1'/'OP-2' se o cliente foi agendado como sub-instrução de cadastro. Só omita se NENHUM cliente foi informado"));
+                props.put("nomeCliente", prop("STRING", "Nome do cliente caso não possua o ID numérico"));
                 props.put("descricao", prop("STRING", "Descrição da venda"));
                 props.put("descontoGlobal", prop("STRING", "Desconto global na nota em R$"));
-                props.put("itens", propArrayItens("Lista de itens vendidos contendo idProduto, quantidade e desconto", false, true));
+                props.put("itens", propArrayItens("Lista de itens vendidos contendo idProduto (ou nomeProduto), quantidade e desconto", false, true));
                 required.add("itens");
             }
             case NOTA_VENDA_EMITIR_BALCAO_CLIENTE_PADRAO -> {
