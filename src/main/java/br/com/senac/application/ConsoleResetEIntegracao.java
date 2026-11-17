@@ -103,8 +103,9 @@ public class ConsoleResetEIntegracao {
         System.out.println("  [1] IntegrarDadosReais18M (arquivo padrão: docs/testesDadosReais18M.csv)");
         System.out.println("  [2] IntegrarDadosReais18M (informar caminho de CSV personalizado)");
         System.out.println("  [3] ImportadorCsvService genérico (escolher tipo de importação + arquivo CSV)");
+        System.out.println("  [4] IntegrarDadosReaisClientesPagamentos (entradas, clientes cadastrados, cliente padrão e pagamentos)");
         System.out.println("  [0] Sair");
-        System.out.print(NEGRITO + "\nEscolha uma opção [0-3]: " + RESET);
+        System.out.print(NEGRITO + "\nEscolha uma opção [0-4]: " + RESET);
 
         String opcao = scanner.nextLine().trim();
         logInfo("Opção selecionada no menu de integração: '" + opcao + "'");
@@ -117,6 +118,14 @@ public class ConsoleResetEIntegracao {
                 rodarIntegracao18M(Paths.get(caminho));
             }
             case "3" -> rodarImportadorCsvGenerico(scanner);
+            case "4" -> {
+                System.out.print("Informe o caminho do arquivo CSV (Enter para padrão OneDrive/Documentos/testesDadosReais18M--1.csv): ");
+                String caminho = scanner.nextLine().trim().replace("\"", "");
+                Path pathCsv = caminho.isEmpty()
+                        ? Paths.get(System.getProperty("user.home"), "OneDrive", "Documentos", "testesDadosReais18M--1.csv")
+                        : Paths.get(caminho);
+                rodarIntegracaoClientesPagamentos(pathCsv);
+            }
             case "0", "" -> logInfo("Encerrando console sem executar integração.");
             default -> System.out.println(VERMELHO + "❌ Opção inválida: " + opcao + RESET);
         }
@@ -142,6 +151,22 @@ public class ConsoleResetEIntegracao {
         long duracaoMs = System.currentTimeMillis() - inicio;
 
         logInfo("IntegrarDadosReais18M finalizado em " + duracaoMs + " ms.");
+        System.out.println(VERDE + "\n" + resumo.formatar() + RESET);
+    }
+
+    private static void rodarIntegracaoClientesPagamentos(Path csvPath) throws Exception {
+        Path absoluto = csvPath.toAbsolutePath().normalize();
+        logInfo("Verificando arquivo CSV para IntegrarDadosReaisClientesPagamentos: " + absoluto);
+        if (!Files.exists(absoluto)) {
+            logErro("Arquivo CSV não encontrado: " + absoluto);
+            return;
+        }
+        long inicio = System.currentTimeMillis();
+        IntegrarDadosReaisClientesPagamentos script = new IntegrarDadosReaisClientesPagamentos();
+        IntegrarDadosReaisClientesPagamentos.ResumoInjecao resumo = script.executar(absoluto, false);
+        long duracaoMs = System.currentTimeMillis() - inicio;
+
+        logInfo("IntegrarDadosReaisClientesPagamentos finalizado em " + duracaoMs + " ms.");
         System.out.println(VERDE + "\n" + resumo.formatar() + RESET);
     }
 

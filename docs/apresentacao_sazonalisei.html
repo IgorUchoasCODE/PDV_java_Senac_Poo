@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sazonalisei PDV — Apresentação Técnica: Arquitetura, Pré e Pós-Processamento</title>
+  <style>
+    :root {
+      --bg-app: #070b12;
+      --bg-slide: #0d131f;
+      --bg-card: #141c2b;
+      --bg-card-alt: #1a2436;
+      --border: #26334a;
+      --border-glow: #38bdf8;
+      --text-main: #e2e8f0;
+      --text-muted: #94a3b8;
+      --text-bright: #ffffff;
+      --cyan: #38bdf8;
+      --emerald: #34d399;
+      --amber: #fbbf24;
+      --purple: #c084fc;
+      --rose: #fb7185;
+      --blue: #60a5fa;
+      --font-sans: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      --font-mono: "Cascadia Code", "Fira Code", Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: var(--bg-app);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Layout principal */
+    .deck-shell {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* Barra superior */
+    .topbar {
+      height: 48px;
+      background: rgba(13, 19, 31, 0.92);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 20;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 0.92rem;
+      color: var(--text-bright);
+      letter-spacing: 0.3px;
+    }
+
+    .brand-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--cyan), var(--emerald));
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+    }
+
+    .topbar-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-tool {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .btn-tool:hover {
+      border-color: var(--cyan);
+      color: var(--text-bright);
+    }
+
+    .btn-tool.active {
+      background: rgba(56, 189, 248, 0.16);
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    .slide-counter {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      min-width: 64px;
+      text-align: center;
+    }
+
+    /* Área de slides */
+    .stage {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 28px;
+      overflow: hidden;
+    }
+
+    .slide {
+      position: absolute;
+      width: min(1240px, 95vw);
+      height: min(690px, calc(100vh - 110px));
+      background: radial-gradient(circle at top right, rgba(56, 189, 248, 0.08), transparent 45%),
+                  radial-gradient(circle at bottom left, rgba(52, 211, 153, 0.06), transparent 45%),
+                  var(--bg-slide);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 34px 42px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      opacity: 0;
+      transform: translateX(40px) scale(0.985);
+      pointer-events: none;
+      transition: opacity 0.32s ease, transform 0.32s ease;
+      overflow-y: auto;
+    }
+
+    .slide.active {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+      pointer-events: auto;
+      z-index: 2;
+    }
+
+    .slide.prev {
+      opacity: 0;
+      transform: translateX(-40px) scale(0.985);
+    }
+
+    /* Cabeçalho interno do slide */
+    .slide-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+      border-bottom: 1px solid rgba(38, 51, 74, 0.8);
+      padding-bottom: 14px;
+    }
+
+    .tag-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+    }
+
+    .pill-cyan { background: rgba(56, 189, 248, 0.14); color: var(--cyan); border-color: rgba(56, 189, 248, 0.35); }
+    .pill-emerald { background: rgba(52, 211, 153, 0.14); color: var(--emerald); border-color: rgba(52, 211, 153, 0.35); }
+    .pill-amber { background: rgba(251, 191, 36, 0.14); color: var(--amber); border-color: rgba(251, 191, 36, 0.35); }
+    .pill-purple { background: rgba(192, 132, 252, 0.14); color: var(--purple); border-color: rgba(192, 132, 252, 0.35); }
+    .pill-rose { background: rgba(251, 113, 133, 0.14); color: var(--rose); border-color: rgba(251, 113, 133, 0.35); }
+
+    h1 {
+      font-size: 2.35rem;
+      line-height: 1.15;
+      color: var(--text-bright);
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    h2 {
+      font-size: 1.65rem;
+      line-height: 1.2;
+      color: var(--text-bright);
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .subtitle {
+      font-size: 0.96rem;
+      color: var(--text-muted);
+      margin-top: 5px;
+      line-height: 1.45;
+    }
+
+    /* Grids e Cards */
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .grid-2-1 { display: grid; grid-template-columns: 1.35fr 1fr; gap: 18px; }
+    .grid-1-2 { display: grid; grid-template-columns: 1fr 1.35fr; gap: 18px; }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .card-accent-cyan { border-top: 3px solid var(--cyan); }
+    .card-accent-emerald { border-top: 3px solid var(--emerald); }
+    .card-accent-amber { border-top: 3px solid var(--amber); }
+    .card-accent-purple { border-top: 3px solid var(--purple); }
+    .card-accent-rose { border-top: 3px solid var(--rose); }
+
+    .card-title {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card p, .card li {
+      font-size: 0.86rem;
+      color: var(--text-main);
+      line-height: 1.5;
+    }
+
+    .card ul {
+      padding-left: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .metric-box {
+      background: var(--bg-card-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      text-align: center;
+    }
+
+    .metric-val {
+      font-size: 1.85rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      line-height: 1.1;
+    }
+
+    .metric-lbl {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 4px;
+      font-weight: 600;
+    }
+
+    /* Blocos de código / terminal */
+    .terminal {
+      background: #06090f;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 15px;
+      font-family: var(--font-mono);
+      font-size: 0.79rem;
+      line-height: 1.5;
+      color: #cbd5e1;
+      overflow-x: auto;
+    }
+
+    .t-cyan { color: var(--cyan); }
+    .t-green { color: var(--emerald); }
+    .t-amber { color: var(--amber); }
+    .t-purple { color: var(--purple); }
+    .t-rose { color: var(--rose); }
+    .t-muted { color: #64748b; }
+
+    code.inline {
+      font-family: var(--font-mono);
+      font-size: 0.82em;
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--cyan);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    /* Fluxo horizontal de pipeline */
+    .pipeline {
+      display: flex;
+      align-items: stretch;
+      gap: 10px;
+      margin: 10px 0;
+    }
+
+    .pipe-step {
+      flex: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .pipe-step .step-num {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .pipe-step .step-name {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-bright);
+    }
+
+    .pipe-step .step-desc {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .pipe-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--cyan);
+      font-weight: 800;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    /* Rodapé do slide */
+    .slide-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid rgba(38, 51, 74, 0.7);
+      padding-top: 10px;
+      margin-top: 12px;
+      font-size: 0.76rem;
+      color: var(--text-muted);
+    }
+
+    /* Painel de Roteiro da Fala (Presenter Notes) */
+    .notes-drawer {
+      position: fixed;
+      right: 20px;
+      bottom: 62px;
+      width: min(480px, 92vw);
+      max-height: 58vh;
+      background: rgba(13, 19, 31, 0.97);
+      border: 1px solid var(--cyan);
+      border-radius: 12px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75);
+      padding: 16px 18px;
+      z-index: 30;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+    }
+
+    .notes-drawer.open {
+      display: flex;
+    }
+
+    .notes-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--cyan);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+
+    .notes-body {
+      font-size: 0.86rem;
+      line-height: 1.6;
+      color: var(--text-main);
+    }
+
+    .notes-highlights {
+      background: rgba(52, 211, 153, 0.08);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.8rem;
+      color: var(--emerald);
+    }
+
+    /* Barra inferior de progresso */
+    .bottombar {
+      height: 44px;
+      background: rgba(13, 19, 31, 0.92);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      flex-shrink: 0;
+    }
+
+    .progress-track {
+      flex: 1;
+      max-width: 520px;
+      height: 6px;
+      background: var(--bg-card);
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 0 18px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--cyan), var(--emerald));
+      width: 11%;
+      transition: width 0.25s ease;
+    }
+
+    .nav-hint {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+    }
+
+    /* Capa centralizada */
+    .cover-center {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 18px;
+      flex: 1;
+    }
+
+    .cover-title {
+      font-size: 2.85rem;
+      line-height: 1.1;
+      font-weight: 800;
+      background: linear-gradient(90deg, #ffffff, var(--cyan), var(--emerald));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Responsivo */
+    @media (max-width: 960px) {
+      .grid-2, .grid-3, .grid-4, .grid-2-1, .grid-1-2 {
+        grid-template-columns: 1fr;
+      }
+      .pipeline {
+        flex-direction: column;
+      }
+      .pipe-arrow {
+        transform: rotate(90deg);
+        padding: 2px 0;
+      }
+      .slide {
+        padding: 22px 20px;
+      }
+      h1, .cover-title { font-size: 1.75rem; }
+      h2 { font-size: 1.35rem; }
+    }
+
+    /* Impressão / PDF */
+    @media print {
+      html, body { overflow: visible; height: auto; background: #fff; color: #111; }
+      .topbar, .bottombar, .notes-drawer { display: none !important; }
+      .stage { display: block; padding: 0; overflow: visible; }
+      .slide {
+        position: static;
+        opacity: 1 !important;
+        transform: none !important;
+        pointer-events: auto;
+        width: 100%;
+        height: auto;
+        page-break-after: always;
+        margin-bottom: 20px;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="deck-shell">
+    <!-- Barra Superior -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <span>Sazonalisei PDV — Engenharia, Pré &amp; Pós-Processamento</span>
+      </div>
+      <div class="topbar-controls">
+        <button class="btn-tool" id="btnNotes" onclick="toggleNotes()">🎙️ Roteiro da Fala (N)</button>
+        <button class="btn-tool" onclick="prevSlide()">◀ Anterior</button>
+        <span class="slide-counter" id="slideCounter">1 / 9</span>
+        <button class="btn-tool" onclick="nextSlide()">Próximo ▶</button>
+      </div>
+    </header>
+
+    <!-- Palco dos Slides -->
+    <main class="stage">
+
+      <!-- SLIDE 1: CAPA -->
+      <section class="slide active" data-speech="Fala 1 (Abertura)" data-notes="Apresentação geral do Sazonalisei PDV: um sistema em Java 21 criado para unir controle rigoroso de estoque/finanças (FIFO + padrão BACEN) com inteligência sazonal baseada em fatores externos e operação conversacional pelo ChatBotTerminal." data-highlights="PDV completo + FIFO estrito + Padrão BACEN + Fatores Externos + Operação conversacional (texto, voz e imagem).">
+        <div class="cover-center">
+          <div class="tag-row">
+            <span class="pill pill-cyan">Java 21 • Hibernate 6.4 • SOLID</span>
+            <span class="pill pill-emerald">85 Rotas Unificadas</span>
+            <span class="pill pill-purple">Pipeline IA: Pré &amp; Pós-Processamento</span>
+          </div>
+          <div class="cover-title">Sazonalisei PDV &amp; Inteligência Operacional</div>
+          <p class="subtitle" style="font-size: 1.12rem; max-width: 820px;">
+            Controle comercial rigoroso (FIFO &amp; Padrão BACEN), leitura de fatores externos amazônicos
+            e um <strong>pipeline determinístico de Pré-Processamento, Bandeja Human-in-the-Loop e Pós-Processamento</strong>
+            que transforma linguagem natural em operações seguras no terminal.
+          </p>
+
+          <div class="grid-4" style="margin-top: 12px;">
+            <div class="metric-box">
+              <div class="metric-val t-cyan">151</div>
+              <div class="metric-lbl">Classes Core Java 21</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-val t-emerald">85</div>
+              <div class="metric-lbl">Rotas no Roteador</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-val t-amber">7 Tipos</div>
+              <div class="metric-lbl">Entidades Pré-Extraídas</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-val t-purple">0</div>
+              <div class="metric-lbl">Gravações Sem Confirmação</div>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer">
+          <span>PDV Java Senac POO • Sazonalisei</span>
+          <span>Use as setas ◀ ▶ ou teclado para navegar • Pressione <strong>N</strong> para abrir o roteiro da fala</span>
+        </div>
+      </section>
+
+      <!-- SLIDE 2: FALA 1 - O QUE É O SAZONALISEI -->
+      <section class="slide" data-speech="Fala 1 — Visão do Projeto e Domínio" data-notes="“O Sazonalisei é um sistema de Ponto de Venda e inteligência operacional criado em Java 21 para resolver dois grandes desafios do varejo: o controle rigoroso de estoque e finanças, e a compreensão de como fatores externos influenciam as vendas e as perdas. Na parte operacional, ele gerencia todo o ciclo comercial — produtos físicos, digitais e kits, clientes, fornecedores, formas de pagamento com taxas e parcelamento no padrão contábil BACEN (HALF_EVEN), além de notas de compra, venda, devolução e perda com baixa estrita por ordem FIFO ou por lote desejado. Já na parte analítica, a cada nota emitida o sistema grava um snapshot com clima, nível hidrológico dos rios, calendário comercial e eventos culturais locais, permitindo responder perguntas estratégicas como qual fornecedor tem menor índice de perda prematura ou qual produto gira mais em dias de calor ou eventos. E é exatamente para tornar toda essa complexidade acessível em segundos que existe o centro de comando conversacional via terminal. Por ele, o operador conversa em português natural — por texto, áudio ou imagem — ou usa comandos curtos e comandos de console para consultar saldos, emitir vendas, auditar perdas e operar o sistema inteiro sem precisar navegar por dezenas de telas.”" data-highlights="PDV completo + FIFO estrito + Padrão BACEN (HALF_EVEN) + Fatores Externos (Clima, Rios, Eventos, Calendário) + ChatBotTerminal (texto, voz e imagem).">
+        <div>
+          <div class="slide-header">
+            <div>
+              <div class="tag-row">
+                <span class="pill pill-cyan">Fala 1 • Tema 1</span>
+                <span class="pill pill-emerald">Domínio &amp; Valor de Negócio</span>
+              </div>
+              <h2>O que é o Sazonalisei? Operação Rigorosa + Inteligência Externa</h2>
+            </div>
+          </div>
+
+          <div class="grid-3">
+            <div class="card card-accent-cyan">
+              <div class="card-title">🛒 Núcleo Comercial &amp; Contábil</div>
+              <ul>
+                <li><strong>Catálogo completo:</strong> produtos físicos, digitais e <strong>kits/conjuntos</strong> compostos.</li>
+                <li><strong>Padrão BACEN (<code class="inline">HALF_EVEN</code>):</strong> taxas de operadora, parcelamento e lucro contábil exato.</li>
+                <li><strong>Estoque <code class="inline">EstoqueManage</code>:</strong> notas de compra, venda, devolução e perda com baixa estrita <strong>FIFO</strong> ou seleção manual de lote.</li>
+              </ul>
+            </div>
+
+            <div class="card card-accent-emerald">
+              <div class="card-title">🌦️ Snapshot Analítico Sazonal</div>
+              <ul>
+                <li>A cada nota emitida, o sistema registra um <strong>snapshot externo</strong> automático:</li>
+                <li><strong>Clima &amp; Temperatura</strong> (<code class="inline">ClimaService</code>)</li>
+                <li><strong>Nível Hidrológico dos Rios</strong> (Cheia / Normal / Seca)</li>
+                <li><strong>Calendário Comercial &amp; Eventos Locais</strong> (Sympla, MinC + distância GPS Haversine)</li>
+              </ul>
+            </div>
+
+            <div class="card card-accent-amber">
+              <div class="card-title">💬 Centro de Comando (<code class="inline">ChatBotTerminal</code>)</div>
+              <ul>
+                <li>Operação em <strong>português natural</strong> sem navegar por dezenas de telas.</li>
+                <li>Entrada multimodal: <strong>texto, áudio (microfone) e imagem</strong>.</li>
+                <li>Responde perguntas estratégicas (ex.: fornecedor com menor perda prematura ou giro em dias de calor/eventos).</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer">
+          <span>Fala 1: O Problema, o Produto e o Centro de Comando</span>
+          <span>EstoqueManage • ManageNotas • ChatBotTerminal</span>
+        </div>
+      </section>
+
+      <!-- SLIDE 3: FALA 2 - ARQUITETURA E 85 ROTAS -->
+      <section class="slide" data-speech="Fala 2 — Arquitetura, SOLID e 85 Rotas" data-notes="“Para garantir escalabilidade, testabilidade e respeito aos princípios SOLID, estruturamos o núcleo do projeto — tirando a interface gráfica — em 151 classes Java 21 divididas em camadas bem definidas: persistência com Hibernate 6.4 e HikariCP alternando automaticamente entre MySQL 8.0 e H2 embarcado; serviços puros de negócio no ManageNotas; Views e Stored Procedures SQL no banco; e um barramento central de controle. Toda a comunicação do sistema passa por um único coração arquitetural: o RoteadorController junto ao enum RotaSistema, que mapeia 85 rotas oficiais distribuídas em 9 módulos — de Sistema e Produto até Estoque, Notas, Pagamentos, Relatórios e Estatísticas. Seja pelo ChatBotTerminal, pelo servidor HTTP mobile, pelo importador CSV ou pelo servidor MCP em JSON-RPC 2.0, toda ação converge para executarEndpoint(), garantindo que as mesmas regras FIFO e BACEN valham em todos os canais.”" data-highlights="Arquitetura em camadas (151 classes core) • RoteadorController unificando 85 rotas (84 expostas como tools à IA) • Múltiplos canais (CLI, Mobile, MCP, CSV) na mesma fachada.">
+        <div>
+          <div class="slide-header">
+            <div>
+              <div class="tag-row">
+                <span class="pill pill-purple">Fala 2 • Tema 2</span>
+                <span class="pill pill-cyan">Engenharia &amp; Rotas</span>
+              </div>
+              <h2>Arquitetura em Camadas &amp; Barramento Central (<code class="inline">RoteadorController</code>)</h2>
+            </div>
+          </div>
+
+          <div class="grid-2-1">
+            <div class="card card-accent-purple">
+              <div class="card-title">🏛️ Convergência Multi-Canal para <code class="inline">executarEndpoint()</code></div>
+              <div class="pipeline" style="margin-top: 4px;">
+                <div class="pipe-step">
+                  <div class="step-num t-cyan">Canais de Entrada</div>
+                  <div class="step-name">4 Portas Oficiais</div>
+                  <div class="step-desc">
+                    • <code class="inline">ChatBotTerminal</code> (CLI)<br/>
+                    • Servidor HTTP Mobile<br/>
+                    • <code class="inline">ImportadorCsvService</code><br/>
+                    • Servidor MCP (JSON-RPC 2.0)
+                  </div>
+                </div>
+                <div class="pipe-arrow">➜</div>
+                <div class="pipe-step" style="border-color: var(--purple);">
+                  <div class="step-num t-purple">Coração Único</div>
+                  <div class="step-name">RoteadorController</div>
+                  <div class="step-desc">
+                    Enum <code class="inline">RotaSistema</code>:<br/>
+                    <strong>85 rotas</strong> em <strong>9 módulos</strong><br/>
+                    (84 expostas à IA como tools)
+                  </div>
+                </div>
+                <div class="pipe-arrow">➜</div>
+                <div class="pipe-step">
+                  <div class="step-num t-emerald">Domínio &amp; Dados</div>
+                  <div class="step-name">SOLID &amp; JPA</div>
+                  <div class="step-desc">
+                    • <code class="inline">ManageNotas</code> / <code class="inline">EstoqueManage</code><br/>
+                    • Hibernate 6.4 + HikariCP<br/>
+                    • MySQL 8.0 ⇄ H2 + Views/SPs
+                  </div>
+                </div>
+              </div>
+              <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 6px;">
+                Garantia arquitetural: <strong>as mesmas regras FIFO e BACEN (<code class="inline">HALF_EVEN</code>) valem em todos os canais</strong>, sem duplicação de lógica.
+              </p>
+            </div>
+
+            <div class="card card-accent-cyan">
+              <div class="card-title">📦 9 Módulos das 85 Rotas</div>
+              <ul>
+                <li><strong>1. Sistema &amp; Saúde</strong> (status, auditoria)</li>
+                <li><strong>2. Produtos &amp; Kits</strong> (físico, digital, composição)</li>
+                <li><strong>3. Estoque &amp; Lotes</strong> (FIFO, validade, alertas)</li>
+                <li><strong>4. Notas Fiscais</strong> (compra, venda, devolução, perda)</li>
+                <li><strong>5. Pessoas</strong> (clientes PF/PJ e fornecedores)</li>
+                <li><strong>6. Pagamentos</strong> (taxas, parcelas, quitação)</li>
+                <li><strong>7. Relatórios</strong> (histórico e comprovantes)</li>
+                <li><strong>8. Estatísticas &amp; Clima</strong> (rios, eventos, causas)</li>
+                <li><strong>9. Unidades de Medida</strong> (siglas e conversões)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer">
+          <span>Fala 2: 151 Classes Core • Padrão Fachada Única</span>
+          <span>RoteadorController.executarEndpoint()</span>
+        </div>
+      </section>
+
+      <!-- SLIDE 4: FALA 2 (CONT.) - CHATBOTTERMINAL & VIRTUAL THREADS -->
+      <section class="slide" data-speech="Fala 2 (Parte 2) — Fluxo do ChatBotTerminal" data-notes="“No ChatBotTerminal, o diálogo roda em Virtual Threads do Java 21 com barra de progresso em tempo real e cancelamento seguro digitando X + Enter. Ele oferece comandos diretos como :rotas, :bandeja, :persona, :audio, :imagem e :logs, limpa qualquer ruído técnico de logs do Hibernate e entrega a resposta já higienizada e colorida em ANSI pelo FormatadorSaidaIA.”" data-highlights="Virtual Threads Java 21 com cancelamento X + Enter • Comandos diretos (:rotas, :bandeja, :persona, :audio, :imagem, :logs) • Higienização de logs do Hibernate + saída ANSI.">
+        <div>
+          <div class="slide-header">
+            <div>
+              <div class="tag-row">
+                <span class="pill pill-purple">Fala 2 • Execução CLI</span>
+                <span class="pill pill-amber">Java 21 Virtual Threads</span>
+              </div>
+              <h2>Fluxo do <code class="inline">ChatBotTerminal</code>: Concorrência, Comandos &amp; Higiene Visual</h2>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="card card-accent-amber">
+              <div class="card-title">⚡ Concorrência &amp; Comandos Diretos</div>
+              <ul>
+                <li><strong>Virtual Threads (Java 21):</strong> processamento assíncrono leve com <strong>barra de progresso em tempo real</strong>.</li>
+                <li><strong>Cancelamento Seguro:</strong> digitar <code class="inline">X + Enter</code> interrompe a tarefa sem corromper estado.</li>
+                <li><strong>Comandos de Console:</strong>
+                  <code class="inline">:rotas</code> · <code class="inline">:bandeja</code> · <code class="inline">:persona</code> · <code class="inline">:audio</code> · <code class="inline">:imagem</code> · <code class="inline">:logs</code>
+                </li>
+                <li><strong>Silenciamento Técnico:</strong> suprime ruído de inicialização/SQL do Hibernate, exibindo apenas informação operacional útil.</li>
+              </ul>
+            </div>
+
+            <div class="terminal">
+              <div class="t-muted">// Exemplo de sessão no ChatBotTerminal</div>
+              <div><span class="t-cyan">operador@pdv&gt;</span> vender 3 >oba para cliente João R$ 45,00 hoje</div>
+              <div class="t-amber">[⠋] Pré-processando entidades e consultando contexto... (X + Enter para cancelar)</div>
+              <div><span class="t-green">✔ Pré-processador:</span> PRODUTO(&gt;oba), PESSOA(João), VALOR(45.00), DATA(hoje)</div>
+              <div><span class="t-purple">📋 Bandeja [1 pendente]:</span> OP-1 Vender 3x Produto #12 (FIFO) | R$ 45,00</div>
+              <div><span class="t-cyan">operador@pdv&gt;</span> SIM</div>
+              <div class="t-green">✅ Nota #408 emitida (Padrão BACEN HALF_EVEN) • Estoque atualizado!</div>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer">
+          <span>Fala 2: Experiência do Operador no Terminal</span>
+          <span>Virtual Threads • FormatadorSaidaIA</span>
+        </div>
+      </section>
+
+      <!-- SLIDE 5: FALA 3 - VISÃO GERAL DO PIPELINE DE IA -->
+      <section class="slide" data-speech="Fala 3 — Visão Geral do Pipeline de IA & Failover" data-notes="“A grande virada de engenharia do projeto está na forma como a IA participa do sistema: ela não é um chatbot solto conversando com o banco, e sim um agente acoplado a um pipeline rigoroso de Pré-Processamento, Pós-Processamento e uma Bandeja de Instruções. Tudo isso roda sobre uma cadeia de failover automático (ProvedorIAComFailover) que alterna entre Gemini, Groq, OpenRouter, Cerebras, Mistral, modelos locais como Ollama/Qwen e até um modo 100% sem API.”" data-highlights="IA não é um chatbot solto • Pipeline determinístico Pré → LLM/Failover → Pós/Bandeja → Saída Segura • ProvedorIAComFailover (Nuvem + Local 3B + Modo Manual).">
+        <div>
+          <div class="slide-header">
+            <div>
+              <div class="tag-row">
+                <span class="pill pill-emerald">Fala 3 • Tema 3</span>
+                <span class="pill pill-cyan">Arquitetura do Pipeline IA</span>
+              </div>
+              <h2>A Virada de Engenharia: Pipeline Determinístico ao Redor da IA</h2>
+            </div>
+          </div>
+
+          <div class="pipeline">
+            <div class="pipe-step" style="border-top: 3px solid var(--amber);">
+              <div class="step-num t-amber">Etapa 0</div>
+              <div class="step-name">Camada 0 Local</div>
+              <div class="step-desc">DSL <code class="inline">$$</code>, sigla <code class="inline">&gt;oba</code> e comandos <code class="inline">:</code> resolvidos com <strong>0 tokens</strong>.</div>
+            </div>
+            <div class="pipe-arrow">➜</div>
+            <div class="pipe-step" style="border-top: 3px solid var(--cyan);">
+              <div class="step-num t-cyan">Pré-Processamento</div>
+              <div class="step-name">PreProcessadorMensagem</div>
+              <div class="step-desc">Expande abreviações, extrai <strong>7 entidades</strong> e define <code class="inline">ROTAS_PRIORITARIAS</code>.</div>
+            </div>
+            <div class="pipe-arrow">➜</div>
+            <div class="pipe-step" style="border-top: 3px solid var(--purple);">
+              <div class="step-num t-purple">Raciocínio</div>
+              <div class="step-name">ProvedorIAComFailover</div>
+              <div class="step-desc">Gemini → Groq → OpenRouter → Cerebras → Mistral → Ollama/Qwen → Manual.</div>
+            </div>
+            <div class="pipe-arrow">➜</div>
+            <div class="pipe-step" style="border-top: 3px solid var(--rose);">
+              <div class="step-num t-rose">Pós-Processamento 1</div>
+              <div class="step-name">Risco &amp; Bandeja</div>
+              <div class="step-desc">51 leitura imediata; 27 escrita + 6 destrutivas retidas na <code class="inline">Bandeja</code>.</div>
+            </div>
+            <div class="pipe-arrow">➜</div>
+            <div class="pipe-step" style="border-top: 3px solid var(--emerald);">
+              <div class="step-num t-emerald">Pós-Processamento 2</div>
+              <div class="step-name">FormatadorSaidaIA</div>
+              <div class="step-desc">Bloqueia dado bruto, quebra por palavras, aplica ANSI e audita.</div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top: 10px;">
+            <div class="card-title">🔄 Cadeia de Resiliência (<code class="inline">ProvedorIAComFailover</code>)</div>
+            <p>
+              Se uma API atingir limite de cota ou cair, o roteamento alterna automaticamente entre
+              <strong>Gemini → Groq → OpenRouter → Cerebras → Mistral → Modelos Locais (Ollama / Qwen 3B)</strong>
+              — e, se não houver nenhuma API disponível, o sistema continua operável em <strong>Modo 100% Manual via DSL <code class="inline">$$</code> e atalhos</strong>.
+            </p>
+          </div>
+        </div>
+        <div class="slide-footer">
+          <span>Fala 3: Visão Completa do Pipeline Pré &amp; Pós-Processamento</span>
+          <span>Zero dependência cega de um único LLM</span>
+        </div>
+      </section>
+
+      <!-- SLIDE 6: ÊNFASE PRÉ-PROCESSAMENTO -->
+      <section class="slide" data-speech="Fala 3 (Ênfase) — Pré-Processamento & Camada 0" data-notes="“Antes mesmo de chamar qualquer LLM, nossa Camada 0 intercepta comandos na DSL compacta $$, atalhos de busca por sigla como >oba e comandos de navegação — resolvendo tudo localmente com zero tokens. Quando precisa da IA, o PreProcessadorMensagem expande abreviações de balcão, extrai e normaliza 7 tipos de entidades — como CPF, CNPJ, valores em R$ e datas relativas — e infere as ROTAS_PRIORITARIAS, guiando a IA direto ao contexto certo sem varrer às cegas 84 ferramentas.”" data-highlights="Camada 0 (DSL $$, >oba, 0 tokens) • PreProcessadorMensagem (7 entidades normalizadas + expansão de abreviações + ROTAS_PRIORITARIAS) • DecompositorPromptLongo (5 camadas).">
+        <div>
+          <div class="slide-header">
+            <div>
+              <div class="tag-row">
+                <span class="pill pill-cyan">Ênfase 1 • Pré-Processamento</span>
+                <span class="pill pill-amber">Camada 0 + PreProcessadorMensagem</span>
+              </div>
+              <h2>Pré-Processamento: Menos Tokens, Zero Ambiguidade, Alta Precisão</h2>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="card card-accent-amber">
+              <div class="card-title">⚡ Camada 0: Interceptação Local (0 Tokens)</div>
+              <ul>
+                <li><strong>DSL Compacta <code class="inline">$$</code>:</strong> compilada pelo <code class="inline">CompiladorInstrucoesCurtaService</code> direto para a Bandeja sem chamar LLM.</li>
+                <li><strong>Atalho por Sigla <code class="inline">&gt;oba</code>:</strong> busca instantânea de produtos/unidades sem gastar tokens de raciocínio.</li>
+                <li><strong>Comandos de Navegação (<code class="inline">:rotas</code>, <code class="inline">:bandeja</code>):</strong> executados localmente em milissegundos.</li>
+              </ul>
+              <div class="terminal" style="margin-top: 6px;">
+                <span class="t-muted">// Entrada original com abreviação e sigla:</span><br/>
+                <span class="t-cyan">"vender 2 &gt;oba por R$ 35,50 ontem cpf 12345678900"</span>
+              </div>
+            </div>
+
+            <div class="card card-accent-cyan">
+              <div class="card-title">🧠 <code class="inline">PreProcessadorMensagem</code> (Antes da LLM)</div>
+              <ul>
+                <li><strong>1. Expansão de Abreviações:</strong> traduz jargões de balcão antes do prompt.</li>
+                <li><strong>2. Extração de 7 Entidades (<code class="inline">TipoEntidade</code>):</strong>
+                  <code class="inline">VALOR_MONETARIO</code>, <code class="inline">DATA</code> (relativa/absoluta), <code class="inline">CPF</code>, <code class="inline">CNPJ</code>, <code class="inline">SIGLA_PRODUTO</code>, <code class="inline">PRODUTO_NOMINADO</code>, <code class="inline">PESSOA_NOMINADA</code>.
+                </li>
+                <li><strong>3. <code class="inline">ROTAS_PRIORITARIAS</code>:</strong> filtra o contexto para a IA não varrer às cegas <strong>84 ferramentas</strong>.</li>
+                <li><strong>4. <code class="inline">DecompositorPromptLongo</code>:</strong> fatia prompts grandes em 5 camadas de dependência.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer">
+          <span>Pré-Processamento: O segredo para modelos de 3B parâmetros acertarem com precisão</span>
+          <span>Camada 0 • PreProcessadorMensagem.java</span>
+        </div>
+      </section>
+
+      <!-- SLIDE 7: ÊNFASE PÓS-PROCESSAMENTO (BANDEJA & RISCO) -->
+      <section class="slide" data-speech="Fala 3 (Ênfase) — Pós-Processamento: Risco & Bandeja" data-notes="“No Pós-Processamento, classificamos cada chamada por risco: as 51 rotas de leitura expostas executam imediatamente sem travar o fluxo; já as 27 de escrita e 6 destrutivas são retidas na Bandeja de Instruções (BandejaOperacoesContexto). Ali, os registros recebem trava preventiva no DAO, dependências entre itens do mesmo lote como OP-1 e OP-2 são resolvidas automaticamente, e o operador tem controle total Human-in-the-Loop para confirmar tudo com SIM, cancelar com NÃO ou executar item por item com dupla conferência de banco antes e depois.”" data-highlights="Classificação de risco (51 leitura / 27 escrita / 6 destrutivas) • BandejaOperacoesContexto • Trava preventiva no DAO • Resolução OP-1 / OP-2 • Human-in-the-Loop (SIM, NÃO, item a item).">
+        <div>
+          <div class="slide-header">
+            <div>
+              <div class="tag-row">
+                <span class="pill pill-rose">Ênfase 2 • Pós-Processamento</span>
+                <span class="pill pill-purple">Governança &amp; Bandeja de Instruções</span>
+              </div>
+              <h2>Pós-Processamento: Classificação de Risco &amp; Bandeja Human-in-the-Loop</h2>
+            </div>
+          </div>
+
+          <div class="grid-3" style="margin-bottom: 14px;">
+            <div class="metric-box" style="border-top: 3px solid var(--emerald);">
+              <div class="metric-val t-emerald">51</div>
+              <div class="metric-lbl">Rotas de Leitura (Execução Imediata)</div>
+            </div>
+            <div class="metric-box" style="border-top: 3px solid var(--amber);">
+              <div class="metric-val t-amber">27</div>
+              <div class="metric-lbl">Rotas de Escrita (Retidas na Bandeja)</div>
+            </div>
+            <div class="metric-box" style="border-top: 3px solid var(--rose);">
+              <div class="metric-val t-rose">6</div>
+              <div class="metric-lbl">Rotas Destrutivas (Retidas + Alerta)</div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="card card-accent-purple">
+              <div class="card-title">🛡️ Blindagem na <code class="inline">BandejaOperacoesContexto</code></div>
+              <ul>
+                <li><strong>Trava Preventiva no DAO:</strong> impede conflitos e duplicidades antes do commit.</li>
+                <li><strong>Validação em 3 Fases (<code class="inline">ValidadorLoteBandeja</code>):</strong> formato, simulação relacional cumulativa e auditoria anti-alucinação.</li>
+                <li><strong>Resolução de Dependências (<code class="inline">OP-1</code> → <code class="inline">OP-2</code>):</strong> IDs gerados em um passo alimentam automaticamente os passos seguintes do lote.</li>
+              </ul>
+            </div>
+
+            <div class="card card-accent-rose">
+              <div class="card-title">🧑‍💼 Controle Total Human-in-the-Loop</div>
+              <ul>
+                <li><strong><code class="inline">SIM</code>:</strong> confirma e executa todo o lote validado atomicamente.</li>
+                <li><strong><code class="inline">NÃO</code>:</strong> descarta as operações pendentes sem tocar no banco.</li>
+                <li><strong>Item por Item:</strong> execução granular com <strong>dupla conferência de banco antes e depois</strong> de cada passo.</li>
+                <li><strong>Auto-correção assistida:</strong> pedir ajuste mantém a trava até o lote ficar íntegro.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer">
+          <span>Pós-Processamento Transacional: 84 Tools Classificadas por Risco</span>
+          <span>BandejaOperacoesContexto • ValidadorLoteBandeja</span>
+        </div>
+      </section>
+
+      <!-- SLIDE 8: ÊNFASE PÓS-PROCESSAMENTO (FORMATADOR & AUDITORIA) -->
+      <section class="slide" data-speech="Fala 3 (Ênfase) — Pós-Processamento: FormatadorSaidaIA & Auditoria" data-notes="“Por fim, o FormatadorSaidaIA bloqueia qualquer dado bruto, quebra as linhas por contador de palavras e registra a auditoria completa de ponta a ponta.”" data-highlights="Zero vazamento de dados brutos ([{chave=valor}], Map) • Quebra de linha por contador de palavras (18 palavras / 130 chars) • Cores ANSI semânticas • Auditoria completa ponta a ponta.">
+        <div>
+          <div class="slide-header">
+            <div>
+              <div class="tag-row">
+                <span class="pill pill-emerald">Ênfase 3 • Pós-Processamento</span>
+                <span class="pill pill-cyan">FormatadorSaidaIA &amp; Auditoria</span>
+              </div>
+              <h2>Pós-Processamento de Saída: Higiene, Legibilidade &amp; Rastreabilidade</h2>
+            </div>
+          </div>
+
+          <div class="grid-1-2">
+            <div class="card card-accent-emerald">
+              <div class="card-title">🧹 O que o <code class="inline">FormatadorSaidaIA</code> Garante</div>
+              <ul>
+                <li><strong>Bloqueio de Dados Brutos:</strong> detecta e converte padrões <code class="inline">[{chave=valor}]</code>, <code class="inline">Map</code> ou <code class="inline">List&lt;Map&gt;</code> — nada cru vaza para o usuário.</li>
+                <li><strong>Quebra por Contador de Palavras:</strong> aplica limite legível (<code class="inline">18 palavras</code> / <code class="inline">130 caracteres</code> por linha).</li>
+                <li><strong>Destaque Semântico ANSI:</strong> cores distintas para <span class="t-green">Cliente</span>, <span class="t-amber">Fornecedor</span>, <span class="t-cyan">Produto</span>, <span class="t-purple">Nota</span>, <span class="t-green">R$</span> e <span class="t-rose">Alertas</span>.</li>
+                <li><strong>Auditoria Ponta a Ponta:</strong> cada decisão e execução no PDV fica registrada.</li>
+              </ul>
+            </div>
+
+            <div class="card">
+              <div class="card-title">🔀 Transformação Antes vs. Depois</div>
+              <div class="terminal" style="margin-bottom: 10px;">
+                <span class="t-rose">❌ BLOQUEADO (Dado Bruto):</span><br/>
+                [{id=12, nome=Oba-Oba Acai, preco=17.75, saldo=42, status=OK}]
+              </div>
+              <div class="terminal">
+                <span class="t-green">✅ ENTREGUE AO OPERADOR (FormatadorSaidaIA):</span><br/>
+                <span class="t-cyan">Produto #12</span> — <strong>Oba-Oba Açaí</strong><br/>
+                Preço Unitário: <span class="t-green">R$ 17,75</span> • Saldo FIFO: <strong>42 un.</strong><br/>
+                <span class="t-muted">[Auditoria registrada • Quebra automática de 18 palavras/linha]</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer">
+          <span>Pós-Processamento Visual &amp; Auditoria</span>
+          <span>FormatadorSaidaIA.java</span>
+        </div>
+      </section>
+
+      <!-- SLIDE 9: BENEFÍCIOS CONCRETOS & ENCERRAMENTO -->
+      <section class="slide" data-speech="Fala 3 (Conclusão) — Benefícios Concretos" data-notes="“Os benefícios são concretos: economia drástica de tokens e latência, viabilidade de rodar até modelos locais compactos de 3B parâmetros com alta precisão, zero risco de a IA apagar ou gravar dados por engano e rastreabilidade total de cada decisão tomada no PDV.”" data-highlights="Economia drástica de tokens e latência • Modelos locais compactos (3B) com alta precisão • Zero risco de gravação/exclusão acidental • Rastreabilidade total.">
+        <div>
+          <div class="slide-header">
+            <div>
+              <div class="tag-row">
+                <span class="pill pill-emerald">Resultados &amp; Conclusão</span>
+                <span class="pill pill-cyan">Impacto na Operação</span>
+              </div>
+              <h2>Benefícios Concretos da Arquitetura Sazonalisei</h2>
+            </div>
+          </div>
+
+          <div class="grid-2" style="margin-top: 8px;">
+            <div class="card card-accent-cyan">
+              <div class="card-title">📉 Economia Drástica de Tokens &amp; Latência</div>
+              <p>
+                A <strong>Camada 0</strong> (<code class="inline">$$</code>, <code class="inline">&gt;oba</code>, comandos <code class="inline">:</code>) elimina chamadas desnecessárias, enquanto o
+                <code class="inline">PreProcessadorMensagem</code> entrega entidades já normalizadas e <code class="inline">ROTAS_PRIORITARIAS</code> prontas.
+              </p>
+            </div>
+
+            <div class="card card-accent-emerald">
+              <div class="card-title">💻 Modelos Locais 3B com Alta Precisão</div>
+              <p>
+                Com o contexto enxuto e pré-estruturado, até <strong>modelos locais compactos de 3B parâmetros</strong> (ex.: Ollama / Qwen)
+                operam o PDV com alta assertividade e zero custo de nuvem.
+              </p>
+            </div>
+
+            <div class="card card-accent-rose">
+              <div class="card-title">🔒 Zero Risco de Dano Acidental</div>
+              <p>
+                Nenhuma das <strong>27 rotas de escrita</strong> ou <strong>6 destrutivas</strong> toca o banco sem passar pela
+                <code class="inline">BandejaOperacoesContexto</code>, trava preventiva no DAO e confirmação explícita do operador.
+              </p>
+            </div>
+
+            <div class="card card-accent-purple">
+              <div class="card-title">📜 Rastreabilidade Total Ponta a Ponta</div>
+              <p>
+                Do comando em voz, texto ou imagem até o snapshot sazonal da nota emitida (FIFO + BACEN <code class="inline">HALF_EVEN</code>),
+                cada decisão é auditável e higienizada pelo <code class="inline">FormatadorSaidaIA</code>.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer">
+          <span>Sazonalisei PDV — Java 21 • 85 Rotas • Pré &amp; Pós-Processamento</span>
+          <span>Fim da Apresentação • Obrigado!</span>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Painel de Roteiro da Fala -->
+    <aside class="notes-drawer" id="notesDrawer">
+      <div class="notes-header">
+        <span id="notesTitle">🎙️ Roteiro da Fala</span>
+        <button class="btn-tool" onclick="toggleNotes()" style="padding: 2px 8px;">✕</button>
+      </div>
+      <div class="notes-body" id="notesBody"></div>
+      <div class="notes-highlights" id="notesHighlights"></div>
+    </aside>
+
+    <!-- Barra Inferior -->
+    <footer class="bottombar">
+      <span class="nav-hint">Atalhos: <strong>← / →</strong> ou <strong>Espaço</strong> para avançar • <strong>N</strong> Roteiro</span>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <span class="nav-hint" id="speechBadge">Fala 1 (Abertura)</span>
+    </footer>
+  </div>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    let current = 0;
+
+    const counterEl = document.getElementById('slideCounter');
+    const progressEl = document.getElementById('progressFill');
+    const speechBadgeEl = document.getElementById('speechBadge');
+    const notesDrawer = document.getElementById('notesDrawer');
+    const notesTitle = document.getElementById('notesTitle');
+    const notesBody = document.getElementById('notesBody');
+    const notesHighlights = document.getElementById('notesHighlights');
+    const btnNotes = document.getElementById('btnNotes');
+
+    function renderSlide(index) {
+      slides.forEach((slide, i) => {
+        slide.classList.remove('active', 'prev');
+        if (i === index) {
+          slide.classList.add('active');
+        } else if (i < index) {
+          slide.classList.add('prev');
+        }
+      });
+
+      const active = slides[index];
+      counterEl.textContent = `${index + 1} / ${slides.length}`;
+      progressEl.style.width = `${((index + 1) / slides.length) * 100}%`;
+      speechBadgeEl.textContent = active.dataset.speech || '';
+
+      notesTitle.textContent = `🎙️ ${active.dataset.speech || 'Roteiro'}`;
+      notesBody.textContent = active.dataset.notes || '';
+      notesHighlights.innerHTML = `<strong>Pontos de destaque:</strong> ${active.dataset.highlights || ''}`;
+    }
+
+    function nextSlide() {
+      if (current < slides.length - 1) {
+        current++;
+        renderSlide(current);
+      }
+    }
+
+    function prevSlide() {
+      if (current > 0) {
+        current--;
+        renderSlide(current);
+      }
+    }
+
+    function toggleNotes() {
+      notesDrawer.classList.toggle('open');
+      btnNotes.classList.toggle('active');
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key.toLowerCase() === 'n') {
+        toggleNotes();
+      }
+    });
+
+    renderSlide(0);
+  </script>
+</body>
+</html>
