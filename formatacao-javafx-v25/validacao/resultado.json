@@ -1,0 +1,94 @@
+{
+  "data": "2026-11-16",
+  "base": "291d403",
+  "ambiente": "H2 em memoria separado, Java 26 com alvo Java 21",
+  "suites": [
+    {
+      "suite": "TesteEndpointsControllers",
+      "codigo_saida": 0,
+      "duracao_segundos": 29.7
+    },
+    {
+      "suite": "TesteBandejaContexto",
+      "codigo_saida": 0,
+      "duracao_segundos": 25.7
+    },
+    {
+      "suite": "TesteBandejaPassoAPasso",
+      "codigo_saida": 0,
+      "duracao_segundos": 32.1
+    },
+    {
+      "suite": "TesteSimulacaoBandeja",
+      "codigo_saida": 0,
+      "duracao_segundos": 12.5
+    },
+    {
+      "suite": "TesteParserEPreProcessador",
+      "codigo_saida": 0,
+      "duracao_segundos": 19.4
+    },
+    {
+      "suite": "TesteFluxoPromptLongoEValidacao",
+      "codigo_saida": 0,
+      "duracao_segundos": 21.4
+    },
+    {
+      "suite": "TesteImportadorCsvEReset",
+      "codigo_saida": 0,
+      "duracao_segundos": 15.3
+    }
+  ],
+  "coberturas_reportadas_pelas_suites": {
+    "TesteEndpointsControllers": [
+      85,
+      85
+    ],
+    "TesteBandejaContexto": [
+      64,
+      64
+    ],
+    "TesteBandejaPassoAPasso": [
+      71,
+      71
+    ],
+    "TesteSimulacaoBandeja": [
+      22,
+      22
+    ],
+    "TesteParserEPreProcessador": [
+      70,
+      70
+    ],
+    "TesteFluxoPromptLongoEValidacao": [
+      36,
+      36
+    ],
+    "TesteImportadorCsvEReset": [
+      17,
+      17
+    ]
+  },
+  "verificacoes_navegacao": 10,
+  "verificacoes_pdv": 10,
+  "arquivos_originais_alterados": [],
+  "venda_emitida_pelo_teste_visual": false,
+  "funcoes_mysql_ausentes_h2": [
+    "sp_analisar_destaques_e_picos_sazonais",
+    "sp_analisar_impacto_externo_rios_clima_produtos",
+    "sp_analisar_perfil_consumo_cliente",
+    "sp_consumir_estoque_fifo",
+    "sp_consumir_lote_especifico",
+    "sp_diagnosticar_motivos_perda_prematura",
+    "sp_plano_estrategico_compras_vendas_inteligente",
+    "sp_prever_demanda_mensal_cliente",
+    "sp_ranking_fornecedores_custo_qualidade"
+  ],
+  "chaves_api_utilizadas": false,
+  "pendencias_visuais": [
+    "Pagamento apresenta 9,9000 e 0,0000 em campos editáveis; padronização de duas casas pendente."
+  ],
+  "observacoes_pdv": [
+    "Divisão em duas linhas de Dinheiro; combinação PIX + Dinheiro e emissão final não testadas pela interface."
+  ]
+}

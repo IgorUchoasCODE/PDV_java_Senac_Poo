@@ -1,0 +1,100 @@
+================================================================================
+   INICIANDO TESTES: BANDEJA PASSO A PASSO (CONFERENCIA ANTES E DEPOIS)
+================================================================================
+nov. 16, 2026 10:41:12 AM org.hibernate.jpa.boot.internal.PersistenceXmlParser parsePersistenceXml
+WARN: HHH015018: Encountered multiple persistence-unit stanzas defining same name [sazonalisei-embarcado]; persistence-unit names must be unique
+? [JPAUtil] Persistência MySQL não encontrada ou indisponível. Iniciando banco embarcado (sazonalisei-embarcado)...
+nov. 16, 2026 10:41:13 AM org.hibernate.jpa.boot.internal.PersistenceXmlParser parsePersistenceXml
+WARN: HHH015018: Encountered multiple persistence-unit stanzas defining same name [sazonalisei-embarcado]; persistence-unit names must be unique
+nov. 16, 2026 10:41:13 AM org.hibernate.jpa.internal.util.LogHelper logPersistenceUnitInformation
+INFO: HHH000204: Processing PersistenceUnitInfo [name: sazonalisei-embarcado]
+nov. 16, 2026 10:41:13 AM org.hibernate.Version logVersion
+INFO: HHH000412: Hibernate ORM core version 6.4.4.Final
+nov. 16, 2026 10:41:13 AM org.hibernate.cache.internal.RegionFactoryInitiator initiateService
+INFO: HHH000026: Second-level cache disabled
+nov. 16, 2026 10:41:13 AM org.hibernate.engine.jdbc.connections.internal.ConnectionProviderInitiator initiateService
+INFO: HHH000130: Instantiating explicit connection provider: org.hibernate.hikaricp.internal.HikariCPConnectionProvider
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+nov. 16, 2026 10:41:23 AM org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
+INFO: HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+ [OK] Comando 'próxima' reconhecido.
+ [OK] Comando 'Executar a próxima instrução!' reconhecido.
+ [OK] Comando 'seguinte' reconhecido.
+ [OK] Comando 'executar OP-2' aponta OP-2.
+ [OK] Comando 'executa 3' vira OP-3.
+ [OK] Comando 'executar item 1' vira OP-1.
+ [OK] Comando 'pular op-1' reconhecido.
+ [OK] Comando 'pula' sem alvo usa a instrucao atual.
+ [OK] Comando 'retomar 2' reconhecido.
+ [OK] Comando 'voltar' reconhecido.
+ [OK] Comando 'ver 2' reconhecido.
+ [OK] Comando 'o que falta' reconhecido.
+ [OK] 'executar' sozinho NAO e comando de passo (continua sendo 'confirmar tudo').
+ [OK] 'sim' e 'nao' seguem o fluxo de confirmacao.
+ [OK] 'ver nota 1' nao e confundido com a bandeja.
+ [OK] 'salvar' sozinho segue o fluxo de confirmacao.
+ [OK] Bandeja com 3 instrucoes prontas (OP-1, OP-2, OP-3).
+ [OK] Proxima executou so a OP-1.
+ [OK] Conferencia depois do cadastro: Produto #1 conferido no banco.
+ [OK] Produto A existe no banco depois da OP-1.
+ [OK] Produto B ainda NAO existe (OP-2 nao executou).
+ [OK] OP-2 e OP-3 continuam prontas, nada executou em lote.
+ [OK] OP-2 foi pulada e continua na bandeja.
+ [OK] Proxima percorreu a bandeja e executou a OP-3 (pulou a OP-2).
+ [OK] Conferencia antes mostrou o preco antigo: Hoje "Passo Produto A 71914" custa R$ 10.00.
+ [OK] Conferencia depois confirmou o preco novo: Preço conferido: era R$ 10.00 e agora é R$ 25.50.
+ [OK] Preco 25.50 gravado no banco.
+ [OK] Sobrou so a OP-2 (pulada): nada pronto para executar.
+ [OK] OP-2 voltou para a fila.
+ [OK] OP-2 executou e a bandeja ficou sem pendencias.
+ [OK] Produto inexistente: conferencia antes reprovou.
+ [OK] Mensagem clara para o usuario: Não encontrei o produto para mudar o preço.
+ [OK] Instrucao ficou marcada com erro, nada foi gravado.
+ [OK] Nome duplicado bloqueado antes de salvar: Já existe o produto "Passo Produto A 71914" na unidade UN como produto simples (#1). Use outro nome ou outra unidade de medida.
+ [OK] Instrucao com dados faltando nao executa.
+ [OK] Conjunto com ele mesmo bloqueado: Um conjunto não pode conter ele mesmo.
+ [OK] Quantidade zero bloqueada: A quantidade do item no conjunto precisa ser maior que zero.
+ [OK] Item incluido no conjunto e conferido: O conjunto #1 agora tem o item #2.
+ [OK] Executar todos parou na primeira falha (2 passos).
+ [OK] Instrucao seguinte a falha ficou intacta e pronta.
+ [OK] Produto da instrucao depois da falha NAO foi criado.
+ [OK] Agente: 'próxima' executou a OP-1: Pronto! OP-1 foi executada: Cadastrar Passo Produto E 71914.
+ [OK] Agente: so a primeira foi gravada.
+ [OK] Agente: 'pular OP-2' respondeu em linguagem simples.
+ [OK] Agente: 'executar OP-2' executou a instrucao pulada.
+ [OK] Agente: bandeja fechou sozinha ao acabar.
+ [OK] Agente: segundo produto gravado.
+ [OK] Unicidade composta: produto cadastrado em UN com sucesso.
+ [OK] Unicidade composta: mesmo nome em unidade CX cadastrado sem conflito.
+ [OK] Unicidade composta: busca exata (nome + UN + simples) retornou o registro correto.
+ [OK] Unicidade composta: busca exata (nome + CX + simples) retornou o registro correto.
+ [OK] Unicidade composta: listarPorNomeExato retornou as 2 versoes do produto.
+ [OK] Unicidade composta: duplicata exata bloqueada com mensagem clara: Já existe o produto "Ovo Granja Teste 71914" na unidade UN como produto simples (#6). Use outro nome ou outra unidade de medida.
+ [OK] Unicidade composta: tentativa de duplicata exata rejeitada com sucesso.
+ [OK] Unicidade composta: limpeza de registros concluida.
+nov. 16, 2026 10:41:30 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 42001, SQLState: 42001
+nov. 16, 2026 10:41:30 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Syntax error in SQL statement "SELECT 1 FROM evento_externo WHERE UPPER(cidade) = UPPER(?) AND UPPER(uf) = UPPER(?) AND coletado_em >= NOW() - INTERVAL [*]? DAY LIMIT 1"; expected "-, +, string"; SQL statement:
+SELECT 1 FROM evento_externo WHERE UPPER(cidade) = UPPER(?) AND UPPER(uf) = UPPER(?) AND coletado_em >= NOW() - INTERVAL ? DAY LIMIT 1 [42001-224]
+ [OK] Lote completo com OP-3 aninhado em itens executou 5 de 5 com sucesso.
+ [OK] Estoque do kit recem-criado recebeu 20 caixas via NOTA_COMPRA_EMITIR.
+ [OK] ExecutorBandeja passo a passo resolveu OP-2 aninhado dentro de itens.
+ [OK] Relatorio parcial exibe marcador [FALHOU - NÃO EXECUTADA] e Motivo da falha.
+ [OK] Unidade de medida unica cadastrada com sucesso.
+ [OK] Unidade com nome duplicado retornou validacao amigavel sem erro SQL bruto: Já existe uma unidade de medida com o nome "UnidadeReg 71914" (sigla "ABAL"). Use a sigla "ABAL" ou informe outro nome para "BBAL".
+ [OK] Auto-referencia no kit bloqueada com mensagem clara: Um kit/conjunto não pode conter a si mesmo como componente.
+ [OK] Produto digital configurado como combo/kit com 3 cursos digitais em lote.
+ [OK] Venda de kit digital desmembrou nos 3 cursos mantendo valor total de R$ 120,00.
+ [OK] Dependencia OP-1 falha nao gerou NumberFormatException.
+ [OK] Lote resolveu kit, componente e nota de compra por nome no mesmo lote (5 de 5).
+ [OK] Exclusao de Passo Produto A 71914 conferida: Produto removido e conferido.
+ [OK] Exclusao de Passo Produto B 71914 conferida: Produto removido e conferido.
+ [OK] Exclusao de Passo Produto C 71914 conferida: Produto removido e conferido.
+ [OK] Exclusao de Passo Produto E 71914 conferida: Produto removido e conferido.
+ [OK] Exclusao de Passo Produto F 71914 conferida: Produto removido e conferido.
+================================================================================
+ RESULTADO: 71 / 71 TESTES DA BANDEJA PASSO A PASSO APROVADOS!
+================================================================================

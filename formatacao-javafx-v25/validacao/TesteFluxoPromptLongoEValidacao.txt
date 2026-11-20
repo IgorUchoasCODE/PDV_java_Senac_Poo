@@ -1,0 +1,81 @@
+================================================================================
+   TESTE DE CONTEXTO: PROMPT LONGO (15 OPS), DECOMPOSIÇÃO E VALIDAÇÃO 3 FASES
+================================================================================
+ [OK] Frase longa com pontos e números NÃO dispara [ATALHO_SIGLA].
+ [OK] Frase com preço decimal NÃO dispara [ATALHO_SIGLA].
+ [OK] Atalho '>oba' reconhecido.
+ [OK] Atalho 'i.s.u' reconhecido.
+ [OK] Atalho 'o.b.a' reconhecido.
+ [OK] Atalho 'i s u' reconhecido.
+ [OK] DecisaoConfirmacao classifica 'pode corrigir' como INDEFINIDA (não aciona SIM).
+ [OK] DecisaoConfirmacao classifica 'pode ajustar OP-1' como INDEFINIDA.
+ [OK] DecisaoConfirmacao preserva 'Confirmo, pode apagar' como SIM.
+ [OK] Sessões distintas geram arquivos de log únicos diferentes.
+ [OK] Ambos os arquivos únicos de log existem no disco.
+ [OK] Relatório ao finalizar bandeja referencia o documento único exato do lote.
+ [OK] Novo lote na mesma sessão gera um novo documento de log único.
+nov. 16, 2026 10:42:17 AM org.hibernate.jpa.boot.internal.PersistenceXmlParser parsePersistenceXml
+WARN: HHH015018: Encountered multiple persistence-unit stanzas defining same name [sazonalisei-embarcado]; persistence-unit names must be unique
+? [JPAUtil] Persistência MySQL não encontrada ou indisponível. Iniciando banco embarcado (sazonalisei-embarcado)...
+nov. 16, 2026 10:42:17 AM org.hibernate.jpa.boot.internal.PersistenceXmlParser parsePersistenceXml
+WARN: HHH015018: Encountered multiple persistence-unit stanzas defining same name [sazonalisei-embarcado]; persistence-unit names must be unique
+nov. 16, 2026 10:42:17 AM org.hibernate.jpa.internal.util.LogHelper logPersistenceUnitInformation
+INFO: HHH000204: Processing PersistenceUnitInfo [name: sazonalisei-embarcado]
+nov. 16, 2026 10:42:17 AM org.hibernate.Version logVersion
+INFO: HHH000412: Hibernate ORM core version 6.4.4.Final
+nov. 16, 2026 10:42:17 AM org.hibernate.cache.internal.RegionFactoryInitiator initiateService
+INFO: HHH000026: Second-level cache disabled
+nov. 16, 2026 10:42:18 AM org.hibernate.engine.jdbc.connections.internal.ConnectionProviderInitiator initiateService
+INFO: HHH000130: Instantiating explicit connection provider: org.hibernate.hikaricp.internal.HikariCPConnectionProvider
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+nov. 16, 2026 10:42:25 AM org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
+INFO: HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+ [OK] Antes de 'pode corrigir', lote com PT (Pacote) está reprovado na pré-validação.
+ [OK] 'pode corrigir' NÃO executou a bandeja prematuramente.
+ [OK] 'pode corrigir' removeu OP-1 redundante mantendo os 2 produtos na bandeja.
+ [OK] Após 'pode corrigir', Biscoito e Café foram ajustados para PCT e o lote passou 100% na pré-validação.
+ [OK] Confirmação posterior ('sim') executou os 2 produtos corrigidos com 0 falhas. Recebido: BANDEJA DE OPERAÇÕES EXECUTADA COM SUCESSO (2 de 2 concluídas):
+  1. Cadastrar produto físico 'Biscoito Pode Corrigir 49719' (PCT, R$ 8.50)
+     #1 - Biscoito Pode Corrigir 49719 (PCT) — Preço de venda: R$ 8.50
+     • Tipo: Produto Físico
+       Dimensões: 0.0000cm x 0.0000cm x 0.0000cm (Volume: 0.0000cm³)
+       Pesos: Peso Bruto: 0.0000kg, Peso Líquido: 0.0000kg
+     • Conjunto/Kit: NÃO (Produto simples)
+     • Estoque físico: 0 PCT
+  2. Cadastrar produto físico 'Café Pode Corrigir 49719' (PCT, R$ 18.00)
+     #2 - Café Pode Corrigir 49719 (PCT) — Preço de venda: R$ 18.00
+     • Tipo: Produto Físico
+       Dimensões: 0.0000cm x 0.0000cm x 0.0000cm (Volume: 0.0000cm³)
+       Pesos: Peso Bruto: 0.0000kg, Peso Líquido: 0.0000kg
+     • Conjunto/Kit: NÃO (Produto simples)
+     • Estoque físico: 0 PCT
+
+? Contexto da operação zerado (bandeja limpa para a próxima instrução).
+ [OK] Decompositor classificou o prompt exato de 15 operações como longo.
+ [OK] Decompositor dividiu o prompt exato em 5 etapas ordenadas por dependência.
+ [OK] Etapas seguem ordem estrutural -> pessoas -> produtos -> kits -> notas.
+ [OK] Prompt longo disparou exatamente 5 chamadas ordenadas (1 por etapa).
+ [OK] Resposta do Turno 1 exibe aviso explícito de prompt longo.
+ [OK] Pré-validação detectou conflito Pacote vs PCT na OP-1 já no Turno 1.
+ [OK] Auditoria do lote reprovou o plano enquanto OP-1 conflita com PCT.
+ [OK] Auditoria propagou dependências quebradas de OP-1 (PT) -> OP-7/OP-8 -> OP-13/OP-14 -> OP-15. Encontrados: {OP-1=[Já existe unidade com o nome "Pacote" (sigla "PCT"). Use "PCT" nos produtos ou altere o nome da unidade.], OP-7=[Depende da OP-1 (a unidade "PT" não será criada: Já existe unidade com o nome "Pacote" (sigla "PCT"). Use "PCT" nos produtos ou altere o nome da unidade.).], OP-8=[Depende da OP-1 (a unidade "PT" não será criada: Já existe unidade com o nome "Pacote" (sigla "PCT"). Use "PCT" nos produtos ou altere o nome da unidade.).], OP-13=[Componente "Biscoito PT Ctx 150518" depende da OP-7 que falhou (Depende da OP-1 (a unidade "PT" não será criada: Já existe unidade com o nome "Pacote" (sigla "PCT"). Use "PCT" nos produtos ou altere o nome da unidade.).).], OP-14=[Componente "Cafe PT Ctx 150518" depende da OP-8 que falhou (Depende da OP-1 (a unidade "PT" não será criada: Já existe unidade com o nome "Pacote" (sigla "PCT"). Use "PCT" nos produtos ou altere o nome da unidade.).).], OP-15=[Item "Biscoito PT Ctx 150518" depende da OP-7 que falhou (Depende da OP-1 (a unidade "PT" não será criada: Já existe unidade com o nome "Pacote" (sigla "PCT"). Use "PCT" nos produtos ou altere o nome da unidade.).)., Item "Cafe PT Ctx 150518" depende da OP-8 que falhou (Depende da OP-1 (a unidade "PT" não será criada: Já existe unidade com o nome "Pacote" (sigla "PCT"). Use "PCT" nos produtos ou altere o nome da unidade.).).]}
+ [OK] Turno 2 ('ja validou se ta tudo correto ?') recebeu auditoria real REPROVADA com conflitos.
+ [OK] Execução NÃO sofre erro 'For input string' ao passar nome do fornecedor em idFornecedor.
+ [OK] Relatório final explica claramente a falha de dependência originada na OP-1.
+ [OK] Bandeja recebeu todas as 15 instruções do fluxo completo.
+ [OK] Pré-validação aprovou 100% do lote corrigido sem conflitos.
+ [OK] Visualização não exibe alertas de erro quando lote está válido.
+nov. 16, 2026 10:42:32 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 42001, SQLState: 42001
+nov. 16, 2026 10:42:32 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Syntax error in SQL statement "SELECT 1 FROM evento_externo WHERE UPPER(cidade) = UPPER(?) AND UPPER(uf) = UPPER(?) AND coletado_em >= NOW() - INTERVAL [*]? DAY LIMIT 1"; expected "-, +, string"; SQL statement:
+SELECT 1 FROM evento_externo WHERE UPPER(cidade) = UPPER(?) AND UPPER(uf) = UPPER(?) AND coletado_em >= NOW() - INTERVAL ? DAY LIMIT 1 [42001-224]
+ [OK] Execução final concluiu todas as 15 operações sem falhas (incluindo fornecedor por nome em idFornecedor).
+ [OK] Kit no banco possui exatamente 4 componentes vinculados.
+ [OK] Nota de compra entrou 40 unidades de Biscoito Amanteigado OK 151245 no estoque (saldo=40.000000).
+ [OK] Nota de compra entrou 100 unidades de Chocolate Bombom OK 151245 no estoque (saldo=100.000000).
+================================================================================
+ RESULTADO: 36 / 36 TESTES DO FLUXO DE PROMPT LONGO APROVADOS!
+================================================================================

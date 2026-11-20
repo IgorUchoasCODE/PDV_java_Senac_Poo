@@ -1,0 +1,8 @@
+{
+  "windows_powershell": "5.1",
+  "validacao_javafx": 41,
+  "arquivos_nucleo_preservados": 221,
+  "bat_encaminha_argumentos": true,
+  "bat_preserva_codigo_erro": true,
+  "selecao_nucleo_valida_versao_25": true
+}

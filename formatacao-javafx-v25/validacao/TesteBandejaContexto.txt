@@ -1,0 +1,139 @@
+================================================================================
+   ? INICIANDO TESTES DO SUBSISTEMA: BANDEJA DE CONTEXTO E EXECUÇÃO
+================================================================================
+ [OK] Bandeja inicia vazia.
+ [OK] Nenhuma instrução validada inicialmente.
+ [OK] Janela de contexto aberta.
+nov. 16, 2026 10:40:47 AM org.hibernate.jpa.boot.internal.PersistenceXmlParser parsePersistenceXml
+WARN: HHH015018: Encountered multiple persistence-unit stanzas defining same name [sazonalisei-embarcado]; persistence-unit names must be unique
+? [JPAUtil] Persistência MySQL não encontrada ou indisponível. Iniciando banco embarcado (sazonalisei-embarcado)...
+nov. 16, 2026 10:40:47 AM org.hibernate.jpa.boot.internal.PersistenceXmlParser parsePersistenceXml
+WARN: HHH015018: Encountered multiple persistence-unit stanzas defining same name [sazonalisei-embarcado]; persistence-unit names must be unique
+nov. 16, 2026 10:40:47 AM org.hibernate.jpa.internal.util.LogHelper logPersistenceUnitInformation
+INFO: HHH000204: Processing PersistenceUnitInfo [name: sazonalisei-embarcado]
+nov. 16, 2026 10:40:47 AM org.hibernate.Version logVersion
+INFO: HHH000412: Hibernate ORM core version 6.4.4.Final
+nov. 16, 2026 10:40:47 AM org.hibernate.cache.internal.RegionFactoryInitiator initiateService
+INFO: HHH000026: Second-level cache disabled
+nov. 16, 2026 10:40:48 AM org.hibernate.engine.jdbc.connections.internal.ConnectionProviderInitiator initiateService
+INFO: HHH000130: Instantiating explicit connection provider: org.hibernate.hikaricp.internal.HikariCPConnectionProvider
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+nov. 16, 2026 10:40:56 AM org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
+INFO: HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+ [OK] Produto base cadastrado para o teste de atualização: Ovos Caipira Teste 1794840057989
+ [OK] Item com dados parciais foi retido como PENDENTE_DADOS.
+ [OK] Detectou campo faltante: novoNome.
+ [OK] Bandeja possui itens pendentes.
+ [OK] Bandeja ainda não possui itens validados.
+ [OK] Após fornecer o novoNome, item foi promovido a VALIDADO.
+ [OK] Campos faltantes zerados.
+ [OK] Bandeja agora possui instruções validadas.
+ [OK] Segunda instrução validada adicionada à bandeja.
+ [OK] Bandeja acumula 2 instruções validadas.
+ [OK] Visualização da bandeja contém título oficial.
+ [OK] Visualização exibe a situação PRONTA das instruções.
+ [OK] Visualização lista a rota de atualização.
+ [OK] Relatório confirma 2 operações executadas.
+ [OK] Todas as 2 operações foram executadas com sucesso.
+ [OK] Zero falhas na execução da bandeja.
+ [OK] Produto localizado no banco com o novo nome!
+ [OK] Nome do produto foi alterado fisicamente.
+ [OK] Bandeja está limpa após fecharJanelaContexto.
+ [OK] Nenhuma confirmação pendente após fechamento.
+ [OK] Instrução aguardando aprovação na bandeja.
+ [OK] Agente confirmou o cancelamento.
+ [OK] Bandeja foi descartada após recusa.
+ [OK] Instrução de compra com dados brutos validada na bandeja.
+nov. 16, 2026 10:41:01 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 42001, SQLState: 42001
+nov. 16, 2026 10:41:01 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Syntax error in SQL statement "SELECT 1 FROM evento_externo WHERE UPPER(cidade) = UPPER(?) AND UPPER(uf) = UPPER(?) AND coletado_em >= NOW() - INTERVAL [*]? DAY LIMIT 1"; expected "-, +, string"; SQL statement:
+SELECT 1 FROM evento_externo WHERE UPPER(cidade) = UPPER(?) AND UPPER(uf) = UPPER(?) AND coletado_em >= NOW() - INTERVAL ? DAY LIMIT 1 [42001-224]
+ [OK] Nota de compra emitida com sucesso a partir dos parâmetros estruturados da IA.
+ [OK] Estoque físico foi abastecido com 120 unidades da compra!
+ [OK] Busca por sigla '>isu' e 'i.s.u' localizou Igor da Silva Uchoa.
+ [OK] Busca por sigla '>otba' localizou Ovos Branco Tipo A Especial (sem sufixo numérico de teste).
+ [OK] Compilador $$ gerou OP-1 e OP-2 na Bandeja de Contexto.
+ [OK] Compilador $$ calculou o subtotal acumulado dos itens (200 + 1000 = 1200).
+ [OK] Instrução OP-1 editada em memória de execução antes do commit.
+nov. 16, 2026 10:41:08 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+WARN: SQL Error: 42001, SQLState: 42001
+nov. 16, 2026 10:41:08 AM org.hibernate.engine.jdbc.spi.SqlExceptionHelper logExceptions
+ERROR: Syntax error in SQL statement "SELECT 1 FROM evento_externo WHERE UPPER(cidade) = UPPER(?) AND UPPER(uf) = UPPER(?) AND coletado_em >= NOW() - INTERVAL [*]? DAY LIMIT 1"; expected "-, +, string"; SQL statement:
+SELECT 1 FROM evento_externo WHERE UPPER(cidade) = UPPER(?) AND UPPER(uf) = UPPER(?) AND coletado_em >= NOW() - INTERVAL ? DAY LIMIT 1 [42001-224]
+ [OK] Bloco $$ de criação de produto + NotaCompra com pagamentos executado em lote após SIM!
+ [OK] Bloqueou exclusão direta de produto com estoque > 0.
+ [OK] Agendou baixa de Nota de Perda isentando fornecedor antes da exclusão.
+ [OK] Comando close:: limpou toda a bandeja de contexto.
+ [OK] ContextoIABuilder traduziu comando $$ para leitura de IA: Criar/Cadastrar produto com nome 'Ovo', preço de venda R$ 20, unidade de medida UN.
+ [OK] C= #Produto, (com vírgula) retido em espera na bandeja (OP-1).
+ [OK] $$ R= #Produto; listou os produtos diretamente de forma humanizada.
+ [OK] Consulta paralela $$ R= #Produto; NÃO fechou a instrução OP-1 que estava em espera na bandeja!
+ [OK] Busca por sigla fora de $$ ('procura prodito o.b.a') localizou o produto em Virtual Thread.
+ [OK] Busca direta por sigla '>oba' fora de $$ localizou o produto.
+ [OK] Buscas por sigla fora de $$ mantiveram OP-1 intacta em espera na bandeja!
+ [OK] ProvedorIAComFailover assumiu automaticamente com a 2ª IA após falha da 1ª e traduziu o comando $$!
+ [OK] Erro de operação inválida formatado via ia-contexto.properties: ? Erro de sintaxe na linha 1, coluna 3:
+
+   $$ X= #Produto nm> Teste;
+     ^
+
+?? Motivo: Operação 'X' não reconhecida. Use C=, R=, U=, D= ou abrir>janela>...
+? Dica: Utilize C= (cadastrar), R= (consultar), U= (atualizar) ou D= (excluir).
+ [OK] Erro de entidade desconhecida formatado via ia-contexto.properties: ? Erro de sintaxe na linha 1, coluna 3:
+
+   $$ C= #EntidadeFantasma nm> Teste;
+     ^
+
+?? Motivo: Entidade '#ENTIDADEFANTASMA' não é reconhecida no sistema. Entidades suportadas: #Produto, #Nota, #Pessoa, #Cliente,
+#Fornecedor, etc.
+? Dica: Verifique a ortografia do nome da entidade após o caractere '#'.
+ [OK] Erro de campo obrigatório ausente formatado via ia-contexto.properties: Nao foi possivel preparar a operacao em #PRODUTO: informe o campo obrigatorio 'nm' (exemplo: nm> Nome do Produto).
+ [OK] Erro de valor numérico inválido formatado via ia-contexto.properties: O valor 'PRECO_ERRADO' informado no campo 'vv' e invalido. Informe um numero valido (ex: 25.90).
+ [OK] Erro de nota inexistente formatado via ia-contexto.properties: Nota #999999 não encontrada.
+ [OK] Compilou lote CRUD complexo (2 Produtos + 1 NotaCompra com 2 itens e 2 pagamentos) na bandeja.
+ [OK] Comando 'abrir>janela>Registarr>nota' mapeou a janela JavaFX e pré-carregou os itens da bandeja: Janela JavaFX preparada: [JANELA_REGISTRAR_NOTA] Emissão e Registro de Notas Operacionais (Modulo: NOTA, FXML: /fxml/nota/NotaFiscalForm.fxml,
+Rota: NOTA_COMPRA_EMITIR / NOTA_VENDA_EMITIR_FIFO) — Pré-carregada com 3 registro(s) da Bandeja de Contexto
+
+BANDEJA DE CONTEXTO ATIVA (3 instruçãoões: 3 validadas, 0 pendente):
+  1. [OP-1 - PRONTA] Cadastrar produto 'Processador Industrial Ryzen 69334' (UN) por R$ 1250.00 (PRODUTO_FISICO_CADASTRAR)
+  2. [OP-2 - PRONTA] Cadastrar produto 'Placa Controladora CNC 69334' (UN) por R$ 890.00 (PRODUTO_FISICO_CADASTRAR)
+  3. [OP-3 - PRONTA] Emitir Nota de Compra de 'Fornecedora Global Tech 69334' (2 itens, Total: R$ 4200.00,
+  Pago: R$ 4200.00) (NOTA_COMPRA_EMITIR)
+
+Você pode executar uma por vez: diga "próxima" ou "executar OP-1". Para deixar uma para depois: "pular OP-1".
+Confirma a execução de todas? Digite SIM para salvar ou NÃO para cancelar.
+[BOTAO_CONFIRMAR:SIM] [BOTAO_CANCELAR:NAO]
+ [OK] NotaCompra complexa gravada com sucesso no banco.
+ [OK] Passo 1 (Busca Sequencial - Nota): Retornou dados tratados da Nota #3.
+ [OK] Passo 2 (Busca Sequencial - Fornecedor dessa Nota): Identificou o fornecedor da Nota em foco: FORNECEDOR #5 - Fornecedora Global Tech 69334 (Vinculado à Nota #3)
+  Tipo: Pessoa Jurídica | Papel: Fornecedor | Documento: 12.345.678/0001-99 | Limite de Crédito: R$ 0.00
+  Contatos e Registros (3):
+    - CNPJ: 12.345.678/0001-99
+    - WHATSAPP: (11) 98888-7777
+    - EMAIL: contato@globaltech.com.br
+ [OK] Passo 3 (Busca Sequencial - Contatos do Fornecedor dessa Nota): Retornou WhatsApp, E-mail e CNPJ: Contatos e Documentos de #5 - Fornecedora Global Tech 69334 (Fornecedor) (referente à Nota #3):
+  - CNPJ: 12.345.678/0001-99
+  - WHATSAPP: (11) 98888-7777
+  - EMAIL: contato@globaltech.com.br
+ [OK] Passo 4 (Busca Sequencial - Produtos dessa Nota): Retornou os produtos e lotes da Nota #3.
+ [OK] Passo 5 (Busca Sequencial - Pagamentos dessa Nota): Retornou os pagamentos detalhados da Nota #3.
+ [OK] Todos os 6 tipos de Java Records (Nota, Pessoa/Fornecedor, Contatos, ProdutosDaNota, PagamentosDaNota e ComandoJanelaUI) foram gerados para a interface JavaFX!
+ [OK] Consultas sequenciais em cascata (R= #Nota; R= #Fornecedor; R= #Contato; R= #Produto; R= #Pagamento;) aproveitaram a consulta de cima sem repetir ID!
+ [OK] Busca em Cascata de Produto ($$ R= #Produto >> #Estoque >> #Fornecedor >> #Nota) retornou lotes FIFO, fornecedor e notas!
+ [OK] Consulta (R=) pode consultar dados trancados normalmente sem bloqueio: #3 - Processador Industrial Ryzen 69334 (UN) — Preço de venda: R$ 1250.00
+• Tipo: Produto Físico
+  Dimensões: 10.0000cm x 10.0000cm x 10.0000cm (Volume: 1000.0000cm³)
+  Pesos: Peso Bruto: 1.0000kg, Peso Líquido: 0.9000kg
+• Conjunto/Kit: NÃO (Produto simples)
+• Estoque físico: 4 UN
+  Lotes físicos em estoque (1):
+    - Lote #4 — Saldo: 4 UN, Custo Unit.: R$ 800.00, Validade: Indeterminada
+  [Status Concorrência: Registro trancado para alteração de estado pela sessão 'sessao-lock-dona-1794840071168' — Consulta liberada]
+ [OK] Tentativa de mudar o estado (U=) de registro trancado por outra sessão foi bloqueada: Operacao bloqueada: o registro #3 (Processador Industrial Ryzen 69334) esta trancado pela sessao 'sessao-lock-dona-1794840071168'
+e nao pode ter seu estado alterado agora (apenas consultas R= sao permitidas).
+================================================================================
+ RESULTADO: 64 / 64 TESTES DA BANDEJA DE CONTEXTO APROVADOS!
+================================================================================
